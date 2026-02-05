@@ -5,6 +5,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
+
+	"github.com/yuto-suzuki/git-wt/cmd"
 )
 
 func setupTestRepo(t *testing.T) (string, string) {
@@ -47,9 +49,9 @@ func setupTestRepo(t *testing.T) (string, string) {
 }
 
 func runGit(t *testing.T, dir string, args ...string) {
-	cmd := exec.Command("git", args...)
-	cmd.Dir = dir
-	if out, err := cmd.CombinedOutput(); err != nil {
+	c := exec.Command("git", args...)
+	c.Dir = dir
+	if out, err := c.CombinedOutput(); err != nil {
 		t.Fatalf("git %v failed: %v\nOutput: %s", args, err, string(out))
 	}
 }
@@ -60,14 +62,13 @@ func TestCopyIgnoredFiles(t *testing.T) {
 
 	targetDir := filepath.Join(tempDir, "worktree")
 
-	// Pre-create worktree dir (usually done by git worktree add, but we test copyIgnoredFiles individually)
 	if err := os.MkdirAll(targetDir, 0755); err != nil {
 		t.Fatalf("Failed to create target dir: %v", err)
 	}
 
-	err := copyIgnoredFiles(repoDir, targetDir)
+	err := cmd.CopyIgnoredFiles(repoDir, targetDir)
 	if err != nil {
-		t.Errorf("copyIgnoredFiles failed: %v", err)
+		t.Errorf("CopyIgnoredFiles failed: %v", err)
 	}
 
 	// Verify .env
