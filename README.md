@@ -16,6 +16,7 @@ Git's `worktree` feature is powerful, but files ignored by `.gitignore` (such as
 - **Flexible Interface**: Powered by the Cobra framework for robust flag handling.
 - **Path Automation**: Automatically generates worktree paths based on branch names (`../{project}-{branch}`).
 - **Lifecycle Management**: Support for listing (`list`/`ls`) and removing (`remove`/`rm`) worktrees.
+- **Custom Hooks**: Execute multiple shell commands naturally after creating (`add`) or removing (`rm`) worktrees.
 
 ## Installation
 
@@ -98,6 +99,38 @@ git-wt rm <branch>
 ```bash
 git-wt rm -f <branch>
 ```
+
+## Configuration
+
+`git-wt` uses a YAML configuration file located at `~/.config/git-wt/config.yaml`.
+
+### Custom Hooks
+
+Hooks allow you to run automated shell commands when worktrees are managed.
+
+```yaml
+hooks:
+  # Commands to run after 'add'
+  add:
+    - "tmux new-window -n [{{.Repo}}]{{.Branch}} -c {{.Path}}"
+    - "echo 'Welcome to {{.Repo}}'"
+  # Commands to run after 'remove'
+  rm:
+    - "echo 'Cleanup for {{.Branch}}'"
+```
+
+#### Available Placeholders
+
+| Placeholder | Description |
+| :--- | :--- |
+| `{{.Path}}` | Absolute path of the worktree directory. |
+| `{{.Branch}}` | Name of the branch. |
+| `{{.Repo}}` | Name of the repository (base directory name). |
+
+#### Note
+
+- If you only need a single command, you can use a string instead of a list: `add: "echo hello"`.
+- Commands are executed via `/bin/sh -c`, allowing for pipes and status checks.
 
 ## Requirements
 
