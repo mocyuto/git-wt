@@ -38,7 +38,21 @@ sudo mv git-wt /usr/local/bin/git-wt
 
 Cobra を使用しているため、フラグ（`-b`）は引数の前後のどちらにでも記述可能です。
 
-### 1. 既存のブランチを指定して作成
+### 1. ブランチ名のみ指定して作成（パス自動生成）
+
+ブランチ名のみを指定すると、自動的に `../{現在のディレクトリ名}-{ブランチ名}` というパスにワークツリーを作成します。
+
+```bash
+git-wt <branch>
+```
+
+**例（プロジェクト名が `pj` の場合）:**
+```bash
+git-wt feature-abc
+# -> ../pj-feature-abc に作成されます
+```
+
+### 2. パスを明示的に指定して作成
 
 ```bash
 git-wt <path> <branch>
@@ -49,7 +63,7 @@ git-wt <path> <branch>
 git-wt ../debug-fix main
 ```
 
-### 2. 新規ブランチを作成してセットアップ
+### 3. 新規ブランチを作成してセットアップ
 
 ```bash
 git-wt -b <new-branch> <path>
@@ -76,6 +90,19 @@ git-wt list
 git-wt ls
 # または
 git-wt -l
+```
+
+### 5. ワークツリーの削除
+
+```bash
+git-wt remove <path>
+# または
+git-wt rm <path>
+```
+
+**強制削除（変更がある場合など）:**
+```bash
+git-wt rm -f <path>
 ```
 
 ## 注意事項

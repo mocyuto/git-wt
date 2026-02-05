@@ -32,9 +32,19 @@ copying ignored configuration files (like .env) from the main tree to the new wo
 			return cmd.Help()
 		}
 
-		targetPath := args[0]
-		var branch string
-		if len(args) > 1 {
+		var targetPath, branch string
+		if len(args) == 1 {
+			// Automate path: ../{current_dir}-{branch}
+			branch = args[0]
+			cwd, err := os.Getwd()
+			if err != nil {
+				return fmt.Errorf("failed to get current directory: %v", err)
+			}
+			projectName := filepath.Base(cwd)
+			targetPath = filepath.Join("..", fmt.Sprintf("%s-%s", projectName, branch))
+			fmt.Printf("Automated path: %s\n", targetPath)
+		} else {
+			targetPath = args[0]
 			branch = args[1]
 		}
 
