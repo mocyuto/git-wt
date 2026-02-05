@@ -1,125 +1,111 @@
 # git-wt
 
-`git worktree` を作成する際、設定ファイル（`.env` など）を自動的にコピーして新しいディレクトリを作成する CLI ツールです。
+English | [日本語](./README_ja.md)
 
-## 概要
+A CLI tool that extends `git worktree add` by automatically copying ignored configuration files (like `.env`) to the new directory.
 
-Git の `worktree` 機能は便利ですが、`.gitignore` で除外されている `.env` やローカルの設定ファイルなどは、新しく作成したワークツリーには含まれません。`git-wt` を使うことで、これらを自動的にコピーし、すぐに開発やテストが可能なワークツリーを作成できます。
+## Overview
 
-## 特徴
+Git's `worktree` feature is powerful, but files ignored by `.gitignore` (such as `.env` or local configs) are not included in the newly created worktree. `git-wt` automates the process of copying these files, allowing you to start development and testing immediately.
 
-- `git worktree add` のラッパーとして動作
-- `.gitignore` に指定された「無視されているファイル」を自動的に特定してコピー
-- ディレクトリ構造を維持したままコピー（例: `node_modules` 内の設定ファイルなど）
-- Cobra フレームワークによる柔軟なフラグ指定
-- Go 言語による単一バイナリでの動作
+## Features
 
-## インストール
+- **Standard Wrapper**: Works as a wrapper for `git worktree add`.
+- **Auto-Discovery**: Automatically identifies and copies "ignored files" specified in `.gitignore`.
+- **Structural Integrity**: Maintains directory structure during copy (e.g., config files inside `node_modules`).
+- **Flexible Interface**: Powered by the Cobra framework for robust flag handling.
+- **Path Automation**: Automatically generates worktree paths based on branch names (`../{project}-{branch}`).
+- **Lifecycle Management**: Support for listing (`list`/`ls`) and removing (`remove`/`rm`) worktrees.
 
-### ビルド
+## Installation
+
+### Build
 
 ```bash
 go build -o git-wt main.go
 ```
 
-### パスの設定
+### Move to PATH
 
-バイナリを `PATH` の通った場所に配置して使用します。
+Place the binary in a directory included in your `PATH`.
 
 ```bash
-# mac / linux の例
+# Example for macOS / Linux
 sudo mv git-wt /usr/local/bin/git-wt
 ```
 
 > [!TIP]
-> `PATH` 内に `git-wt` という名前で配置すると、`git wt ...` という形式で呼び出すことも可能です。
+> If you name the binary `git-wt` and place it in your `PATH`, you can also call it as `git wt ...`.
 
-## 使い方
+## Usage
 
-Cobra を使用しているため、フラグ（`-b`）は引数の前後のどちらにでも記述可能です。
+Since it uses Cobra, flags (like `-b`) can be placed either before or after the positional arguments.
 
-### 1. ブランチ名のみ指定して作成（パス自動生成）
+### 1. Create with Branch Name Only (Auto-Path)
 
-ブランチ名のみを指定すると、自動的に `../{現在のディレクトリ名}-{ブランチ名}` というパスにワークツリーを作成します。
+Providing only a branch name will automatically create a worktree at `../{current_dir}-{branch}`.
 
 ```bash
 git-wt <branch>
 ```
 
-**例（プロジェクト名が `pj` の場合）:**
+**Example (if project is `pj`):**
 ```bash
 git-wt feature-abc
-# -> ../pj-feature-abc に作成されます
+# -> Created at ../pj-feature-abc
 ```
 
-### 2. パスを明示的に指定して作成
+### 2. Create with Explicit Path
 
 ```bash
 git-wt <path> <branch>
 ```
 
-**例:**
+**Example:**
 ```bash
 git-wt ../debug-fix main
 ```
 
-### 3. 新規ブランチを作成してセットアップ
+### 3. Setup with New Branch
 
 ```bash
 git-wt -b <new-branch> <path>
-# または
+# or
 git-wt <path> -b <new-branch>
 ```
 
-**例:**
-```bash
-git-wt -b feature/login ../feature-login
-```
-
-### 3. オプションなし（カレントブランチをベースに作成）
-
-```bash
-git-wt <path>
-```
-
-### 4. ワークツリーの一覧表示
+### 4. List Worktrees
 
 ```bash
 git-wt list
-# または
+# or
 git-wt ls
-# または
+# or
 git-wt -l
 ```
 
-### 5. ワークツリーの削除
+### 5. Remove Worktree
 
-ブランチ名（またはパス）を指定してワークツリーを削除します。
+Remove a worktree by providing the branch name (or path).
 
 ```bash
 git-wt remove <branch>
-# または
+# or
 git-wt rm <branch>
 ```
 
-**例:**
-```bash
-git-wt rm feature/login
-```
-
-**強制削除（変更がある場合など）:**
+**Force Removal (if there are changes):**
 ```bash
 git-wt rm -f <branch>
 ```
 
-## 注意事項
+## Requirements
 
-- コピー対象は、実行時のワークツリールートにおいて `git ls-files --others --ignored --exclude-standard` でリストアップされるファイルです。
-- 実行には `git` がインストールされている必要があります。
+- `git` must be installed and available in your environment.
 
-## 開発・テスト
+## Development & Testing
 
 ```bash
-# テストの実行
+# Run tests
 go test -v .
 ```
