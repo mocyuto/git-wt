@@ -94,15 +94,22 @@ git-wt -l
 
 ### 5. ワークツリーの削除
 
+ブランチ名（またはパス）を指定してワークツリーを削除します。
+
 ```bash
-git-wt remove <path>
+git-wt remove <branch>
 # または
-git-wt rm <path>
+git-wt rm <branch>
+```
+
+**例:**
+```bash
+git-wt rm feature/login
 ```
 
 **強制削除（変更がある場合など）:**
 ```bash
-git-wt rm -f <path>
+git-wt rm -f <branch>
 ```
 
 ## 注意事項
