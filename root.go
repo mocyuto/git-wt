@@ -69,7 +69,11 @@ copying ignored configuration files (like .env) from the main tree to the new wo
 		fmt.Printf("New worktree is ready at: %s\n", targetPath)
 
 		// Run add hooks
-		RunHooks("add", targetPath, branch)
+		RunHooks("add", HookContext{
+			Path:   targetPath,
+			Branch: branch,
+			Repo:   filepath.Base(sourceRoot),
+		})
 
 		return nil
 	},

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -31,7 +32,12 @@ var removeCmd = &cobra.Command{
 		}
 
 		// Run removal hooks
-		RunHooks("rm", path, branchOrPath)
+		gitRoot, _ := GetGitRoot()
+		RunHooks("rm", HookContext{
+			Path:   path,
+			Branch: branchOrPath,
+			Repo:   filepath.Base(gitRoot),
+		})
 
 		fmt.Println("--- Done! ---")
 		return nil
