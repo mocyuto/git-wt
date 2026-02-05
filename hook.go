@@ -11,7 +11,7 @@ import (
 )
 
 // RunHooks executes hooks for a given action (e.g., "add", "rm")
-func RunHooks(action string, targetPath string) {
+func RunHooks(action string, targetPath string, branch string) {
 	key := "hooks." + action
 	val := viper.Get(key)
 	if val == nil {
@@ -43,15 +43,16 @@ func RunHooks(action string, targetPath string) {
 	}
 
 	for _, cmdStr := range commands {
-		executeCommand(cmdStr, absPath)
+		executeCommand(cmdStr, absPath, branch)
 	}
 }
 
-func executeCommand(cmdStr string, absPath string) {
+func executeCommand(cmdStr string, absPath string, branch string) {
 	fmt.Printf("--- Executing hook: %s ---\n", cmdStr)
 
-	// Replace {{.Path}} with actual path
+	// Replace placeholders
 	replacedCmd := strings.ReplaceAll(cmdStr, "{{.Path}}", absPath)
+	replacedCmd = strings.ReplaceAll(replacedCmd, "{{.Branch}}", branch)
 
 	// Execute via shell to support pipes, redirects, etc.
 	// We use /bin/sh -c because users expect shell behavior

@@ -31,7 +31,7 @@ var removeCmd = &cobra.Command{
 		}
 
 		// Run removal hooks
-		RunHooks("rm", path)
+		RunHooks("rm", path, branchOrPath)
 
 		fmt.Println("--- Done! ---")
 		return nil
