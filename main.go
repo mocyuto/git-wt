@@ -2,59 +2,87 @@ package main
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/spf13/cobra"
+)
+
+var (
+	newBranch string
+	showList  bool
 )
 
 func main() {
-	var newBranch string
-	flag.StringVar(&newBranch, "b", "", "create a new branch")
-	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: git-wt [-b <new-branch>] <path> [<branch>]\n\n")
-		fmt.Fprintf(os.Stderr, "Arguments:\n")
-		fmt.Fprintf(os.Stderr, "  <path>    New worktree path\n")
-		fmt.Fprintf(os.Stderr, "  -b        Create and checkout a new branch (must come before <path>)\n")
-		fmt.Fprintf(os.Stderr, "  <branch>  Existing branch to checkout\n")
-	}
-	flag.Parse()
+	var rootCmd = &cobra.Command{
+		Use:   "git-wt <path> [<branch>]",
+		Short: "Create git worktree and copy ignored files",
+		Long: `git-wt is a CLI tool that extends 'git worktree add' by automatically
+copying ignored configuration files (like .env) from the main tree to the new worktree.`,
+		Args: cobra.ArbitraryArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if showList {
+				return listWorktrees()
+			}
 
-	args := flag.Args()
-	if len(args) < 1 {
-		flag.Usage()
+			if len(args) < 1 {
+				return cmd.Help()
+			}
+
+			targetPath := args[0]
+			var branch string
+			if len(args) > 1 {
+				branch = args[1]
+			}
+
+			sourceRoot, err := getGitRoot()
+			if err != nil {
+				return fmt.Errorf("failed to get git root: %v", err)
+			}
+
+			fmt.Printf("--- Creating worktree at %s ---\n", targetPath)
+			if err := createWorktree(targetPath, newBranch, branch); err != nil {
+				return fmt.Errorf("error creating worktree: %v", err)
+			}
+
+			fmt.Println("--- Copying ignored configuration files ---")
+			if err := copyIgnoredFiles(sourceRoot, targetPath); err != nil {
+				return fmt.Errorf("error copying files: %v", err)
+			}
+
+			fmt.Println("--- Done! ---")
+			fmt.Printf("New worktree is ready at: %s\n", targetPath)
+			return nil
+		},
+	}
+
+	var listCmd = &cobra.Command{
+		Use:     "list",
+		Aliases: []string{"ls"},
+		Short:   "List all worktrees",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return listWorktrees()
+		},
+	}
+
+	rootCmd.Flags().StringVarP(&newBranch, "branch", "b", "", "create and checkout a new branch")
+	rootCmd.Flags().BoolVarP(&showList, "list", "l", false, "list all worktrees")
+	rootCmd.AddCommand(listCmd)
+
+	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
+}
 
-	targetPath := args[0]
-	var branch string
-	if len(args) > 1 {
-		branch = args[1]
-	}
-
-	sourceRoot, err := getGitRoot()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
-
-	fmt.Printf("--- Creating worktree at %s ---\n", targetPath)
-	if err := createWorktree(targetPath, newBranch, branch); err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating worktree: %v\n", err)
-		os.Exit(1)
-	}
-
-	fmt.Println("--- Copying ignored configuration files ---")
-	if err := copyIgnoredFiles(sourceRoot, targetPath); err != nil {
-		fmt.Fprintf(os.Stderr, "Error copying files: %v\n", err)
-		os.Exit(1)
-	}
-
-	fmt.Println("--- Done! ---")
-	fmt.Printf("New worktree is ready at: %s\n", targetPath)
+func listWorktrees() error {
+	cmd := exec.Command("git", "worktree", "list")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
 
 func getGitRoot() (string, error) {
@@ -99,10 +127,10 @@ func copyIgnoredFiles(sourceRoot, targetPath string) error {
 
 		info, err := os.Stat(src)
 		if err != nil {
-			continue // Skip if file doesn't exist (e.g. directory list)
+			continue
 		}
 		if info.IsDir() {
-			continue // git ls-files usually returns files, but be safe
+			continue
 		}
 
 		if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {

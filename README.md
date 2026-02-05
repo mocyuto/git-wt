@@ -11,6 +11,7 @@ Git の `worktree` 機能は便利ですが、`.gitignore` で除外されてい
 - `git worktree add` のラッパーとして動作
 - `.gitignore` に指定された「無視されているファイル」を自動的に特定してコピー
 - ディレクトリ構造を維持したままコピー（例: `node_modules` 内の設定ファイルなど）
+- Cobra フレームワークによる柔軟なフラグ指定
 - Go 言語による単一バイナリでの動作
 
 ## インストール
@@ -35,7 +36,7 @@ sudo mv git-wt /usr/local/bin/git-wt
 
 ## 使い方
 
-**重要: オプション（`-b`）は必ず \<path\> の前に記述してください。**
+Cobra を使用しているため、フラグ（`-b`）は引数の前後のどちらにでも記述可能です。
 
 ### 1. 既存のブランチを指定して作成
 
@@ -52,6 +53,8 @@ git-wt ../debug-fix main
 
 ```bash
 git-wt -b <new-branch> <path>
+# または
+git-wt <path> -b <new-branch>
 ```
 
 **例:**
@@ -63,6 +66,16 @@ git-wt -b feature/login ../feature-login
 
 ```bash
 git-wt <path>
+```
+
+### 4. ワークツリーの一覧表示
+
+```bash
+git-wt list
+# または
+git-wt ls
+# または
+git-wt -l
 ```
 
 ## 注意事項
