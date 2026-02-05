@@ -15,10 +15,10 @@ func main() {
 	var newBranch string
 	flag.StringVar(&newBranch, "b", "", "create a new branch")
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: git wt <path> [-b <new-branch>] [<branch>]\n\n")
+		fmt.Fprintf(os.Stderr, "Usage: git-wt [-b <new-branch>] <path> [<branch>]\n\n")
 		fmt.Fprintf(os.Stderr, "Arguments:\n")
 		fmt.Fprintf(os.Stderr, "  <path>    New worktree path\n")
-		fmt.Fprintf(os.Stderr, "  -b        Create and checkout a new branch\n")
+		fmt.Fprintf(os.Stderr, "  -b        Create and checkout a new branch (must come before <path>)\n")
 		fmt.Fprintf(os.Stderr, "  <branch>  Existing branch to checkout\n")
 	}
 	flag.Parse()

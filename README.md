@@ -1,66 +1,78 @@
 # git-wt
 
-`git worktree` を作成する際、設定ファイル（`.env` など）をメインツリーから自動的にコピーする CLI ツールです。
+`git worktree` を作成する際、設定ファイル（`.env` など）を自動的にコピーして新しいディレクトリを作成する CLI ツールです。
 
 ## 概要
 
-Git の `worktree` 機能は便利ですが、`.gitignore` で除外されている `.env` やローカルの設定ファイルなどは新しいワークツリーに引き継がれません。`git-wt` を使うことで、これらを自動的にコピーし、すぐに開発やテストが可能なワークツリーを作成できます。
+Git の `worktree` 機能は便利ですが、`.gitignore` で除外されている `.env` やローカルの設定ファイルなどは、新しく作成したワークツリーには含まれません。`git-wt` を使うことで、これらを自動的にコピーし、すぐに開発やテストが可能なワークツリーを作成できます。
 
 ## 特徴
 
 - `git worktree add` のラッパーとして動作
 - `.gitignore` に指定された「無視されているファイル」を自動的に特定してコピー
-- ディレクトリ構造を維持したままコピー（例: `node_modules` 内の特定ファイルなど）
-- Go 言語による実装のため、高速かつ単一バイナリで動作
+- ディレクトリ構造を維持したままコピー（例: `node_modules` 内の設定ファイルなど）
+- Go 言語による単一バイナリでの動作
 
 ## インストール
 
-### リポジトリのクローンとビルド
+### ビルド
 
 ```bash
-git clone <repository-url>
-cd git-wt
 go build -o git-wt main.go
 ```
 
-### Git サブコマンドとしての登録
+### パスの設定
 
-バイナリを `PATH` の通った場所に `git-wt` という名前で配置すると、`git wt` として呼び出せるようになります。
+バイナリを `PATH` の通った場所に配置して使用します。
 
 ```bash
-mv git-wt /usr/local/bin/git-wt
+# mac / linux の例
+sudo mv git-wt /usr/local/bin/git-wt
 ```
+
+> [!TIP]
+> `PATH` 内に `git-wt` という名前で配置すると、`git wt ...` という形式で呼び出すことも可能です。
 
 ## 使い方
 
-### 基本的な使い方
+**重要: オプション（`-b`）は必ず \<path\> の前に記述してください。**
 
-既存のブランチを指定してワークツリーを作成します。
-
-```bash
-git wt <path> <branch>
-```
-
-例:
-```bash
-git wt ../debug-fix main
-```
-
-### 新規ブランチの作成
-
-`-b` オプションを使用して、新しいブランチを作成しながらワークツリーをセットアップします。
+### 1. 既存のブランチを指定して作成
 
 ```bash
-git wt -b <new-branch> <path>
+git-wt <path> <branch>
 ```
 
-例:
+**例:**
 ```bash
-git wt -b feature/login ../feature-login
+git-wt ../debug-fix main
 ```
 
-## 動作の仕組み
+### 2. 新規ブランチを作成してセットアップ
 
-1. `git worktree add` を実行し、指定されたパスにワークツリーを作成します。
-2. `git ls-files --others --ignored --exclude-standard` を実行し、現在のプロジェクトで無視されているファイルのリストを取得します。
-3. リストアップされたファイルを、新しいワークツリーの対応する場所にコピーします。
+```bash
+git-wt -b <new-branch> <path>
+```
+
+**例:**
+```bash
+git-wt -b feature/login ../feature-login
+```
+
+### 3. オプションなし（カレントブランチをベースに作成）
+
+```bash
+git-wt <path>
+```
+
+## 注意事項
+
+- コピー対象は、実行時のワークツリールートにおいて `git ls-files --others --ignored --exclude-standard` でリストアップされるファイルです。
+- 実行には `git` がインストールされている必要があります。
+
+## 開発・テスト
+
+```bash
+# テストの実行
+go test -v .
+```
