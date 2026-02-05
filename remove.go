@@ -1,4 +1,4 @@
-package cmd
+package main
 
 import (
 	"fmt"
@@ -29,6 +29,10 @@ var removeCmd = &cobra.Command{
 		if err := RemoveWorktree(path, forceDelete); err != nil {
 			return fmt.Errorf("error removing worktree: %v", err)
 		}
+
+		// Run removal hooks
+		RunHooks("rm", path)
+
 		fmt.Println("--- Done! ---")
 		return nil
 	},

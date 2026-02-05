@@ -1,4 +1,4 @@
-package cmd
+package main
 
 import (
 	"bufio"
@@ -10,11 +10,13 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var (
 	newBranch string
 	showList  bool
+	cfgFile   string
 )
 
 var rootCmd = &cobra.Command{
@@ -65,6 +67,10 @@ copying ignored configuration files (like .env) from the main tree to the new wo
 
 		fmt.Println("--- Done! ---")
 		fmt.Printf("New worktree is ready at: %s\n", targetPath)
+
+		// Run add hooks
+		RunHooks("add", targetPath)
+
 		return nil
 	},
 }
@@ -76,8 +82,44 @@ func Execute() {
 }
 
 func init() {
+	cobra.OnInitialize(initConfig)
+
 	rootCmd.Flags().StringVarP(&newBranch, "branch", "b", "", "create and checkout a new branch")
 	rootCmd.Flags().BoolVarP(&showList, "list", "l", false, "list all worktrees")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config/git-wt/config.yaml)")
+}
+
+func initConfig() {
+	if cfgFile != "" {
+		viper.SetConfigFile(cfgFile)
+	} else {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		configDir := filepath.Join(home, ".config", "git-wt")
+		viper.AddConfigPath(configDir)
+		viper.SetConfigName("config")
+		viper.SetConfigType("yaml")
+
+		// Create default config if not exists
+		configPath := filepath.Join(configDir, "config.yaml")
+		if _, err := os.Stat(configPath); os.IsNotExist(err) {
+			if err := os.MkdirAll(configDir, 0755); err == nil {
+				viper.SetDefault("hooks.add", []string{})
+				viper.SetDefault("hooks.rm", []string{})
+				_ = viper.SafeWriteConfig()
+			}
+		}
+	}
+
+	viper.AutomaticEnv()
+
+	if err := viper.ReadInConfig(); err == nil {
+		// fmt.Println("Using config file:", viper.ConfigFileUsed())
+	}
 }
 
 func GetGitRoot() (string, error) {
