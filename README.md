@@ -20,6 +20,14 @@ Git's `worktree` feature is powerful, but files ignored by `.gitignore` (such as
 
 ## Installation
 
+### Homebrew
+
+The easiest way to install on macOS is via Homebrew:
+
+```bash
+brew install mocyuto/tap/git-wt
+```
+
 ### Build
 
 ```bash
@@ -44,50 +52,55 @@ Since it uses Cobra, flags (like `-b`) can be placed either before or after the 
 
 ### 1. Create with Branch Name Only (Auto-Path)
 
-Providing only a branch name will automatically create a worktree at `../{current_dir}-{branch}`.
+Providing only a branch name will automatically create a worktree at `../{current_dir}-{branch}`. If the branch doesn't exist, it will be created automatically.
 
 ```bash
-git-wt <branch>
+git-wt add <branch>
 ```
 
 **Example (if project is `pj`):**
 ```bash
-git-wt feature-abc
+git-wt add feature-abc
 # -> Created at ../pj-feature-abc
 ```
 
 ### 2. Create with Explicit Path
 
 ```bash
-git-wt <path> <branch>
+git-wt add <path> <branch>
 ```
 
 **Example:**
 ```bash
-git-wt ../debug-fix main
+git-wt add ../debug-fix main
 ```
 
-### 3. Setup with New Branch
+### 3. Create with New Branch
 
 ```bash
-git-wt -b <new-branch> <path>
+git-wt add -b <new-branch> <path>
 # or
-git-wt <path> -b <new-branch>
+git-wt add <path> -b <new-branch>
+```
+
+**Example:**
+```bash
+git-wt add -b feature/login ../feature-login
 ```
 
 ### 4. List Worktrees
+
+Lists all worktrees with their paths, commit hashes, branch names, and GitHub PR status (if `gh` CLI is available).
 
 ```bash
 git-wt list
 # or
 git-wt ls
-# or
-git-wt -l
 ```
 
 ### 5. Remove Worktree
 
-Remove a worktree by providing the branch name (or path).
+Remove a worktree by providing the branch name (or path). By default, the associated branch is also deleted.
 
 ```bash
 git-wt remove <branch>
@@ -95,9 +108,21 @@ git-wt remove <branch>
 git-wt rm <branch>
 ```
 
-**Force Removal (if there are changes):**
+**Example:**
+```bash
+git-wt rm feature/login
+```
+
+**Force Removal (if there are uncommitted changes):**
 ```bash
 git-wt rm -f <branch>
+```
+
+**Keep the Branch (don't delete it):**
+```bash
+git-wt rm -k <branch>
+# or
+git-wt rm --keep-branch <branch>
 ```
 
 ## Configuration

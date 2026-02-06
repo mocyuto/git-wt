@@ -19,6 +19,14 @@ Git の `worktree` 機能は便利ですが、`.gitignore` で除外されてい
 
 ## インストール
 
+### Homebrew
+
+macOS での最も簡単なインストール方法は Homebrew を使用することです:
+
+```bash
+brew install mocyuto/tap/git-wt
+```
+
 ### ビルド
 
 ```bash
@@ -43,55 +51,55 @@ Cobra を使用しているため、フラグ（`-b`）は引数の前後のど�
 
 ### 1. ブランチ名のみ指定して作成（パス自動生成）
 
-ブランチ名のみを指定すると、自動的に `../{現在のディレクトリ名}-{ブランチ名}` というパスにワークツリーを作成します。
+ブランチ名のみを指定すると、自動的に `../{現在のディレクトリ名}-{ブランチ名}` というパスにワークツリーを作成します。ブランチが存在しない場合は自動的に作成されます。
 
 ```bash
-git-wt <branch>
+git-wt add <branch>
 ```
 
 **例（プロジェクト名が `pj` の場合）:**
 ```bash
-git-wt feature-abc
+git-wt add feature-abc
 # -> ../pj-feature-abc に作成されます
 ```
 
 ### 2. パスを明示的に指定して作成
 
 ```bash
-git-wt <path> <branch>
+git-wt add <path> <branch>
 ```
 
 **例:**
 ```bash
-git-wt ../debug-fix main
+git-wt add ../debug-fix main
 ```
 
 ### 3. 新規ブランチを作成してセットアップ
 
 ```bash
-git-wt -b <new-branch> <path>
+git-wt add -b <new-branch> <path>
 # または
-git-wt <path> -b <new-branch>
+git-wt add <path> -b <new-branch>
 ```
 
 **例:**
 ```bash
-git-wt -b feature/login ../feature-login
+git-wt add -b feature/login ../feature-login
 ```
 
 ### 4. ワークツリーの一覧表示
+
+すべてのワークツリーをパス、コミットハッシュ、ブランチ名とともに表示します。`gh` CLI が利用可能な場合は、GitHub PR のステータスも表示されます。
 
 ```bash
 git-wt list
 # または
 git-wt ls
-# または
-git-wt -l
 ```
 
 ### 5. ワークツリーの削除
 
-ブランチ名（またはパス）を指定してワークツリーを削除します。
+ブランチ名（またはパス）を指定してワークツリーを削除します。デフォルトでは、関連するブランチも削除されます。
 
 ```bash
 git-wt remove <branch>
@@ -104,9 +112,16 @@ git-wt rm <branch>
 git-wt rm feature/login
 ```
 
-**強制削除（変更がある場合など）:**
+**強制削除（未コミットの変更がある場合）:**
 ```bash
 git-wt rm -f <branch>
+```
+
+**ブランチを残す（削除しない）:**
+```bash
+git-wt rm -k <branch>
+# または
+git-wt rm --keep-branch <branch>
 ```
 
 ## 設定
