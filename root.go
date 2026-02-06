@@ -38,6 +38,13 @@ copying ignored configuration files (like .env) from the main tree to the new wo
 		if len(args) == 1 {
 			// Automate path: ../{current_dir}-{branch}
 			branch = args[0]
+
+			// Auto-create branch if it doesn't exist
+			if !BranchExists(branch) && newBranch == "" {
+				newBranch = branch
+				fmt.Printf("Branch '%s' does not exist. It will be created.\n", branch)
+			}
+
 			cwd, err := os.Getwd()
 			if err != nil {
 				return fmt.Errorf("failed to get current directory: %v", err)
@@ -48,6 +55,12 @@ copying ignored configuration files (like .env) from the main tree to the new wo
 		} else {
 			targetPath = args[0]
 			branch = args[1]
+
+			// Auto-create branch if it doesn't exist
+			if !BranchExists(branch) && newBranch == "" {
+				newBranch = branch
+				fmt.Printf("Branch '%s' does not exist. It will be created.\n", branch)
+			}
 		}
 
 		sourceRoot, err := GetGitRoot()
@@ -132,6 +145,17 @@ func GetGitRoot() (string, error) {
 		return "", err
 	}
 	return strings.TrimSpace(string(out)), nil
+}
+
+func BranchExists(branch string) bool {
+	// Check local branches
+	err := exec.Command("git", "show-ref", "--verify", "--quiet", "refs/heads/"+branch).Run()
+	if err == nil {
+		return true
+	}
+	// Check remote branches
+	err = exec.Command("git", "show-ref", "--verify", "--quiet", "refs/remotes/origin/"+branch).Run()
+	return err == nil
 }
 
 func CreateWorktree(path, newBranch, branch string) error {
