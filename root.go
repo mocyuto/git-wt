@@ -15,68 +15,14 @@ import (
 
 var (
 	newBranch string
-	showList  bool
 	cfgFile   string
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "git-wt <path> [<branch>]",
+	Use:   "git-wt",
 	Short: "Create git worktree and copy ignored files",
 	Long: `git-wt is a CLI tool that extends 'git worktree add' by automatically
 copying ignored configuration files (like .env) from the main tree to the new worktree.`,
-	Args: cobra.ArbitraryArgs,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if showList {
-			return ListWorktrees()
-		}
-
-		if len(args) < 1 {
-			return cmd.Help()
-		}
-
-		var targetPath, branch string
-		if len(args) == 1 {
-			// Automate path: ../{current_dir}-{branch}
-			branch = args[0]
-			cwd, err := os.Getwd()
-			if err != nil {
-				return fmt.Errorf("failed to get current directory: %v", err)
-			}
-			projectName := filepath.Base(cwd)
-			targetPath = filepath.Join("..", fmt.Sprintf("%s-%s", projectName, branch))
-			fmt.Printf("Automated path: %s\n", targetPath)
-		} else {
-			targetPath = args[0]
-			branch = args[1]
-		}
-
-		sourceRoot, err := GetGitRoot()
-		if err != nil {
-			return fmt.Errorf("failed to get git root: %v", err)
-		}
-
-		fmt.Printf("--- Creating worktree at %s ---\n", targetPath)
-		if err := CreateWorktree(targetPath, newBranch, branch); err != nil {
-			return fmt.Errorf("error creating worktree: %v", err)
-		}
-
-		fmt.Println("--- Copying ignored configuration files ---")
-		if err := CopyIgnoredFiles(sourceRoot, targetPath); err != nil {
-			return fmt.Errorf("error copying files: %v", err)
-		}
-
-		fmt.Println("--- Done! ---")
-		fmt.Printf("New worktree is ready at: %s\n", targetPath)
-
-		// Run add hooks
-		RunHooks("add", HookContext{
-			Path:   targetPath,
-			Branch: branch,
-			Repo:   filepath.Base(sourceRoot),
-		})
-
-		return nil
-	},
 }
 
 func Execute() {
@@ -88,8 +34,6 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.Flags().StringVarP(&newBranch, "branch", "b", "", "create and checkout a new branch")
-	rootCmd.Flags().BoolVarP(&showList, "list", "l", false, "list all worktrees")
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config/git-wt/config.yaml)")
 }
 
@@ -132,6 +76,17 @@ func GetGitRoot() (string, error) {
 		return "", err
 	}
 	return strings.TrimSpace(string(out)), nil
+}
+
+func BranchExists(branch string) bool {
+	// Check local branches
+	err := exec.Command("git", "show-ref", "--verify", "--quiet", "refs/heads/"+branch).Run()
+	if err == nil {
+		return true
+	}
+	// Check remote branches
+	err = exec.Command("git", "show-ref", "--verify", "--quiet", "refs/remotes/origin/"+branch).Run()
+	return err == nil
 }
 
 func CreateWorktree(path, newBranch, branch string) error {
