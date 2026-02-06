@@ -10,6 +10,7 @@ import (
 
 var (
 	newBranch string
+	verbose   bool
 )
 
 var rootCmd = &cobra.Command{
