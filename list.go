@@ -31,9 +31,10 @@ type PRInfo struct {
 }
 
 type Worktree struct {
-	Path   string
-	HEAD   string
-	Branch string
+	Path            string
+	HEAD            string
+	Branch          string
+	HasLocalChanges bool
 }
 
 func ListWorktrees() error {
@@ -53,6 +54,10 @@ func ListWorktrees() error {
 	}
 
 	for _, wt := range wts {
+		// Check for local changes
+		hasChanges, _ := checkLocalChanges(wt.Path)
+		wt.HasLocalChanges = hasChanges
+
 		head := wt.HEAD
 		if len(head) > 7 {
 			head = head[:7]
@@ -69,6 +74,9 @@ func ListWorktrees() error {
 				}
 				line += fmt.Sprintf(" PR:#%d [%s]", pr.Number, status)
 			}
+		}
+		if wt.HasLocalChanges {
+			line += " [DIRTY]"
 		}
 		fmt.Println(line)
 	}
@@ -145,4 +153,14 @@ func getPRs() ([]PRInfo, error) {
 		return nil, err
 	}
 	return prs, nil
+}
+
+// checkLocalChanges checks if the worktree has uncommitted changes
+func checkLocalChanges(wtPath string) (bool, error) {
+	cmd := exec.Command("git", "-C", wtPath, "status", "--porcelain")
+	out, err := cmd.Output()
+	if err != nil {
+		return false, err
+	}
+	return len(strings.TrimSpace(string(out))) > 0, nil
 }
