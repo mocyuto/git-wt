@@ -6,8 +6,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-
-	"github.com/spf13/viper"
 )
 
 // HookContext holds information for hook placeholders
@@ -19,24 +17,12 @@ type HookContext struct {
 
 // RunHooks executes hooks for a given action (e.g., "add", "rm")
 func RunHooks(action string, ctx HookContext) {
-	key := "hooks." + action
-	val := viper.Get(key)
-	if val == nil {
-		return
-	}
-
 	var commands []string
-	switch v := val.(type) {
-	case string:
-		commands = []string{v}
-	case []any:
-		for _, item := range v {
-			if s, ok := item.(string); ok {
-				commands = append(commands, s)
-			}
-		}
-	case []string:
-		commands = v
+	switch action {
+	case "add":
+		commands = AppConfig.Hooks.Add
+	case "rm":
+		commands = AppConfig.Hooks.RM
 	}
 
 	if len(commands) == 0 {
