@@ -10,12 +10,10 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var (
 	newBranch string
-	cfgFile   string
 )
 
 var rootCmd = &cobra.Command{
@@ -35,39 +33,6 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config/git-wt/config.yaml)")
-}
-
-func initConfig() {
-	if cfgFile != "" {
-		viper.SetConfigFile(cfgFile)
-	} else {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-
-		configDir := filepath.Join(home, ".config", "git-wt")
-		viper.AddConfigPath(configDir)
-		viper.SetConfigName("config")
-		viper.SetConfigType("yaml")
-
-		// Create default config if not exists
-		configPath := filepath.Join(configDir, "config.yaml")
-		if _, err := os.Stat(configPath); os.IsNotExist(err) {
-			if err := os.MkdirAll(configDir, 0755); err == nil {
-				viper.SetDefault("hooks.add", []string{})
-				viper.SetDefault("hooks.rm", []string{})
-				_ = viper.SafeWriteConfig()
-			}
-		}
-	}
-
-	viper.AutomaticEnv()
-
-	if err := viper.ReadInConfig(); err == nil {
-		// fmt.Println("Using config file:", viper.ConfigFileUsed())
-	}
 }
 
 func GetGitRoot() (string, error) {
@@ -118,6 +83,36 @@ func CopyIgnoredFiles(sourceRoot, targetPath string) error {
 	scanner := bufio.NewScanner(stdout)
 	for scanner.Scan() {
 		relPath := scanner.Text()
+
+		// Filter by ignore patterns in config
+		ignored := false
+		for _, pattern := range AppConfig.Ignore {
+			match, err := filepath.Match(pattern, relPath)
+			if err == nil && match {
+				ignored = true
+				break
+			}
+			// Also check if pattern matches a directory in relPath
+			// filepath.Match doesn't handle directory matching like .gitignore automatically
+			// For simplicity, we also check if any part of the path matches
+			parts := strings.SplitSeq(relPath, string(os.PathSeparator))
+			for part := range parts {
+				match, err := filepath.Match(pattern, part)
+				if err == nil && match {
+					ignored = true
+					break
+				}
+			}
+			if ignored {
+				break
+			}
+		}
+
+		if ignored {
+			fmt.Printf("Skipping ignored file: %s\n", relPath)
+			continue
+		}
+
 		src := filepath.Join(sourceRoot, relPath)
 		dst := filepath.Join(targetPath, relPath)
 
