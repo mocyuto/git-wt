@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/spf13/cobra"
 )
@@ -108,6 +109,8 @@ func CopyIgnoredFiles(sourceRoot, targetPath string) error {
 		return err
 	}
 
+	// Collect all files to copy first
+	var filesToCopy []string
 	scanner := bufio.NewScanner(stdout)
 	for scanner.Scan() {
 		relPath := scanner.Text()
@@ -120,9 +123,6 @@ func CopyIgnoredFiles(sourceRoot, targetPath string) error {
 				ignored = true
 				break
 			}
-			// Also check if pattern matches a directory in relPath
-			// filepath.Match doesn't handle directory matching like .gitignore automatically
-			// For simplicity, we also check if any part of the path matches
 			parts := strings.SplitSeq(relPath, string(os.PathSeparator))
 			for part := range parts {
 				match, err := filepath.Match(pattern, part)
@@ -141,29 +141,58 @@ func CopyIgnoredFiles(sourceRoot, targetPath string) error {
 			continue
 		}
 
+		// Check if it's a file (not directory)
 		src := filepath.Join(sourceRoot, relPath)
-		dst := filepath.Join(targetPath, relPath)
-
 		info, err := os.Stat(src)
-		if err != nil {
-			continue
-		}
-		if info.IsDir() {
+		if err != nil || info.IsDir() {
 			continue
 		}
 
-		if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
-			return fmt.Errorf("failed to create directory for %s: %v", dst, err)
-		}
-
-		if err := copyFile(src, dst); err != nil {
-			fmt.Printf("Failed to copy %s: %v\n", relPath, err)
-		} else {
-			fmt.Printf("Copied: %s\n", relPath)
-		}
+		filesToCopy = append(filesToCopy, relPath)
 	}
 
-	return cmd.Wait()
+	if err := cmd.Wait(); err != nil {
+		return err
+	}
+
+	// Use worker pool pattern to limit concurrency
+	const maxWorkers = 20
+	sem := make(chan struct{}, maxWorkers)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var firstErr error
+
+	for _, relPath := range filesToCopy {
+		wg.Add(1)
+		sem <- struct{}{} // Acquire semaphore
+
+		go func(relPath string) {
+			defer wg.Done()
+			defer func() { <-sem }() // Release semaphore
+
+			src := filepath.Join(sourceRoot, relPath)
+			dst := filepath.Join(targetPath, relPath)
+
+			if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
+				mu.Lock()
+				if firstErr == nil {
+					firstErr = fmt.Errorf("failed to create directory for %s: %v", dst, err)
+				}
+				mu.Unlock()
+				return
+			}
+
+			if err := copyFile(src, dst); err != nil {
+				fmt.Printf("Failed to copy %s: %v\n", relPath, err)
+			} else {
+				fmt.Printf("Copied: %s\n", relPath)
+			}
+		}(relPath)
+	}
+
+	wg.Wait()
+
+	return firstErr
 }
 
 func copyFile(src, dst string) error {
