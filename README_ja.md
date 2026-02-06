@@ -111,7 +111,36 @@ git-wt rm -f <branch>
 
 ## 設定
 
-`git-wt` は `~/.config/git-wt/config.yaml` にある YAML 形式の設定ファイルを使用します。
+`git-wt` は以下の優先順位で設定ファイルを読み込みます（YAML形式）。
+
+1. プロジェクトごとの設定（プロジェクトルートの `git-wt.config.yaml` または `.yml`）
+2. グローバル設定（`~/.config/git-wt/config.yaml`）
+3. `--config` フラグで明示的に指定されたパス
+
+### プロジェクトごとの設定
+
+プロジェクトのルートディレクトリに `git-wt.config.yaml`（または `.yml`）を作成することで、そのプロジェクト固有の設定を定義できます。`hooks` や `ignore` の設定は、グローバル設定に**追加（マージ）**されます。
+
+```yaml
+# git-wt.config.yaml
+ignore:
+  - "*.tmp"
+  - "local-debug.log"
+
+hooks:
+  add:
+    - "npm install"
+```
+
+### カスタム無視パターン
+
+コピー時に除外したいファイルパターンを `ignore` セクションで指定できます。
+
+```yaml
+ignore:
+  - ".env.production"
+  - "secrets/*"
+```
 
 ### カスタムフック
 

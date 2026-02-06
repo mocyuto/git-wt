@@ -102,7 +102,35 @@ git-wt rm -f <branch>
 
 ## Configuration
 
-`git-wt` uses a YAML configuration file located at `~/.config/git-wt/config.yaml`.
+`git-wt` loads configuration from three sources in this priority:
+1. Local project configuration (`git-wt.config.yaml` or `git-wt.config.yml` in project root)
+2. Global configuration (`~/.config/git-wt/config.yaml`)
+3. Explicit configuration path provided via `--config` flag
+
+### Project-Specific Configuration
+
+You can create a `git-wt.config.yaml` (or `.yml`) in your project's root directory to define settings specific to that project. Local settings for `hooks` and `ignore` will be **appended** to the global settings.
+
+```yaml
+# git-wt.config.yaml
+ignore:
+  - "*.tmp"
+  - "local-debug.log"
+
+hooks:
+  add:
+    - "npm install"
+```
+
+### Custom Ignore Patterns
+
+You can specify additional file patterns to be ignored during the copy process. These patterns follow the same format as `.gitignore` (using `filepath.Match`).
+
+```yaml
+ignore:
+  - ".env.production"
+  - "secrets/*"
+```
 
 ### Custom Hooks
 
