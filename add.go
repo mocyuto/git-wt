@@ -60,7 +60,7 @@ automatically copy ignored configuration files (like .env) from the main tree.`,
 		}
 
 		fmt.Println("--- Copying ignored configuration files ---")
-		if err := CopyIgnoredFiles(sourceRoot, targetPath); err != nil {
+		if err := CopyIgnoredFiles(sourceRoot, targetPath, verbose); err != nil {
 			return fmt.Errorf("error copying files: %v", err)
 		}
 
@@ -80,6 +80,7 @@ automatically copy ignored configuration files (like .env) from the main tree.`,
 
 func init() {
 	addCmd.Flags().StringVarP(&newBranch, "branch", "b", "", "create and checkout a new branch")
+	addCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "show detailed output")
 	rootCmd.AddCommand(addCmd)
 }
 
@@ -97,7 +98,7 @@ func CreateWorktree(path, newBranch, branch string) error {
 	return cmd.Run()
 }
 
-func CopyIgnoredFiles(sourceRoot, targetPath string) error {
+func CopyIgnoredFiles(sourceRoot, targetPath string, verbose bool) error {
 	cmd := exec.Command("git", "ls-files", "--others", "--ignored", "--exclude-standard")
 	cmd.Dir = sourceRoot
 	stdout, err := cmd.StdoutPipe()
@@ -115,29 +116,46 @@ func CopyIgnoredFiles(sourceRoot, targetPath string) error {
 	for scanner.Scan() {
 		relPath := scanner.Text()
 
-		// Filter by ignore patterns in config
+		// Filter by ignore patterns in config (gitignore style)
 		ignored := false
 		for _, pattern := range AppConfig.Ignore {
+			// Check if pattern matches the full path
 			match, err := filepath.Match(pattern, relPath)
 			if err == nil && match {
 				ignored = true
 				break
 			}
-			parts := strings.SplitSeq(relPath, string(os.PathSeparator))
-			for part := range parts {
-				match, err := filepath.Match(pattern, part)
+
+			// Check if pattern matches any part of the path
+			// This allows patterns like ".venv" to match "server/.venv/config.py"
+			pathParts := strings.Split(relPath, string(os.PathSeparator))
+			for i := range pathParts {
+				// Try matching the pattern against each path segment
+				match, err := filepath.Match(pattern, pathParts[i])
+				if err == nil && match {
+					ignored = true
+					break
+				}
+
+				// Also try matching against the path from this segment onwards
+				// This allows patterns like "*.log" to match anywhere in the path
+				subPath := strings.Join(pathParts[i:], string(os.PathSeparator))
+				match, err = filepath.Match(pattern, subPath)
 				if err == nil && match {
 					ignored = true
 					break
 				}
 			}
+
 			if ignored {
 				break
 			}
 		}
 
 		if ignored {
-			fmt.Printf("Skipping ignored file: %s\n", relPath)
+			if verbose {
+				fmt.Printf("Skipping ignored file: %s\n", relPath)
+			}
 			continue
 		}
 
@@ -161,6 +179,13 @@ func CopyIgnoredFiles(sourceRoot, targetPath string) error {
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	var firstErr error
+	var completed int
+	totalFiles := len(filesToCopy)
+
+	// Show initial progress
+	if totalFiles > 0 {
+		fmt.Printf("\rProgress: 0/%d (0%%)", totalFiles)
+	}
 
 	for _, relPath := range filesToCopy {
 		wg.Add(1)
@@ -183,14 +208,29 @@ func CopyIgnoredFiles(sourceRoot, targetPath string) error {
 			}
 
 			if err := copyFile(src, dst); err != nil {
-				fmt.Printf("Failed to copy %s: %v\n", relPath, err)
+				if verbose {
+					fmt.Printf("\nFailed to copy %s: %v\n", relPath, err)
+				}
 			} else {
-				fmt.Printf("Copied: %s\n", relPath)
+				mu.Lock()
+				completed++
+				percentage := int(float64(completed) / float64(totalFiles) * 100)
+				if verbose {
+					fmt.Printf("\rProgress: %d/%d (%d%%) - Copied: %s\n", completed, totalFiles, percentage, relPath)
+				} else {
+					fmt.Printf("\rProgress: %d/%d (%d%%)", completed, totalFiles, percentage)
+				}
+				mu.Unlock()
 			}
 		}(relPath)
 	}
 
 	wg.Wait()
+
+	// Print newline after progress display
+	if totalFiles > 0 {
+		fmt.Println()
+	}
 
 	return firstErr
 }
