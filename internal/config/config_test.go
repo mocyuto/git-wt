@@ -72,6 +72,8 @@ ignore: [".global-ignore"]
 hooks:
   add: ["local-add"]
 ignore: [".local-ignore"]
+ports:
+  api: 8080
 `), 0644)
 
 		// Still have previous global config in tmpHome
@@ -96,6 +98,11 @@ ignore: [".local-ignore"]
 		// Ignores should be merged
 		if len(AppConfig.Ignore) != 2 {
 			t.Errorf("Ignores not merged correctly: %v", AppConfig.Ignore)
+		}
+
+		// Ports should be merged
+		if AppConfig.Ports["api"] != 8080 {
+			t.Errorf("Expected port 8080 for api, got %v", AppConfig.Ports["api"])
 		}
 	})
 

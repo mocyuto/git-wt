@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 
@@ -73,6 +74,11 @@ func InitConfig() {
 				AppConfig.Hooks.RM = append(AppConfig.Hooks.RM, localConfig.Hooks.RM...)
 				// Merge ignore patterns
 				AppConfig.Ignore = append(AppConfig.Ignore, localConfig.Ignore...)
+				// Merge ports
+				if AppConfig.Ports == nil {
+					AppConfig.Ports = make(map[string]int)
+				}
+				maps.Copy(AppConfig.Ports, localConfig.Ports)
 			}
 		}
 	}
