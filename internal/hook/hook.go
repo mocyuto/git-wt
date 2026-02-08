@@ -5,20 +5,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 
 	"github.com/mocyuto/git-wt/internal/config"
+	"github.com/mocyuto/git-wt/internal/template"
 )
 
-// HookContext holds information for hook placeholders
-type HookContext struct {
-	Path   string
-	Branch string
-	Repo   string
-}
-
 // RunHooks executes hooks for a given action (e.g., "add", "rm")
-func RunHooks(action string, ctx HookContext) {
+func RunHooks(action string, ctx template.Context) {
 	var commands []string
 	switch action {
 	case "add":
@@ -42,13 +35,12 @@ func RunHooks(action string, ctx HookContext) {
 	}
 }
 
-func executeCommand(cmdStr string, absPath string, ctx HookContext) {
+func executeCommand(cmdStr string, absPath string, ctx template.Context) {
 	fmt.Printf("--- Executing hook: %s ---\n", cmdStr)
 
 	// Replace placeholders
-	replacedCmd := strings.ReplaceAll(cmdStr, "{{.Path}}", absPath)
-	replacedCmd = strings.ReplaceAll(replacedCmd, "{{.Branch}}", ctx.Branch)
-	replacedCmd = strings.ReplaceAll(replacedCmd, "{{.Repo}}", ctx.Repo)
+	ctx.Path = absPath
+	replacedCmd := template.Replace(cmdStr, ctx)
 
 	// Execute via shell to support pipes, redirects, etc.
 	// We use /bin/sh -c because users expect shell behavior
