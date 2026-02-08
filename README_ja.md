@@ -18,6 +18,12 @@ Git の `worktree` 機能は便利ですが、`.gitignore` で除外されてい
 - **ポート管理**: 各ワークツリーに一意のポートインデックスを自動割り当てし、衝突を防止
 - **カスタムフック**: ワークツリーの作成（`add`）や削除（`rm`）に連動して、複数のシェルコマンドを自然に実行
 
+## Badges
+
+[![Release](https://img.shields.io/github/release/mocyuto/git-wt.svg?style=for-the-badge)](https://github.com/mocyuto/git-wt/releases/latest)
+[![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=for-the-badge)](/LICENSE.md)
+[![Build status](https://img.shields.io/github/actions/workflow/status/mocyuto/git-wt/ci.yml?style=for-the-badge&branch=main)](https://github.com/mocyuto/git-wt/actions?workflow=ci)
+
 ## インストール
 
 ### Homebrew
@@ -176,7 +182,7 @@ hooks:
 ## 注意事項
 
 - コピー対象は、実行時のワークツリールートにおいて `git ls-files --others --ignored --exclude-standard` でリストアップされるファイルです。
-- 実行には `git` がインストールされている必要があります。
+- 実行には `git` と　`gh` がインストールされている必要があります。
 
 ## 開発・テスト
 

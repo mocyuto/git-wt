@@ -19,6 +19,12 @@ Git's `worktree` feature is powerful, but files ignored by `.gitignore` (such as
 - **Port Management**: Automatically assigns unique port indexes to each worktree to prevent port collisions.
 - **Custom Hooks**: Execute multiple shell commands naturally after creating (`add`) or removing (`rm`) worktrees.
 
+## Badges
+
+[![Release](https://img.shields.io/github/release/mocyuto/git-wt.svg?style=for-the-badge)](https://github.com/mocyuto/git-wt/releases/latest)
+[![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=for-the-badge)](/LICENSE.md)
+[![Build status](https://img.shields.io/github/actions/workflow/status/mocyuto/git-wt/ci.yml?style=for-the-badge&branch=main)](https://github.com/mocyuto/git-wt/actions?workflow=ci)
+
 ## Installation
 
 ### Homebrew
@@ -176,7 +182,7 @@ hooks:
 
 ## Requirements
 
-- `git` must be installed and available in your environment.
+- `git` and `gh` must be installed and available in your environment.
 
 ## Development & Testing
 
