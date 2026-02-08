@@ -1,4 +1,4 @@
-package main
+package git
 
 import (
 	"bufio"
@@ -6,22 +6,7 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
-
-	"github.com/spf13/cobra"
 )
-
-var listCmd = &cobra.Command{
-	Use:     "list",
-	Aliases: []string{"ls"},
-	Short:   "List all worktrees with PR status",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return ListWorktrees()
-	},
-}
-
-func init() {
-	rootCmd.AddCommand(listCmd)
-}
 
 type PRInfo struct {
 	Number      int    `json:"number"`
@@ -37,54 +22,7 @@ type Worktree struct {
 	HasLocalChanges bool
 }
 
-func ListWorktrees() error {
-	wts, err := getWorktrees()
-	if err != nil {
-		return err
-	}
-
-	prMap := make(map[string]PRInfo)
-	if hasGh() {
-		prs, err := getPRs()
-		if err == nil {
-			for _, pr := range prs {
-				prMap[pr.HeadRefName] = pr
-			}
-		}
-	}
-
-	for _, wt := range wts {
-		// Check for local changes
-		hasChanges, _ := checkLocalChanges(wt.Path)
-		wt.HasLocalChanges = hasChanges
-
-		head := wt.HEAD
-		if len(head) > 7 {
-			head = head[:7]
-		}
-		line := fmt.Sprintf("%-40s %s", wt.Path, head)
-		if wt.Branch != "" {
-			branchName := strings.TrimPrefix(wt.Branch, "refs/heads/")
-			line += fmt.Sprintf(" [%s]", branchName)
-
-			if pr, ok := prMap[branchName]; ok {
-				status := strings.ToUpper(pr.State)
-				if pr.IsDraft {
-					status = "DRAFT"
-				}
-				line += fmt.Sprintf(" PR:#%d [%s]", pr.Number, status)
-			}
-		}
-		if wt.HasLocalChanges {
-			line += " [DIRTY]"
-		}
-		fmt.Println(line)
-	}
-
-	return nil
-}
-
-func getWorktrees() ([]Worktree, error) {
+func GetWorktrees() ([]Worktree, error) {
 	cmd := exec.Command("git", "worktree", "list", "--porcelain")
 	out, err := cmd.Output()
 	if err != nil {
@@ -136,12 +74,12 @@ func getWorktrees() ([]Worktree, error) {
 	return wts, nil
 }
 
-func hasGh() bool {
+func HasGh() bool {
 	_, err := exec.LookPath("gh")
 	return err == nil
 }
 
-func getPRs() ([]PRInfo, error) {
+func GetPRs() ([]PRInfo, error) {
 	cmd := exec.Command("gh", "pr", "list", "--state", "all", "--limit", "100", "--json", "number,state,isDraft,headRefName")
 	out, err := cmd.Output()
 	if err != nil {
@@ -155,8 +93,8 @@ func getPRs() ([]PRInfo, error) {
 	return prs, nil
 }
 
-// checkLocalChanges checks if the worktree has uncommitted changes
-func checkLocalChanges(wtPath string) (bool, error) {
+// CheckLocalChanges checks if the worktree has uncommitted changes
+func CheckLocalChanges(wtPath string) (bool, error) {
 	cmd := exec.Command("git", "-C", wtPath, "status", "--porcelain")
 	out, err := cmd.Output()
 	if err != nil {

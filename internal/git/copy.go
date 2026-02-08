@@ -1,4 +1,4 @@
-package main
+package git
 
 import (
 	"bufio"
@@ -9,96 +9,9 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-
-	"github.com/spf13/cobra"
 )
 
-var addCmd = &cobra.Command{
-	Use:   "add <path> [<branch>]",
-	Short: "Create git worktree and copy ignored files",
-	Long: `Create a new git worktree, optionally creating a new branch, and
-automatically copy ignored configuration files (like .env) from the main tree.`,
-	Args: cobra.MinimumNArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		var targetPath, branch string
-		if len(args) == 1 {
-			// Automate path: ../{current_dir}-{branch}
-			branch = args[0]
-
-			// Auto-create branch if it doesn't exist
-			if !BranchExists(branch) && newBranch == "" {
-				newBranch = branch
-				fmt.Printf("Branch '%s' does not exist. It will be created.\n", branch)
-			}
-
-			cwd, err := os.Getwd()
-			if err != nil {
-				return fmt.Errorf("failed to get current directory: %v", err)
-			}
-			projectName := filepath.Base(cwd)
-			targetPath = filepath.Join("..", fmt.Sprintf("%s-%s", projectName, branch))
-			fmt.Printf("Automated path: %s\n", targetPath)
-		} else {
-			targetPath = args[0]
-			branch = args[1]
-
-			// Auto-create branch if it doesn't exist
-			if !BranchExists(branch) && newBranch == "" {
-				newBranch = branch
-				fmt.Printf("Branch '%s' does not exist. It will be created.\n", branch)
-			}
-		}
-
-		sourceRoot, err := GetGitRoot()
-		if err != nil {
-			return fmt.Errorf("failed to get git root: %v", err)
-		}
-
-		fmt.Printf("--- Creating worktree at %s ---\n", targetPath)
-		if err := CreateWorktree(targetPath, newBranch, branch); err != nil {
-			return fmt.Errorf("error creating worktree: %v", err)
-		}
-
-		fmt.Println("--- Copying ignored configuration files ---")
-		if err := CopyIgnoredFiles(sourceRoot, targetPath, verbose); err != nil {
-			return fmt.Errorf("error copying files: %v", err)
-		}
-
-		fmt.Println("--- Done! ---")
-		fmt.Printf("New worktree is ready at: %s\n", targetPath)
-
-		// Run add hooks
-		RunHooks("add", HookContext{
-			Path:   targetPath,
-			Branch: branch,
-			Repo:   filepath.Base(sourceRoot),
-		})
-
-		return nil
-	},
-}
-
-func init() {
-	addCmd.Flags().StringVarP(&newBranch, "branch", "b", "", "create and checkout a new branch")
-	addCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "show detailed output")
-	rootCmd.AddCommand(addCmd)
-}
-
-func CreateWorktree(path, newBranch, branch string) error {
-	cmdArgs := []string{"worktree", "add", path}
-	if newBranch != "" {
-		cmdArgs = append(cmdArgs, "-b", newBranch)
-	} else if branch != "" {
-		cmdArgs = append(cmdArgs, branch)
-	}
-
-	cmd := exec.Command("git", cmdArgs...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
-}
-
-func CopyIgnoredFiles(sourceRoot, targetPath string, verbose bool) error {
+func CopyIgnoredFiles(sourceRoot, targetPath string, ignorePatterns []string, verbose bool) error {
 	cmd := exec.Command("git", "ls-files", "--others", "--ignored", "--exclude-standard")
 	cmd.Dir = sourceRoot
 	stdout, err := cmd.StdoutPipe()
@@ -116,9 +29,9 @@ func CopyIgnoredFiles(sourceRoot, targetPath string, verbose bool) error {
 	for scanner.Scan() {
 		relPath := scanner.Text()
 
-		// Filter by ignore patterns in config (gitignore style)
+		// Filter by ignore patterns (gitignore style)
 		ignored := false
-		for _, pattern := range AppConfig.Ignore {
+		for _, pattern := range ignorePatterns {
 			// Check if pattern matches the full path
 			match, err := filepath.Match(pattern, relPath)
 			if err == nil && match {
@@ -127,18 +40,14 @@ func CopyIgnoredFiles(sourceRoot, targetPath string, verbose bool) error {
 			}
 
 			// Check if pattern matches any part of the path
-			// This allows patterns like ".venv" to match "server/.venv/config.py"
 			pathParts := strings.Split(relPath, string(os.PathSeparator))
 			for i := range pathParts {
-				// Try matching the pattern against each path segment
 				match, err := filepath.Match(pattern, pathParts[i])
 				if err == nil && match {
 					ignored = true
 					break
 				}
 
-				// Also try matching against the path from this segment onwards
-				// This allows patterns like "*.log" to match anywhere in the path
 				subPath := strings.Join(pathParts[i:], string(os.PathSeparator))
 				match, err = filepath.Match(pattern, subPath)
 				if err == nil && match {
@@ -171,6 +80,22 @@ func CopyIgnoredFiles(sourceRoot, targetPath string, verbose bool) error {
 
 	if err := cmd.Wait(); err != nil {
 		return err
+	}
+
+	// Warning for uncommitted/untracked config files NOT in .gitignore
+	configFiles := []string{"git-wt.config.yml", "git-wt.config.yaml"}
+	for _, cfg := range configFiles {
+		src := filepath.Join(sourceRoot, cfg)
+		if info, err := os.Stat(src); err == nil && !info.IsDir() {
+			// Check if it's ignored by git
+			checkCmd := exec.Command("git", "check-ignore", "-q", cfg)
+			checkCmd.Dir = sourceRoot
+			err := checkCmd.Run()
+			if err != nil {
+				// Exit code is non-zero if not ignored
+				fmt.Printf("\033[33mWarning: %s exists but is not in .gitignore. It will not be copied to the new worktree.\033[0m\n", cfg)
+			}
+		}
 	}
 
 	// Use worker pool pattern to limit concurrency

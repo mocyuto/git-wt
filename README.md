@@ -16,6 +16,7 @@ Git's `worktree` feature is powerful, but files ignored by `.gitignore` (such as
 - **Flexible Interface**: Powered by the Cobra framework for robust flag handling.
 - **Path Automation**: Automatically generates worktree paths based on branch names (`../{project}-{branch}`).
 - **Lifecycle Management**: Support for listing (`list`/`ls`) and removing (`remove`/`rm`) worktrees.
+- **Port Management**: Automatically assigns unique port indexes to each worktree to prevent port collisions.
 - **Custom Hooks**: Execute multiple shell commands naturally after creating (`add`) or removing (`rm`) worktrees.
 
 ## Installation
@@ -46,88 +47,62 @@ sudo mv git-wt /usr/local/bin/git-wt
 > [!TIP]
 > If you name the binary `git-wt` and place it in your `PATH`, you can also call it as `git wt ...`.
 
-## Usage
+## Development Workflow & Behavior
 
-Since it uses Cobra, flags (like `-b`) can be placed either before or after the positional arguments.
+`git-wt` is designed to make context switching seamless for developers by automating the repetitive parts of managing worktrees.
 
-### 1. Create with Branch Name Only (Auto-Path)
+### 1. Starting a New Feature (`add`)
 
-Providing only a branch name will automatically create a worktree at `../{current_dir}-{branch}`. If the branch doesn't exist, it will be created automatically.
+Running `git worktree add` usually leaves you with a fresh directory missing essential local files like `.env`. `git-wt` automates the entire setup:
 
-```bash
-git-wt add <branch>
-```
-
-**Example (if project is `pj`):**
-```bash
-git-wt add feature-abc
-# -> Created at ../pj-feature-abc
-```
-
-### 2. Create with Explicit Path
+1. **Worktree Creation**: Creates the directory and checks out the branch.
+2. **Auto-Path Generation**: Provide just the branch name, and it will be placed at `../{project}-{branch}` automatically.
+3. **Config Synchronization**: Identifies "ignored files" (like `.env`) in your main tree and copies them over, maintaining the directory structure.
+4. **Port Reservation**: Reserves a unique "Port Index" for this specific worktree.
+5. **Automated Setup**: If you define hooks like `npm install` in `hooks.add`, they run immediately after creation.
 
 ```bash
-git-wt add <path> <branch>
+# Start a new feature in a fresh worktree
+git-wt add feature-login
 ```
 
-**Example:**
-```bash
-git-wt add ../debug-fix main
-```
+### 2. Running Multiple Projects Simultaneously (`env` / `ports`)
 
-### 3. Create with New Branch
+When running multiple servers across different worktrees, port collisions are a common pain point. `git-wt` solves this:
 
-```bash
-git-wt add -b <new-branch> <path>
-# or
-git-wt add <path> -b <new-branch>
-```
-
-**Example:**
-```bash
-git-wt add -b feature/login ../feature-login
-```
-
-### 4. List Worktrees
-
-Lists all worktrees with their paths, commit hashes, branch names, and GitHub PR status (if `gh` CLI is available).
+- **Behavior**: Every worktree is assigned a stable index (`0, 1, 2...`).
+- **Usage**: Define base ports (e.g., `api: 8080`) in your config. `git-wt env` generates environment variables (e.g., `8080`, `8081`...) specific to that worktree.
 
 ```bash
-git-wt list
-# or
-git-wt ls
+# Move to a worktree and load its specific environment
+cd ../my-project-feature-login
+eval $(git-wt env)
+
+# $API_PORT is now 8081, preventing collision with other worktrees
+npm start
 ```
 
-### 5. Remove Worktree
+### 3. Cleaning Up (`remove`)
 
-Remove a worktree by providing the branch name (or path). By default, the associated branch is also deleted.
+When a feature is finished, `git-wt` handles the teardown in one go.
+
+- **Behavior**: Deletes the worktree directory and its associated local branch simultaneously (configurable).
+- **Cleanup**: The Port Index is released and becomes available for future worktrees. You can also trigger cleanup scripts via `hooks.rm`.
 
 ```bash
-git-wt remove <branch>
-# or
-git-wt rm <branch>
+# Done with the feature. Delete both directory and branch.
+git-wt rm feature-login
 ```
 
-**Example:**
-```bash
-git-wt rm feature/login
-```
+### 4. Monitoring Assignments (`list` / `ports`)
 
-**Force Removal (if there are uncommitted changes):**
-```bash
-git-wt rm -f <branch>
-```
-
-**Keep the Branch (don't delete it):**
-```bash
-git-wt rm -k <branch>
-# or
-git-wt rm --keep-branch <branch>
-```
+- `list`: Shows which worktrees are active, their branch status, GitHub PR details, and whether they have uncommitted changes.
+- `ports`: Shows the mapping of worktree paths to their assigned port indexes.
 
 ## Configuration
 
 `git-wt` loads configuration from three sources in this priority:
+
 1. Local project configuration (`git-wt.config.yaml` or `git-wt.config.yml` in project root)
 2. Global configuration (`~/.config/git-wt/config.yaml`)
 3. Explicit configuration path provided via `--config` flag
@@ -145,7 +120,21 @@ ignore:
 hooks:
   add:
     - "npm install"
+
+ports:
+  api: 8080
+  web: 3000
 ```
+
+### Port Management Logic
+
+When you add a worktree with `git-wt add`, it is assigned a unique `PortIndex` (starting from 0).
+Calling `git-wt env` will export environment variables using the pattern `UPPER_NAME_PORT = BasePort + PortIndex`.
+
+Example for `PortIndex: 1` with the config above:
+
+- `API_PORT=8081`
+- `WEB_PORT=3001`
 
 ### Custom Ignore Patterns
 
@@ -174,11 +163,11 @@ hooks:
 
 #### Available Placeholders
 
-| Placeholder | Description |
-| :--- | :--- |
-| `{{.Path}}` | Absolute path of the worktree directory. |
-| `{{.Branch}}` | Name of the branch. |
-| `{{.Repo}}` | Name of the repository (base directory name). |
+| Placeholder   | Description                                   |
+| :------------ | :-------------------------------------------- |
+| `{{.Path}}`   | Absolute path of the worktree directory.      |
+| `{{.Branch}}` | Name of the branch.                           |
+| `{{.Repo}}`   | Name of the repository (base directory name). |
 
 #### Note
 

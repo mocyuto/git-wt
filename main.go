@@ -1,5 +1,7 @@
 package main
 
+import "github.com/mocyuto/git-wt/cmd"
+
 func main() {
-	Execute()
+	cmd.Execute()
 }

@@ -1,15 +1,17 @@
-package main
+package config
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 
+	"github.com/mocyuto/git-wt/internal/git"
 	"github.com/spf13/viper"
 )
 
 var (
-	cfgFile string
+	CfgFile string
 )
 
 type Config struct {
@@ -17,12 +19,13 @@ type Config struct {
 		Add []string `mapstructure:"add"`
 		RM  []string `mapstructure:"rm"`
 	} `mapstructure:"hooks"`
-	Ignore []string `mapstructure:"ignore"`
+	Ignore []string       `mapstructure:"ignore"`
+	Ports  map[string]int `mapstructure:"ports"`
 }
 
 var AppConfig Config
 
-func initConfig() {
+func InitConfig() {
 	// Initialize default viper for global/local loading
 	v := viper.New()
 
@@ -56,12 +59,12 @@ func initConfig() {
 	}
 
 	// 2. Load local config
-	gitRoot, _ := GetGitRoot()
+	gitRoot, _ := git.GetGitRoot()
 	if gitRoot != "" {
 		localV := viper.New()
 		localV.AddConfigPath(gitRoot)
 		localV.SetConfigName("git-wt.config")
-		localV.SetConfigType("yml")
+		// Viper will look for .yaml, .yml, .json, etc. if no type is set but we want to be sure
 
 		if err := localV.ReadInConfig(); err == nil {
 			var localConfig Config
@@ -71,14 +74,19 @@ func initConfig() {
 				AppConfig.Hooks.RM = append(AppConfig.Hooks.RM, localConfig.Hooks.RM...)
 				// Merge ignore patterns
 				AppConfig.Ignore = append(AppConfig.Ignore, localConfig.Ignore...)
+				// Merge ports
+				if AppConfig.Ports == nil {
+					AppConfig.Ports = make(map[string]int)
+				}
+				maps.Copy(AppConfig.Ports, localConfig.Ports)
 			}
 		}
 	}
 
 	// 3. Override with --config if provided
-	if cfgFile != "" {
+	if CfgFile != "" {
 		explicitV := viper.New()
-		explicitV.SetConfigFile(cfgFile)
+		explicitV.SetConfigFile(CfgFile)
 		if err := explicitV.ReadInConfig(); err == nil {
 			// Full override if specific config is provided
 			if err := explicitV.Unmarshal(&AppConfig); err != nil {

@@ -1,4 +1,4 @@
-package main
+package hook
 
 import (
 	"fmt"
@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/mocyuto/git-wt/internal/config"
 )
 
 // HookContext holds information for hook placeholders
@@ -20,9 +22,9 @@ func RunHooks(action string, ctx HookContext) {
 	var commands []string
 	switch action {
 	case "add":
-		commands = AppConfig.Hooks.Add
+		commands = config.AppConfig.Hooks.Add
 	case "rm":
-		commands = AppConfig.Hooks.RM
+		commands = config.AppConfig.Hooks.RM
 	}
 
 	if len(commands) == 0 {
