@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"sort"
 	"text/tabwriter"
 
@@ -18,11 +17,11 @@ var portsCmd = &cobra.Command{
 		_ = SaveState()
 
 		if len(AppState.Worktrees) == 0 {
-			fmt.Println("No port assignments found.")
+			cmd.Println("No port assignments found.")
 			return nil
 		}
 
-		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+		w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
 		fmt.Fprintln(w, "INDEX\tWORKTREE PATH")
 
 		// Sort by index
@@ -44,9 +43,9 @@ var portsCmd = &cobra.Command{
 		w.Flush()
 
 		if len(AppConfig.Ports) > 0 {
-			fmt.Println("\nConfigured Base Ports:")
+			cmd.Println("\nConfigured Base Ports:")
 			for name, port := range AppConfig.Ports {
-				fmt.Printf("  - %s: %d\n", name, port)
+				cmd.Printf("  - %s: %d\n", name, port)
 			}
 		}
 
