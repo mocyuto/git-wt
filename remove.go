@@ -57,6 +57,13 @@ var removeCmd = &cobra.Command{
 			Repo:   filepath.Base(gitRoot),
 		})
 
+		// Release port index
+		absPath, _ := filepath.Abs(path)
+		_ = LoadState()
+		ReleasePortIndex(absPath)
+		CleanupState()
+		_ = SaveState()
+
 		fmt.Println("--- Done! ---")
 		return nil
 	},

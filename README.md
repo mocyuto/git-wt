@@ -16,6 +16,7 @@ Git's `worktree` feature is powerful, but files ignored by `.gitignore` (such as
 - **Flexible Interface**: Powered by the Cobra framework for robust flag handling.
 - **Path Automation**: Automatically generates worktree paths based on branch names (`../{project}-{branch}`).
 - **Lifecycle Management**: Support for listing (`list`/`ls`) and removing (`remove`/`rm`) worktrees.
+- **Port Management**: Automatically assigns unique port indexes to each worktree to prevent port collisions.
 - **Custom Hooks**: Execute multiple shell commands naturally after creating (`add`) or removing (`rm`) worktrees.
 
 ## Installation
@@ -59,6 +60,7 @@ git-wt add <branch>
 ```
 
 **Example (if project is `pj`):**
+
 ```bash
 git-wt add feature-abc
 # -> Created at ../pj-feature-abc
@@ -71,6 +73,7 @@ git-wt add <path> <branch>
 ```
 
 **Example:**
+
 ```bash
 git-wt add ../debug-fix main
 ```
@@ -84,6 +87,7 @@ git-wt add <path> -b <new-branch>
 ```
 
 **Example:**
+
 ```bash
 git-wt add -b feature/login ../feature-login
 ```
@@ -109,25 +113,45 @@ git-wt rm <branch>
 ```
 
 **Example:**
+
 ```bash
 git-wt rm feature/login
 ```
 
 **Force Removal (if there are uncommitted changes):**
+
 ```bash
 git-wt rm -f <branch>
 ```
 
 **Keep the Branch (don't delete it):**
+
 ```bash
 git-wt rm -k <branch>
 # or
 git-wt rm --keep-branch <branch>
 ```
 
+### 6. Export Port Variables
+
+Generates shell export commands for variables defined in your config, offset by the worktree's assigned index.
+
+```bash
+eval $(git-wt env)
+```
+
+### 7. List Port Assignments
+
+Lists all worktree paths and their assigned port indexes.
+
+```bash
+git-wt ports
+```
+
 ## Configuration
 
 `git-wt` loads configuration from three sources in this priority:
+
 1. Local project configuration (`git-wt.config.yaml` or `git-wt.config.yml` in project root)
 2. Global configuration (`~/.config/git-wt/config.yaml`)
 3. Explicit configuration path provided via `--config` flag
@@ -145,7 +169,21 @@ ignore:
 hooks:
   add:
     - "npm install"
+
+ports:
+  api: 8080
+  web: 3000
 ```
+
+### Port Management Logic
+
+When you add a worktree with `git-wt add`, it is assigned a unique `PortIndex` (starting from 0).
+Calling `git-wt env` will export environment variables using the pattern `UPPER_NAME_PORT = BasePort + PortIndex`.
+
+Example for `PortIndex: 1` with the config above:
+
+- `API_PORT=8081`
+- `WEB_PORT=3001`
 
 ### Custom Ignore Patterns
 
@@ -174,11 +212,11 @@ hooks:
 
 #### Available Placeholders
 
-| Placeholder | Description |
-| :--- | :--- |
-| `{{.Path}}` | Absolute path of the worktree directory. |
-| `{{.Branch}}` | Name of the branch. |
-| `{{.Repo}}` | Name of the repository (base directory name). |
+| Placeholder   | Description                                   |
+| :------------ | :-------------------------------------------- |
+| `{{.Path}}`   | Absolute path of the worktree directory.      |
+| `{{.Branch}}` | Name of the branch.                           |
+| `{{.Repo}}`   | Name of the repository (base directory name). |
 
 #### Note
 

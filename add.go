@@ -67,6 +67,13 @@ automatically copy ignored configuration files (like .env) from the main tree.`,
 		fmt.Println("--- Done! ---")
 		fmt.Printf("New worktree is ready at: %s\n", targetPath)
 
+		// Assign port index
+		absPath, _ := filepath.Abs(targetPath)
+		_ = LoadState()
+		idx := AssignPortIndex(absPath)
+		_ = SaveState()
+		fmt.Printf("Assigned Port Index: %d\n", idx)
+
 		// Run add hooks
 		RunHooks("add", HookContext{
 			Path:   targetPath,

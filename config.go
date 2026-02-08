@@ -17,7 +17,8 @@ type Config struct {
 		Add []string `mapstructure:"add"`
 		RM  []string `mapstructure:"rm"`
 	} `mapstructure:"hooks"`
-	Ignore []string `mapstructure:"ignore"`
+	Ignore []string       `mapstructure:"ignore"`
+	Ports  map[string]int `mapstructure:"ports"`
 }
 
 var AppConfig Config
@@ -61,7 +62,7 @@ func initConfig() {
 		localV := viper.New()
 		localV.AddConfigPath(gitRoot)
 		localV.SetConfigName("git-wt.config")
-		localV.SetConfigType("yml")
+		// Viper will look for .yaml, .yml, .json, etc. if no type is set but we want to be sure
 
 		if err := localV.ReadInConfig(); err == nil {
 			var localConfig Config
