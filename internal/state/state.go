@@ -1,4 +1,4 @@
-package cmd
+package state
 
 import (
 	"encoding/json"

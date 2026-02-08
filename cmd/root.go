@@ -2,15 +2,9 @@ package cmd
 
 import (
 	"os"
-	"os/exec"
-	"strings"
 
+	"github.com/mocyuto/git-wt/internal/config"
 	"github.com/spf13/cobra"
-)
-
-var (
-	newBranch string
-	verbose   bool
 )
 
 var rootCmd = &cobra.Command{
@@ -27,26 +21,7 @@ func Execute() {
 }
 
 func init() {
-	cobra.OnInitialize(initConfig)
+	cobra.OnInitialize(config.InitConfig)
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config/git-wt/config.yaml)")
-}
-
-func GetGitRoot() (string, error) {
-	out, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(string(out)), nil
-}
-
-func BranchExists(branch string) bool {
-	// Check local branches
-	err := exec.Command("git", "show-ref", "--verify", "--quiet", "refs/heads/"+branch).Run()
-	if err == nil {
-		return true
-	}
-	// Check remote branches
-	err = exec.Command("git", "show-ref", "--verify", "--quiet", "refs/remotes/origin/"+branch).Run()
-	return err == nil
+	rootCmd.PersistentFlags().StringVar(&config.CfgFile, "config", "", "config file (default is $HOME/.config/git-wt/config.yaml)")
 }

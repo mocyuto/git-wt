@@ -1,12 +1,10 @@
 package cmd
 
 import (
-	"bufio"
-	"encoding/json"
 	"fmt"
-	"os/exec"
 	"strings"
 
+	"github.com/mocyuto/git-wt/internal/git"
 	"github.com/spf13/cobra"
 )
 
@@ -23,29 +21,15 @@ func init() {
 	rootCmd.AddCommand(listCmd)
 }
 
-type PRInfo struct {
-	Number      int    `json:"number"`
-	State       string `json:"state"`
-	IsDraft     bool   `json:"isDraft"`
-	HeadRefName string `json:"headRefName"`
-}
-
-type Worktree struct {
-	Path            string
-	HEAD            string
-	Branch          string
-	HasLocalChanges bool
-}
-
 func ListWorktrees() error {
-	wts, err := getWorktrees()
+	wts, err := git.GetWorktrees()
 	if err != nil {
 		return err
 	}
 
-	prMap := make(map[string]PRInfo)
-	if hasGh() {
-		prs, err := getPRs()
+	prMap := make(map[string]git.PRInfo)
+	if git.HasGh() {
+		prs, err := git.GetPRs()
 		if err == nil {
 			for _, pr := range prs {
 				prMap[pr.HeadRefName] = pr
@@ -55,7 +39,7 @@ func ListWorktrees() error {
 
 	for _, wt := range wts {
 		// Check for local changes
-		hasChanges, _ := checkLocalChanges(wt.Path)
+		hasChanges, _ := git.CheckLocalChanges(wt.Path)
 		wt.HasLocalChanges = hasChanges
 
 		head := wt.HEAD
@@ -82,85 +66,4 @@ func ListWorktrees() error {
 	}
 
 	return nil
-}
-
-func getWorktrees() ([]Worktree, error) {
-	cmd := exec.Command("git", "worktree", "list", "--porcelain")
-	out, err := cmd.Output()
-	if err != nil {
-		return nil, fmt.Errorf("failed to list worktrees: %v", err)
-	}
-
-	var wts []Worktree
-	var current *Worktree
-
-	scanner := bufio.NewScanner(strings.NewReader(string(out)))
-	for scanner.Scan() {
-		line := scanner.Text()
-		if line == "" {
-			if current != nil {
-				wts = append(wts, *current)
-				current = nil
-			}
-			continue
-		}
-
-		parts := strings.SplitN(line, " ", 2)
-		if len(parts) < 2 {
-			continue
-		}
-
-		key := parts[0]
-		value := parts[1]
-
-		switch key {
-		case "worktree":
-			if current != nil {
-				wts = append(wts, *current)
-			}
-			current = &Worktree{Path: value}
-		case "HEAD":
-			if current != nil {
-				current.HEAD = value
-			}
-		case "branch":
-			if current != nil {
-				current.Branch = value
-			}
-		}
-	}
-	if current != nil {
-		wts = append(wts, *current)
-	}
-
-	return wts, nil
-}
-
-func hasGh() bool {
-	_, err := exec.LookPath("gh")
-	return err == nil
-}
-
-func getPRs() ([]PRInfo, error) {
-	cmd := exec.Command("gh", "pr", "list", "--state", "all", "--limit", "100", "--json", "number,state,isDraft,headRefName")
-	out, err := cmd.Output()
-	if err != nil {
-		return nil, err
-	}
-
-	var prs []PRInfo
-	if err := json.Unmarshal(out, &prs); err != nil {
-		return nil, err
-	}
-	return prs, nil
-}
-
-// checkLocalChanges checks if the worktree has uncommitted changes
-func checkLocalChanges(wtPath string) (bool, error) {
-	cmd := exec.Command("git", "-C", wtPath, "status", "--porcelain")
-	out, err := cmd.Output()
-	if err != nil {
-		return false, err
-	}
-	return len(strings.TrimSpace(string(out))) > 0, nil
 }

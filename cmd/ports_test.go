@@ -6,6 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/mocyuto/git-wt/internal/config"
+	"github.com/mocyuto/git-wt/internal/state"
 )
 
 func TestPortsCmd(t *testing.T) {
@@ -21,8 +24,8 @@ func TestPortsCmd(t *testing.T) {
 	defer os.Setenv("HOME", origHome)
 
 	t.Run("Empty state", func(t *testing.T) {
-		AppState.Worktrees = make(map[string]int)
-		SaveState()
+		state.AppState.Worktrees = make(map[string]int)
+		state.SaveState()
 
 		buf := new(bytes.Buffer)
 		portsCmd.SetOut(buf)
@@ -46,11 +49,11 @@ func TestPortsCmd(t *testing.T) {
 		os.MkdirAll(wt2, 0755)
 
 		// Setup initial state
-		AppState.Worktrees = map[string]int{
+		state.AppState.Worktrees = map[string]int{
 			wt1: 0,
 			wt2: 1,
 		}
-		SaveState()
+		state.SaveState()
 
 		buf := new(bytes.Buffer)
 		portsCmd.SetOut(buf)
@@ -73,7 +76,7 @@ func TestPortsCmd(t *testing.T) {
 	})
 
 	t.Run("With configured base ports", func(t *testing.T) {
-		AppConfig.Ports = map[string]int{
+		config.AppConfig.Ports = map[string]int{
 			"api": 8080,
 		}
 

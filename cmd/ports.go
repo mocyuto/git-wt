@@ -5,6 +5,8 @@ import (
 	"sort"
 	"text/tabwriter"
 
+	"github.com/mocyuto/git-wt/internal/config"
+	"github.com/mocyuto/git-wt/internal/state"
 	"github.com/spf13/cobra"
 )
 
@@ -12,11 +14,11 @@ var portsCmd = &cobra.Command{
 	Use:   "ports",
 	Short: "List all port assignments",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		_ = LoadState()
-		CleanupState()
-		_ = SaveState()
+		_ = state.LoadState()
+		state.CleanupState()
+		_ = state.SaveState()
 
-		if len(AppState.Worktrees) == 0 {
+		if len(state.AppState.Worktrees) == 0 {
 			cmd.Println("No port assignments found.")
 			return nil
 		}
@@ -30,7 +32,7 @@ var portsCmd = &cobra.Command{
 			idx  int
 		}
 		var assignments []assignment
-		for p, i := range AppState.Worktrees {
+		for p, i := range state.AppState.Worktrees {
 			assignments = append(assignments, assignment{p, i})
 		}
 		sort.Slice(assignments, func(i, j int) bool {
@@ -42,9 +44,9 @@ var portsCmd = &cobra.Command{
 		}
 		w.Flush()
 
-		if len(AppConfig.Ports) > 0 {
+		if len(config.AppConfig.Ports) > 0 {
 			cmd.Println("\nConfigured Base Ports:")
-			for name, port := range AppConfig.Ports {
+			for name, port := range config.AppConfig.Ports {
 				cmd.Printf("  - %s: %d\n", name, port)
 			}
 		}

@@ -1,15 +1,16 @@
-package cmd
+package config
 
 import (
 	"fmt"
 	"os"
 	"path/filepath"
 
+	"github.com/mocyuto/git-wt/internal/git"
 	"github.com/spf13/viper"
 )
 
 var (
-	cfgFile string
+	CfgFile string
 )
 
 type Config struct {
@@ -23,7 +24,7 @@ type Config struct {
 
 var AppConfig Config
 
-func initConfig() {
+func InitConfig() {
 	// Initialize default viper for global/local loading
 	v := viper.New()
 
@@ -57,7 +58,7 @@ func initConfig() {
 	}
 
 	// 2. Load local config
-	gitRoot, _ := GetGitRoot()
+	gitRoot, _ := git.GetGitRoot()
 	if gitRoot != "" {
 		localV := viper.New()
 		localV.AddConfigPath(gitRoot)
@@ -77,9 +78,9 @@ func initConfig() {
 	}
 
 	// 3. Override with --config if provided
-	if cfgFile != "" {
+	if CfgFile != "" {
 		explicitV := viper.New()
-		explicitV.SetConfigFile(cfgFile)
+		explicitV.SetConfigFile(CfgFile)
 		if err := explicitV.ReadInConfig(); err == nil {
 			// Full override if specific config is provided
 			if err := explicitV.Unmarshal(&AppConfig); err != nil {
