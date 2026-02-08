@@ -82,6 +82,22 @@ func CopyIgnoredFiles(sourceRoot, targetPath string, ignorePatterns []string, ve
 		return err
 	}
 
+	// Warning for uncommitted/untracked config files NOT in .gitignore
+	configFiles := []string{"git-wt.config.yml", "git-wt.config.yaml"}
+	for _, cfg := range configFiles {
+		src := filepath.Join(sourceRoot, cfg)
+		if info, err := os.Stat(src); err == nil && !info.IsDir() {
+			// Check if it's ignored by git
+			checkCmd := exec.Command("git", "check-ignore", "-q", cfg)
+			checkCmd.Dir = sourceRoot
+			err := checkCmd.Run()
+			if err != nil {
+				// Exit code is non-zero if not ignored
+				fmt.Printf("\033[33mWarning: %s exists but is not in .gitignore. It will not be copied to the new worktree.\033[0m\n", cfg)
+			}
+		}
+	}
+
 	// Use worker pool pattern to limit concurrency
 	const maxWorkers = 20
 	sem := make(chan struct{}, maxWorkers)
