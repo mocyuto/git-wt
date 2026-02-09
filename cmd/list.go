@@ -2,9 +2,12 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"sort"
 	"strings"
+	"text/tabwriter"
 
+	"github.com/mocyuto/git-wt/internal/config"
 	"github.com/mocyuto/git-wt/internal/git"
 	"github.com/mocyuto/git-wt/internal/state"
 	"github.com/spf13/cobra"
@@ -50,6 +53,9 @@ func ListWorktrees() error {
 		}
 	}
 
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(w, "PATH\tCOMMIT\tBRANCH\tSTATUS\tPORTS")
+
 	for _, wt := range wts {
 		// Check for local changes
 		hasChanges, _ := git.CheckLocalChanges(wt.Path)
@@ -59,39 +65,40 @@ func ListWorktrees() error {
 		if len(head) > 7 {
 			head = head[:7]
 		}
-		line := fmt.Sprintf("%-40s %s", wt.Path, head)
-		if wt.Branch != "" {
-			branchName := strings.TrimPrefix(wt.Branch, "refs/heads/")
-			line += fmt.Sprintf(" [%s]", branchName)
 
+		branchName := ""
+		if wt.Branch != "" {
+			branchName = strings.TrimPrefix(wt.Branch, "refs/heads/")
 			if pr, ok := prMap[branchName]; ok {
 				status := strings.ToUpper(pr.State)
 				if pr.IsDraft {
 					status = "DRAFT"
 				}
-				line += fmt.Sprintf(" PR:#%d [%s]", pr.Number, status)
+				branchName += fmt.Sprintf(" (PR:#%d [%s])", pr.Number, status)
 			}
 		}
 
+		portStr := "-"
 		if ports, ok := portsMap[wt.Path]; ok {
 			var portInfos []string
 			for name, idx := range ports {
-				// We don't have basePort here easily without config,
-				// but showing the index or the actual port if we had basePort would be better.
-				// For now, let's just show key:index.
-				portInfos = append(portInfos, fmt.Sprintf("%s:%d", name, idx))
+				basePort := config.AppConfig.Ports[name]
+				portInfos = append(portInfos, fmt.Sprintf("%s:%d", name, basePort+idx))
 			}
 			if len(portInfos) > 0 {
 				sort.Strings(portInfos)
-				line += fmt.Sprintf(" ports:[%s]", strings.Join(portInfos, ","))
+				portStr = strings.Join(portInfos, ",")
 			}
 		}
 
+		statusStr := ""
 		if wt.HasLocalChanges {
-			line += " [DIRTY]"
+			statusStr = "[DIRTY]"
 		}
-		fmt.Println(line)
+
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", wt.Path, head, branchName, statusStr, portStr)
 	}
+	w.Flush()
 
 	return nil
 }
