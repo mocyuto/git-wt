@@ -20,15 +20,19 @@ var envCmd = &cobra.Command{
 Usage: eval $(git-wt env)`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		_ = state.LoadState()
-		idx, found := state.GetCurrentWorktreePortIndex()
+		ports, found := state.GetCurrentWorktreePorts()
 		if !found {
-			return logger.Errorf("current directory is not a managed worktree index")
+			return logger.Errorf("current directory is not a managed worktree")
 		}
 
 		// 1. Export ports
 		if len(config.AppConfig.Ports) > 0 {
 			cmd.Println("# Port Assignments")
 			for name, basePort := range config.AppConfig.Ports {
+				idx, ok := ports[name]
+				if !ok {
+					continue
+				}
 				envName := strings.ToUpper(name) + "_PORT"
 				port := basePort + idx
 				cmd.Printf("export %s=%d\n", envName, port)

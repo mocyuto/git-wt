@@ -60,8 +60,10 @@ var removeCmd = &cobra.Command{
 
 		// Release port index
 		absPath, _ := filepath.Abs(path)
+		gitRoot, _ = git.GetGitRoot()
+		projectName := filepath.Base(gitRoot)
 		_ = state.LoadState()
-		state.ReleasePortIndex(absPath)
+		state.ReleasePortIndex(projectName, absPath)
 		state.CleanupState()
 		_ = state.SaveState()
 

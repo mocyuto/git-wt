@@ -2,6 +2,8 @@ package state
 
 import (
 	"encoding/json"
+	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"sort"
@@ -9,7 +11,15 @@ import (
 )
 
 type State struct {
-	Worktrees map[string]int `json:"worktrees"` // map[absPath]portIndex
+	Projects map[string]ProjectState `json:"projects"` // map[projectName]ProjectState
+}
+
+type ProjectState struct {
+	Worktrees map[string]WorktreeState `json:"worktrees"` // map[absPath]WorktreeState
+}
+
+type WorktreeState struct {
+	Ports map[string]int `json:"ports"` // map[portKey]portIndex
 }
 
 var AppState State
@@ -29,7 +39,7 @@ func LoadState() error {
 	}
 
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		AppState.Worktrees = make(map[string]int)
+		AppState.Projects = make(map[string]ProjectState)
 		return nil
 	}
 
@@ -38,7 +48,16 @@ func LoadState() error {
 		return err
 	}
 
-	return json.Unmarshal(data, &AppState)
+	err = json.Unmarshal(data, &AppState)
+	if err != nil {
+		// If unmarshal fails (e.g. old format), reset state
+		AppState.Projects = make(map[string]ProjectState)
+		return nil
+	}
+	if AppState.Projects == nil {
+		AppState.Projects = make(map[string]ProjectState)
+	}
+	return nil
 }
 
 func SaveState() error {
@@ -60,71 +79,123 @@ func SaveState() error {
 	return os.WriteFile(path, data, 0644)
 }
 
-func AssignPortIndex(path string) int {
-	if idx, ok := AppState.Worktrees[path]; ok {
+func AssignPortIndex(projectName, path, portKey string, basePort int) int {
+	if AppState.Projects == nil {
+		AppState.Projects = make(map[string]ProjectState)
+	}
+
+	proj, ok := AppState.Projects[projectName]
+	if !ok {
+		proj = ProjectState{Worktrees: make(map[string]WorktreeState)}
+	}
+
+	wt, ok := proj.Worktrees[path]
+	if !ok {
+		wt = WorktreeState{Ports: make(map[string]int)}
+	}
+
+	if idx, ok := wt.Ports[portKey]; ok {
 		return idx
 	}
 
-	// Find the smallest available index
-	used := make(map[int]bool)
-	for _, idx := range AppState.Worktrees {
-		used[idx] = true
+	usedIndexes := make(map[int]bool)
+	for _, pState := range AppState.Projects {
+		for _, wState := range pState.Worktrees {
+			if idx, found := wState.Ports[portKey]; found {
+				usedIndexes[idx] = true
+			}
+		}
 	}
 
 	idx := 0
 	for {
-		if !used[idx] {
-			break
+		if !usedIndexes[idx] {
+			if isPortAvailable(basePort + idx) {
+				break
+			}
+			usedIndexes[idx] = true
 		}
 		idx++
 	}
 
-	AppState.Worktrees[path] = idx
+	wt.Ports[portKey] = idx
+	proj.Worktrees[path] = wt
+	AppState.Projects[projectName] = proj
 	return idx
 }
 
-func ReleasePortIndex(path string) {
-	delete(AppState.Worktrees, path)
+func isPortAvailable(port int) bool {
+	// Simple check using net.Listen
+	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	if err != nil {
+		return false
+	}
+	ln.Close()
+	return true
+}
+
+func ReleasePortIndex(projectName, path string) {
+	if proj, ok := AppState.Projects[projectName]; ok {
+		delete(proj.Worktrees, path)
+		if len(proj.Worktrees) == 0 {
+			delete(AppState.Projects, projectName)
+		} else {
+			AppState.Projects[projectName] = proj
+		}
+	}
 }
 
 func CleanupState() {
 	// Remove paths that no longer exist
-	for path := range AppState.Worktrees {
-		if _, err := os.Stat(path); os.IsNotExist(err) {
-			delete(AppState.Worktrees, path)
+	for projectName, proj := range AppState.Projects {
+		changed := false
+		for path := range proj.Worktrees {
+			if _, err := os.Stat(path); os.IsNotExist(err) {
+				delete(proj.Worktrees, path)
+				changed = true
+			}
+		}
+		if changed {
+			if len(proj.Worktrees) == 0 {
+				delete(AppState.Projects, projectName)
+			} else {
+				AppState.Projects[projectName] = proj
+			}
 		}
 	}
 }
 
-func GetCurrentWorktreePortIndex() (int, bool) {
+func GetCurrentWorktreePorts() (map[string]int, bool) {
 	cwd, err := os.Getwd()
 	if err != nil {
-		return 0, false
+		return nil, false
 	}
 	absCwd, _ := filepath.Abs(cwd)
 
-	// Check if we are in one of the registered worktrees
-	// We handle subdirectories by checking if absCwd starts with one of the registered paths
-
-	// Sort registered paths by length (longest first) to match most specific worktree
-	type wt struct {
-		path string
-		idx  int
+	// Search across all projects for the best matching worktree path
+	type wtMatch struct {
+		ports map[string]int
+		path  string
 	}
-	var wts []wt
-	for p, i := range AppState.Worktrees {
-		wts = append(wts, wt{p, i})
-	}
-	sort.Slice(wts, func(i, j int) bool {
-		return len(wts[i].path) > len(wts[j].path)
-	})
+	var matches []wtMatch
 
-	for _, w := range wts {
-		rel, err := filepath.Rel(w.path, absCwd)
-		if err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
-			return w.idx, true
+	for _, proj := range AppState.Projects {
+		for p, wt := range proj.Worktrees {
+			rel, err := filepath.Rel(p, absCwd)
+			if err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+				matches = append(matches, wtMatch{wt.Ports, p})
+			}
 		}
 	}
 
-	return 0, false
+	if len(matches) == 0 {
+		return nil, false
+	}
+
+	// Sort by path length descending to get the most specific match
+	sort.Slice(matches, func(i, j int) bool {
+		return len(matches[i].path) > len(matches[j].path)
+	})
+
+	return matches[0].ports, true
 }

@@ -19,7 +19,7 @@ var portsCmd = &cobra.Command{
 		state.CleanupState()
 		_ = state.SaveState()
 
-		if len(state.AppState.Worktrees) == 0 {
+		if len(state.AppState.Projects) == 0 {
 			cmd.Println("No port assignments found.")
 			return nil
 		}
@@ -34,30 +34,40 @@ var portsCmd = &cobra.Command{
 		sort.Strings(portNames)
 
 		// Header
-		fmt.Fprint(w, "INDEX\tWORKTREE PATH")
+		fmt.Fprint(w, "PROJECT\tWORKTREE PATH")
 		for _, name := range portNames {
 			fmt.Fprintf(w, "\t%s", strings.ToUpper(name))
 		}
 		fmt.Fprintln(w)
 
-		// Sort assignments by index
+		// Collect and sort assignments by project then path
 		type assignment struct {
-			path string
-			idx  int
+			projectName string
+			path        string
+			ports       map[string]int
 		}
 		var assignments []assignment
-		for p, i := range state.AppState.Worktrees {
-			assignments = append(assignments, assignment{p, i})
+		for pn, proj := range state.AppState.Projects {
+			for p, wt := range proj.Worktrees {
+				assignments = append(assignments, assignment{pn, p, wt.Ports})
+			}
 		}
 		sort.Slice(assignments, func(i, j int) bool {
-			return assignments[i].idx < assignments[j].idx
+			if assignments[i].projectName != assignments[j].projectName {
+				return assignments[i].projectName < assignments[j].projectName
+			}
+			return assignments[i].path < assignments[j].path
 		})
 
 		for _, a := range assignments {
-			fmt.Fprintf(w, "%d\t%s", a.idx, a.path)
+			fmt.Fprintf(w, "%s\t%s", a.projectName, a.path)
 			for _, name := range portNames {
-				basePort := config.AppConfig.Ports[name]
-				fmt.Fprintf(w, "\t%d", basePort+a.idx)
+				if idx, ok := a.ports[name]; ok {
+					basePort := config.AppConfig.Ports[name]
+					fmt.Fprintf(w, "\t%d", basePort+idx)
+				} else {
+					fmt.Fprint(w, "\t-")
+				}
 			}
 			fmt.Fprintln(w)
 		}
