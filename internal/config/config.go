@@ -70,7 +70,7 @@ func InitConfig() {
 	}
 
 	// 2. Load local config
-	gitRoot, _ := git.GetGitRoot()
+	gitRoot, _ := git.GetMainProjectRoot()
 	if gitRoot != "" {
 		localV := viper.New()
 		localV.AddConfigPath(gitRoot)

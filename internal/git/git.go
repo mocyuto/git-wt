@@ -16,6 +16,23 @@ func GetGitRoot() (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
+func GetMainProjectRoot() (string, error) {
+	out, err := exec.Command("git", "rev-parse", "--path-format=absolute", "--git-common-dir").Output()
+	if err != nil {
+		return "", err
+	}
+	path := strings.TrimSpace(string(out))
+	// If it's a worktree, git-common-dir returns the .git directory of the main project.
+	// We want the working directory of the main project.
+	if strings.HasSuffix(path, "/.git") {
+		return strings.TrimSuffix(path, "/.git"), nil
+	}
+	if strings.HasSuffix(path, string(os.PathSeparator)+".git") {
+		return strings.TrimSuffix(path, string(os.PathSeparator)+".git"), nil
+	}
+	return path, nil
+}
+
 func GetCurrentBranch() (string, error) {
 	out, err := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD").Output()
 	if err != nil {

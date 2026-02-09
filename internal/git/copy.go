@@ -70,6 +70,14 @@ func CopyIgnoredFiles(sourceRoot, targetPath string, ignorePatterns []string, ve
 			continue
 		}
 
+		// Explicitly skip git-wt configuration files
+		if relPath == "git-wt.config.yml" || relPath == "git-wt.config.yaml" {
+			if verbose {
+				fmt.Printf("Skipping configuration file: %s\n", relPath)
+			}
+			continue
+		}
+
 		// Check if it's a file (not directory)
 		src := filepath.Join(sourceRoot, relPath)
 		info, err := os.Stat(src)

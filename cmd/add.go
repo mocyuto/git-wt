@@ -76,7 +76,7 @@ automatically copy ignored configuration files (like .env) from the main tree.`,
 		// Assign port index
 		absPath, _ := filepath.Abs(targetPath)
 		_ = state.LoadState() // Assign ports
-		gitRoot, _ := git.GetGitRoot()
+		gitRoot, _ := git.GetMainProjectRoot()
 		projectName := filepath.Base(gitRoot)
 		for name, basePort := range config.AppConfig.Ports {
 			state.AssignPortIndex(projectName, absPath, name, basePort)
