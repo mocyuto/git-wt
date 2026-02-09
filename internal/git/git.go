@@ -15,6 +15,14 @@ func GetGitRoot() (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
+func GetCurrentBranch() (string, error) {
+	out, err := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD").Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
 func BranchExists(branch string) bool {
 	// Check local branches
 	err := exec.Command("git", "show-ref", "--verify", "--quiet", "refs/heads/"+branch).Run()

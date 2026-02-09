@@ -74,6 +74,8 @@ hooks:
 ignore: [".local-ignore"]
 ports:
   api: 8080
+env:
+  LOCAL_ENV: "local-val"
 `), 0644)
 
 		// Still have previous global config in tmpHome
@@ -104,6 +106,11 @@ ports:
 		if AppConfig.Ports["api"] != 8080 {
 			t.Errorf("Expected port 8080 for api, got %v", AppConfig.Ports["api"])
 		}
+
+		// Env should be loaded (Viper lowercases by default)
+		if AppConfig.Env["LOCAL_ENV"] != "local-val" {
+			t.Errorf("Expected env LOCAL_ENV 'local-val', got %v", AppConfig.Env["LOCAL_ENV"])
+		}
 	})
 
 	t.Run("Explicit config override", func(t *testing.T) {
@@ -122,7 +129,37 @@ ports:
 		if AppConfig.Ports["web"] != 3000 {
 			t.Errorf("Expected explicit port 3000, got %v", AppConfig.Ports["web"])
 		}
-		// Explicit config usually overrides global/local in this implementation (step 3 in InitConfig)
-		// but check how it's implemented. Step 3 is an unmarshal into AppConfig which might fully override
 	})
+
+	t.Run("Duplicate env keys prevention", func(t *testing.T) {
+		tmpRoot, _ := os.MkdirTemp("", "git-wt-dup-test")
+		defer os.RemoveAll(tmpRoot)
+
+		configPath := filepath.Join(tmpRoot, "git-wt.config.yaml")
+		_ = os.WriteFile(configPath, []byte(`
+env:
+  COMPOSE_PROJECT_NAME: "git-wt-pj-name"
+`), 0644)
+
+		AppConfig = Config{} // Reset
+		CfgFile = configPath
+		defer func() { CfgFile = "" }()
+
+		InitConfig()
+
+		if _, ok := AppConfig.Env["COMPOSE_PROJECT_NAME"]; !ok {
+			t.Errorf("Expected key COMPOSE_PROJECT_NAME to be present")
+		}
+		if _, ok := AppConfig.Env["compose_project_name"]; ok {
+			t.Errorf("Did not expect lowercased duplicate 'compose_project_name' to be present. Keys: %v", getKeys(AppConfig.Env))
+		}
+	})
+}
+
+func getKeys(m map[string]string) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
 }

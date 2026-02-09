@@ -7,6 +7,7 @@ import (
 	"github.com/mocyuto/git-wt/internal/git"
 	"github.com/mocyuto/git-wt/internal/hook"
 	"github.com/mocyuto/git-wt/internal/state"
+	"github.com/mocyuto/git-wt/internal/template"
 	"github.com/spf13/cobra"
 )
 
@@ -51,7 +52,7 @@ var removeCmd = &cobra.Command{
 
 		// Run removal hooks
 		gitRoot, _ := git.GetGitRoot()
-		hook.RunHooks("rm", hook.HookContext{
+		hook.RunHooks("rm", template.Context{
 			Path:   path,
 			Branch: branch,
 			Repo:   filepath.Base(gitRoot),

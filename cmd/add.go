@@ -9,6 +9,7 @@ import (
 	"github.com/mocyuto/git-wt/internal/git"
 	"github.com/mocyuto/git-wt/internal/hook"
 	"github.com/mocyuto/git-wt/internal/state"
+	"github.com/mocyuto/git-wt/internal/template"
 	"github.com/spf13/cobra"
 )
 
@@ -79,7 +80,7 @@ automatically copy ignored configuration files (like .env) from the main tree.`,
 		fmt.Printf("Assigned Port Index: %d\n", idx)
 
 		// Run add hooks
-		hook.RunHooks("add", hook.HookContext{
+		hook.RunHooks("add", template.Context{
 			Path:   targetPath,
 			Branch: branch,
 			Repo:   filepath.Base(sourceRoot),
