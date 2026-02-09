@@ -1,6 +1,11 @@
 package template
 
-import "testing"
+import (
+	"reflect"
+	"testing"
+
+	"github.com/mocyuto/git-wt/internal/config"
+)
 
 func TestReplace(t *testing.T) {
 	ctx := Context{
@@ -48,5 +53,62 @@ func TestReplace(t *testing.T) {
 				t.Errorf("Replace() = %v, want %v", got, tt.expected)
 			}
 		})
+	}
+}
+
+func TestReplaceMap(t *testing.T) {
+	ctx := Context{
+		Path:   "/path/to/repo-branch",
+		Branch: "branch",
+		Repo:   "repo",
+	}
+
+	m := map[string]string{
+		"B": "{{.Branch}}",
+		"P": "{{.Path}}",
+		"R": "{{.Repo}}",
+		"S": "static",
+	}
+
+	got := ReplaceMap(m, ctx)
+
+	expected := map[string]string{
+		"B": "branch",
+		"P": "/path/to/repo-branch",
+		"R": "repo",
+		"S": "static",
+	}
+
+	if !reflect.DeepEqual(got, expected) {
+		t.Errorf("ReplaceMap() = %v, want %v", got, expected)
+	}
+}
+
+func TestReplaceConfig(t *testing.T) {
+	ctx := Context{
+		Path:   "/path",
+		Branch: "feat",
+		Repo:   "myrepo",
+	}
+
+	cfg := config.Config{}
+	cfg.Hooks.Add = []string{"echo {{.Branch}}"}
+	cfg.Hooks.RM = []string{"rm {{.Path}}"}
+	cfg.Ignore = []string{"{{.Repo}}.log"}
+	cfg.Env = map[string]string{"G": "{{.Repo}}"}
+
+	got := ReplaceConfig(cfg, ctx)
+
+	if got.Hooks.Add[0] != "echo feat" {
+		t.Errorf("Hooks.Add mismatch: %v", got.Hooks.Add)
+	}
+	if got.Hooks.RM[0] != "rm /path" {
+		t.Errorf("Hooks.RM mismatch: %v", got.Hooks.RM)
+	}
+	if got.Ignore[0] != "myrepo.log" {
+		t.Errorf("Ignore mismatch: %v", got.Ignore)
+	}
+	if got.Env["G"] != "myrepo" {
+		t.Errorf("Env mismatch: %v", got.Env)
 	}
 }

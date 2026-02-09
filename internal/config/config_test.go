@@ -74,6 +74,8 @@ hooks:
 ignore: [".local-ignore"]
 ports:
   api: 8080
+env:
+  LOCAL_ENV: "local-val"
 `), 0644)
 
 		// Still have previous global config in tmpHome
@@ -103,6 +105,29 @@ ports:
 		// Ports should be merged
 		if AppConfig.Ports["api"] != 8080 {
 			t.Errorf("Expected port 8080 for api, got %v", AppConfig.Ports["api"])
+		}
+
+		// Env should be loaded
+		if AppConfig.Env["local_env"] != "local-val" {
+			t.Errorf("Expected env local_env 'local-val', got %v", AppConfig.Env["local_env"])
+		}
+	})
+
+	t.Run("Hidden local config loading", func(t *testing.T) {
+		// Cleanup previous non-hidden config
+		os.Remove(filepath.Join(tmpGit, "git-wt.config.yaml"))
+
+		// Hidden local config
+		os.WriteFile(filepath.Join(tmpGit, ".git-wt.config.yaml"), []byte(`
+env:
+  HIDDEN_ENV: "hidden-val"
+`), 0644)
+
+		AppConfig = Config{} // Reset
+		InitConfig()
+
+		if AppConfig.Env["hidden_env"] != "hidden-val" {
+			t.Errorf("Expected hidden env 'hidden-val', got %v", AppConfig.Env["hidden_env"])
 		}
 	})
 

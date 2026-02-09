@@ -19,8 +19,9 @@ type Config struct {
 		Add []string `mapstructure:"add"`
 		RM  []string `mapstructure:"rm"`
 	} `mapstructure:"hooks"`
-	Ignore []string       `mapstructure:"ignore"`
-	Ports  map[string]int `mapstructure:"ports"`
+	Ignore []string          `mapstructure:"ignore"`
+	Ports  map[string]int    `mapstructure:"ports"`
+	Env    map[string]string `mapstructure:"env"`
 }
 
 var AppConfig Config
@@ -64,22 +65,32 @@ func InitConfig() {
 		localV := viper.New()
 		localV.AddConfigPath(gitRoot)
 		localV.SetConfigName("git-wt.config")
-		// Viper will look for .yaml, .yml, .json, etc. if no type is set but we want to be sure
+		localV.SetConfigType("yaml")
 
-		if err := localV.ReadInConfig(); err == nil {
-			var localConfig Config
-			if err := localV.Unmarshal(&localConfig); err == nil {
-				// Merge hooks
-				AppConfig.Hooks.Add = append(AppConfig.Hooks.Add, localConfig.Hooks.Add...)
-				AppConfig.Hooks.RM = append(AppConfig.Hooks.RM, localConfig.Hooks.RM...)
-				// Merge ignore patterns
-				AppConfig.Ignore = append(AppConfig.Ignore, localConfig.Ignore...)
-				// Merge ports
-				if AppConfig.Ports == nil {
-					AppConfig.Ports = make(map[string]int)
-				}
-				maps.Copy(AppConfig.Ports, localConfig.Ports)
+		if err := localV.ReadInConfig(); err != nil {
+			// Try hidden config file
+			fmt.Println("Local config load failed", err)
+		}
+
+		var localConfig Config
+		if err := localV.Unmarshal(&localConfig); err == nil {
+			// Merge hooks
+			AppConfig.Hooks.Add = append(AppConfig.Hooks.Add, localConfig.Hooks.Add...)
+			AppConfig.Hooks.RM = append(AppConfig.Hooks.RM, localConfig.Hooks.RM...)
+			// Merge ignore patterns
+			AppConfig.Ignore = append(AppConfig.Ignore, localConfig.Ignore...)
+			// Merge ports
+			if AppConfig.Ports == nil {
+				AppConfig.Ports = make(map[string]int)
 			}
+			maps.Copy(AppConfig.Ports, localConfig.Ports)
+			// Merge env
+			if AppConfig.Env == nil {
+				AppConfig.Env = make(map[string]string)
+			}
+			maps.Copy(AppConfig.Env, localConfig.Env)
+		} else {
+			fmt.Printf("Error unmarshaling local config: %v\n", err)
 		}
 	}
 

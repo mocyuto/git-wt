@@ -48,6 +48,16 @@ func executeCommand(cmdStr string, absPath string, ctx template.Context) {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
+	// Merge system env with config env
+	env := os.Environ()
+	if config.AppConfig.Env != nil {
+		replacedEnv := template.ReplaceMap(config.AppConfig.Env, ctx)
+		for k, v := range replacedEnv {
+			env = append(env, fmt.Sprintf("%s=%s", k, v))
+		}
+	}
+	cmd.Env = env
+
 	if err := cmd.Run(); err != nil {
 		fmt.Printf("Warning: hook failed: %v\n", err)
 	}
