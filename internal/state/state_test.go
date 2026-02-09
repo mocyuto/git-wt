@@ -2,41 +2,56 @@ package state
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 )
 
 func TestAssignPortIndex(t *testing.T) {
+	tmpDir, _ := os.MkdirTemp("", "git-wt-assign-test")
+	defer os.RemoveAll(tmpDir)
+
+	// Initialize git in tmpDir to make it a "main" project
+	exec.Command("git", "init", tmpDir).Run()
+	absMain, _ := filepath.Abs(tmpDir)
+	projectName := filepath.Base(absMain)
+
 	AppState.Projects = make(map[string]ProjectState)
 
-	// Assign first index
-	idx0 := AssignPortIndex("pj1", "/path/to/wt0", "http", 3000)
-	if idx0 != 0 {
-		t.Errorf("Expected index 0, got %d", idx0)
+	// Assign to main (should get 0)
+	idx_main := AssignPortIndex(projectName, absMain, "http", 3000)
+	if idx_main != 0 {
+		t.Errorf("Expected index 0 for main project, got %d", idx_main)
 	}
 
-	// Assign second index (different worktree, same project)
-	idx1 := AssignPortIndex("pj1", "/path/to/wt1", "http", 3000)
-	if idx1 != 1 {
-		t.Errorf("Expected index 1, got %d", idx1)
+	// Assign to a "worktree" (not the main root)
+	wtPath := filepath.Join(tmpDir, "wt0")
+	os.MkdirAll(wtPath, 0755)
+	idx_wt := AssignPortIndex(projectName, wtPath, "http", 3000)
+	if idx_wt != 1 {
+		t.Errorf("Expected index 1 for worktree, got %d", idx_wt)
 	}
 
-	// Assign different port key
-	idx_db := AssignPortIndex("pj1", "/path/to/wt0", "db", 9000)
-	if idx_db != 0 {
-		t.Errorf("Expected index 0 for different key, got %d", idx_db)
+	// Assign another worktree
+	wtPath2 := filepath.Join(tmpDir, "wt1")
+	os.MkdirAll(wtPath2, 0755)
+	idx_wt2 := AssignPortIndex(projectName, wtPath2, "http", 3000)
+	if idx_wt2 != 2 {
+		t.Errorf("Expected index 2 for second worktree, got %d", idx_wt2)
 	}
 
 	// Re-assign existing path
-	idx0_again := AssignPortIndex("pj1", "/path/to/wt0", "http", 3000)
-	if idx0_again != 0 {
-		t.Errorf("Expected index 0, got %d", idx0_again)
+	idx_wt_again := AssignPortIndex(projectName, wtPath, "http", 3000)
+	if idx_wt_again != 1 {
+		t.Errorf("Expected index 1 for same worktree, got %d", idx_wt_again)
 	}
 
-	// The implementation of AssignPortIndex checks usedIndexes across ALL projects for the same port key.
-	idx_pj2 := AssignPortIndex("pj2", "/path/to/wt2", "http", 3000)
-	if idx_pj2 != 2 {
-		t.Errorf("Expected index 2 for project 2 to avoid collision with PJ1, got %d", idx_pj2)
+	// Different project should be able to use index 0 as well (project-scoped)
+	projectName2 := "other-project"
+	idx_pj2 := AssignPortIndex(projectName2, "/other/path", "http", 3000)
+	// it starts at 1 for non-main path
+	if idx_pj2 != 1 {
+		t.Errorf("Expected index 1 for non-main path in other project, got %d", idx_pj2)
 	}
 }
 

@@ -22,6 +22,25 @@ Usage: eval $(git-wt env)`,
 		_ = state.LoadState()
 		ports, found := state.GetCurrentWorktreePorts()
 		if !found {
+			// If not found, check if we are in the main git root.
+			// If so, automatically assign index 0.
+			gitRoot, err := git.GetGitRoot()
+			if err == nil {
+				cwd, _ := os.Getwd()
+				absCwd, _ := filepath.Abs(cwd)
+				absGitRoot, _ := filepath.Abs(gitRoot)
+				if absCwd == absGitRoot {
+					projectName := filepath.Base(gitRoot)
+					for name, basePort := range config.AppConfig.Ports {
+						state.AssignPortIndex(projectName, absCwd, name, basePort)
+					}
+					_ = state.SaveState()
+					ports, found = state.GetCurrentWorktreePorts()
+				}
+			}
+		}
+
+		if !found {
 			return logger.Errorf("current directory is not a managed worktree")
 		}
 

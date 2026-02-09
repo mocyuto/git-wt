@@ -98,22 +98,34 @@ func AssignPortIndex(projectName, path, portKey string, basePort int) int {
 		return idx
 	}
 
-	usedIndexes := make(map[int]bool)
-	for _, pState := range AppState.Projects {
-		for _, wState := range pState.Worktrees {
-			if idx, found := wState.Ports[portKey]; found {
-				usedIndexes[idx] = true
-			}
+	// Determine if this is the main project path (Git root)
+	// In the main worktree, .git is a directory.
+	// In linked worktrees, .git is a file.
+	isMain := false
+	gitPath := filepath.Join(path, ".git")
+	if info, err := os.Stat(gitPath); err == nil && info.IsDir() {
+		isMain = true
+	}
+
+	// Find the smallest available index within THIS project
+	usedInProject := make(map[int]bool)
+	for _, wState := range proj.Worktrees {
+		if idx, found := wState.Ports[portKey]; found {
+			usedInProject[idx] = true
 		}
 	}
 
-	idx := 0
+	idx := 1
+	if isMain {
+		idx = 0
+	}
+
 	for {
-		if !usedIndexes[idx] {
+		if !usedInProject[idx] {
 			if isPortAvailable(basePort + idx) {
 				break
 			}
-			usedIndexes[idx] = true
+			usedInProject[idx] = true
 		}
 		idx++
 	}
