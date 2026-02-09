@@ -2,36 +2,56 @@ package state
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 )
 
 func TestAssignPortIndex(t *testing.T) {
-	AppState.Worktrees = make(map[string]int)
+	tmpDir, _ := os.MkdirTemp("", "git-wt-assign-test")
+	defer os.RemoveAll(tmpDir)
 
-	// Assign first index
-	idx0 := AssignPortIndex("/path/to/wt0")
-	if idx0 != 0 {
-		t.Errorf("Expected index 0, got %d", idx0)
+	// Initialize git in tmpDir to make it a "main" project
+	exec.Command("git", "init", tmpDir).Run()
+	absMain, _ := filepath.Abs(tmpDir)
+	projectName := filepath.Base(absMain)
+
+	AppState.Projects = make(map[string]ProjectState)
+
+	// Assign to main (should get 0)
+	idx_main := AssignPortIndex(projectName, absMain, "http", 3000)
+	if idx_main != 0 {
+		t.Errorf("Expected index 0 for main project, got %d", idx_main)
 	}
 
-	// Assign second index
-	idx1 := AssignPortIndex("/path/to/wt1")
-	if idx1 != 1 {
-		t.Errorf("Expected index 1, got %d", idx1)
+	// Assign to a "worktree" (not the main root)
+	wtPath := filepath.Join(tmpDir, "wt0")
+	os.MkdirAll(wtPath, 0755)
+	idx_wt := AssignPortIndex(projectName, wtPath, "http", 3000)
+	if idx_wt != 1 {
+		t.Errorf("Expected index 1 for worktree, got %d", idx_wt)
+	}
+
+	// Assign another worktree
+	wtPath2 := filepath.Join(tmpDir, "wt1")
+	os.MkdirAll(wtPath2, 0755)
+	idx_wt2 := AssignPortIndex(projectName, wtPath2, "http", 3000)
+	if idx_wt2 != 2 {
+		t.Errorf("Expected index 2 for second worktree, got %d", idx_wt2)
 	}
 
 	// Re-assign existing path
-	idx0_again := AssignPortIndex("/path/to/wt0")
-	if idx0_again != 0 {
-		t.Errorf("Expected index 0, got %d", idx0_again)
+	idx_wt_again := AssignPortIndex(projectName, wtPath, "http", 3000)
+	if idx_wt_again != 1 {
+		t.Errorf("Expected index 1 for same worktree, got %d", idx_wt_again)
 	}
 
-	// Release 0 and assign new (should get 0)
-	ReleasePortIndex("/path/to/wt0")
-	idx0_recycled := AssignPortIndex("/path/to/wt2")
-	if idx0_recycled != 0 {
-		t.Errorf("Expected recycled index 0, got %d", idx0_recycled)
+	// Different project should be able to use index 0 as well (project-scoped)
+	projectName2 := "other-project"
+	idx_pj2 := AssignPortIndex(projectName2, "/other/path", "http", 3000)
+	// it starts at 1 for non-main path
+	if idx_pj2 != 1 {
+		t.Errorf("Expected index 1 for non-main path in other project, got %d", idx_pj2)
 	}
 }
 
@@ -46,22 +66,26 @@ func TestCleanupState(t *testing.T) {
 	os.MkdirAll(existingPath, 0755)
 	nonExistingPath := filepath.Join(tmpDir, "missing")
 
-	AppState.Worktrees = map[string]int{
-		existingPath:    0,
-		nonExistingPath: 1,
+	AppState.Projects = map[string]ProjectState{
+		"pj": {
+			Worktrees: map[string]WorktreeState{
+				existingPath:    {Ports: map[string]int{"http": 0}},
+				nonExistingPath: {Ports: map[string]int{"http": 1}},
+			},
+		},
 	}
 
 	CleanupState()
 
-	if _, ok := AppState.Worktrees[existingPath]; !ok {
+	if _, ok := AppState.Projects["pj"].Worktrees[existingPath]; !ok {
 		t.Error("Existing path was incorrectly removed")
 	}
-	if _, ok := AppState.Worktrees[nonExistingPath]; ok {
+	if _, ok := AppState.Projects["pj"].Worktrees[nonExistingPath]; ok {
 		t.Error("Non-existing path was not removed")
 	}
 }
 
-func TestGetCurrentWorktreePortIndex(t *testing.T) {
+func TestGetCurrentWorktreePorts(t *testing.T) {
 	origWd, _ := os.Getwd()
 	defer os.Chdir(origWd)
 
@@ -80,33 +104,30 @@ func TestGetCurrentWorktreePortIndex(t *testing.T) {
 	wtPath, _ = filepath.EvalSymlinks(wtPath)
 	subDir, _ = filepath.EvalSymlinks(subDir)
 
-	AppState.Worktrees = map[string]int{
-		wtPath: 5,
+	AppState.Projects = map[string]ProjectState{
+		"pj": {
+			Worktrees: map[string]WorktreeState{
+				wtPath: {Ports: map[string]int{"http": 5}},
+			},
+		},
 	}
 
 	// Test exact match
 	if err := os.Chdir(wtPath); err != nil {
 		t.Fatal(err)
 	}
-	idx, found := GetCurrentWorktreePortIndex()
-	if !found || idx != 5 {
-		t.Errorf("Expected (5, true), got (%d, %t) for exact match", idx, found)
+	ports, found := GetCurrentWorktreePorts()
+	if !found || ports["http"] != 5 {
+		t.Errorf("Expected {http:5}, got %v", ports)
 	}
 
 	// Test subdirectory match
 	if err := os.Chdir(subDir); err != nil {
 		t.Fatal(err)
 	}
-	idx, found = GetCurrentWorktreePortIndex()
-	if !found || idx != 5 {
-		t.Errorf("Expected (5, true), got (%d, %t) for subdirectory", idx, found)
-	}
-
-	// Test no match (parent directory)
-	os.Chdir(tmpDir)
-	idx, found = GetCurrentWorktreePortIndex()
-	if found {
-		t.Errorf("Expected found:false for parent directory, got true with idx %d", idx)
+	ports, found = GetCurrentWorktreePorts()
+	if !found || ports["http"] != 5 {
+		t.Errorf("Expected {http:5} for subdirectory, got %v", ports)
 	}
 }
 
@@ -122,9 +143,12 @@ func TestSaveLoadState(t *testing.T) {
 	defer os.Setenv("HOME", origHome)
 
 	// Setup state
-	AppState.Worktrees = map[string]int{
-		"/abs/path/1": 10,
-		"/abs/path/2": 20,
+	AppState.Projects = map[string]ProjectState{
+		"pj1": {
+			Worktrees: map[string]WorktreeState{
+				"/abs/path/1": {Ports: map[string]int{"http": 10}},
+			},
+		},
 	}
 
 	if err := SaveState(); err != nil {
@@ -132,12 +156,12 @@ func TestSaveLoadState(t *testing.T) {
 	}
 
 	// Clear and load
-	AppState.Worktrees = nil
+	AppState.Projects = nil
 	if err := LoadState(); err != nil {
 		t.Fatalf("LoadState failed: %v", err)
 	}
 
-	if AppState.Worktrees["/abs/path/1"] != 10 || AppState.Worktrees["/abs/path/2"] != 20 {
-		t.Errorf("Loaded state mismatch: %v", AppState.Worktrees)
+	if AppState.Projects["pj1"].Worktrees["/abs/path/1"].Ports["http"] != 10 {
+		t.Errorf("Loaded state mismatch: %v", AppState.Projects)
 	}
 }

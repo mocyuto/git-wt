@@ -72,7 +72,7 @@ func TestCopyIgnoredFiles(t *testing.T) {
 		}
 	})
 
-	t.Run("Copy untracked config files IF ignored", func(t *testing.T) {
+	t.Run("Do NOT copy untracked config files even IF ignored", func(t *testing.T) {
 		// Reset destination
 		os.RemoveAll(tmpDst)
 		os.MkdirAll(tmpDst, 0755)
@@ -87,9 +87,9 @@ func TestCopyIgnoredFiles(t *testing.T) {
 			t.Fatalf("CopyIgnoredFiles failed: %v", err)
 		}
 
-		// Verify git-wt.config.yml is copied
-		if _, err := os.Stat(filepath.Join(tmpDst, "git-wt.config.yml")); os.IsNotExist(err) {
-			t.Error("git-wt.config.yml should have been copied because it is now ignored")
+		// Verify git-wt.config.yml is NOT copied
+		if _, err := os.Stat(filepath.Join(tmpDst, "git-wt.config.yml")); err == nil {
+			t.Error("git-wt.config.yml should NOT have been copied because it is now explicitly excluded")
 		}
 	})
 
