@@ -1,13 +1,13 @@
 package config
 
 import (
-	"fmt"
 	"maps"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/mocyuto/git-wt/internal/git"
+	"github.com/mocyuto/git-wt/internal/logger"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
 )
@@ -59,13 +59,13 @@ func InitConfig() {
 
 	// Unmarshal global config into AppConfig
 	if err := v.Unmarshal(&AppConfig); err != nil {
-		fmt.Printf("Error unmarshaling global config: %v\n", err)
+		logger.Error("unmarshaling global config: %v", err)
 	}
 
 	// Fix case for global env if loaded
 	if globalPath != "" {
 		if err := loadEnvCasePreserved(globalPath); err != nil {
-			fmt.Printf("Warning: failed to restore environment variable case in global config: %v\n", err)
+			logger.Warn("failed to restore environment variable case in global config: %v", err)
 		}
 	}
 
@@ -103,11 +103,11 @@ func InitConfig() {
 			// Fix case for local env
 			if localPath != "" {
 				if err := loadEnvCasePreserved(localPath); err != nil {
-					fmt.Printf("Warning: failed to restore environment variable case in local config: %v\n", err)
+					logger.Warn("failed to restore environment variable case in local config: %v", err)
 				}
 			}
 		} else {
-			fmt.Printf("Error unmarshaling local config: %v\n", err)
+			logger.Error("unmarshaling local config: %v", err)
 		}
 	}
 
@@ -120,10 +120,10 @@ func InitConfig() {
 			if err := explicitV.Unmarshal(&AppConfig); err == nil {
 				// Fix case for explicit env
 				if err := loadEnvCasePreserved(CfgFile); err != nil {
-					fmt.Printf("Warning: failed to restore environment variable case in explicit config: %v\n", err)
+					logger.Warn("failed to restore environment variable case in explicit config: %v", err)
 				}
 			} else {
-				fmt.Printf("Error unmarshaling explicit config: %v\n", err)
+				logger.Error("unmarshaling explicit config: %v", err)
 			}
 		}
 	}

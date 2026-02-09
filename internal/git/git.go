@@ -1,10 +1,11 @@
 package git
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/mocyuto/git-wt/internal/logger"
 )
 
 func GetGitRoot() (string, error) {
@@ -88,5 +89,5 @@ func ResolveWorktreeInfo(search string) (path, branch string, err error) {
 			}
 		}
 	}
-	return "", "", fmt.Errorf("not found")
+	return "", "", logger.Errorf("not found")
 }
