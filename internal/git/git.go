@@ -17,7 +17,15 @@ func GetGitRoot() (string, error) {
 }
 
 func GetMainProjectRoot() (string, error) {
-	out, err := exec.Command("git", "rev-parse", "--path-format=absolute", "--git-common-dir").Output()
+	return GetMainProjectRootFromPath("")
+}
+
+func GetMainProjectRootFromPath(dir string) (string, error) {
+	cmd := exec.Command("git", "rev-parse", "--path-format=absolute", "--git-common-dir")
+	if dir != "" {
+		cmd.Dir = dir
+	}
+	out, err := cmd.Output()
 	if err != nil {
 		return "", err
 	}

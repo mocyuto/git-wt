@@ -24,7 +24,7 @@ func TestPortsCmd(t *testing.T) {
 	defer os.Setenv("HOME", origHome)
 
 	t.Run("Empty state", func(t *testing.T) {
-		state.AppState.Worktrees = make(map[string]int)
+		state.AppState.Projects = make(map[string]state.ProjectState)
 		state.SaveState()
 
 		buf := new(bytes.Buffer)
@@ -36,7 +36,7 @@ func TestPortsCmd(t *testing.T) {
 		}
 
 		output := buf.String()
-		if !strings.Contains(output, "No port assignments found.") {
+		if !strings.Contains(output, "No port assignments found") {
 			t.Errorf("Expected empty state message not found: %s", output)
 		}
 	})
@@ -49,9 +49,13 @@ func TestPortsCmd(t *testing.T) {
 		os.MkdirAll(wt2, 0755)
 
 		// Setup initial state
-		state.AppState.Worktrees = map[string]int{
-			wt1: 0,
-			wt2: 1,
+		state.AppState.Projects = map[string]state.ProjectState{
+			"git-wt": {
+				Worktrees: map[string]state.WorktreeState{
+					wt1: {Ports: map[string]int{"api": 0}},
+					wt2: {Ports: map[string]int{"api": 1}},
+				},
+			},
 		}
 		state.SaveState()
 
@@ -64,13 +68,13 @@ func TestPortsCmd(t *testing.T) {
 		}
 
 		output := buf.String()
-		if !strings.Contains(output, "INDEX  WORKTREE PATH") {
+		if !strings.Contains(output, "PROJECT") || !strings.Contains(output, "WORKTREE PATH") {
 			t.Errorf("Expected header not found in output: %s", output)
 		}
-		if !strings.Contains(output, "0      "+wt1) {
+		if !strings.Contains(output, "git-wt") || !strings.Contains(output, wt1) {
 			t.Errorf("Expected assignment for wt1 not found: %s", output)
 		}
-		if !strings.Contains(output, "1      "+wt2) {
+		if !strings.Contains(output, "git-wt") || !strings.Contains(output, wt2) {
 			t.Errorf("Expected assignment for wt2 not found: %s", output)
 		}
 	})
@@ -88,9 +92,13 @@ func TestPortsCmd(t *testing.T) {
 		os.MkdirAll(wt2, 0755)
 
 		// Setup initial state
-		state.AppState.Worktrees = map[string]int{
-			wt1: 0,
-			wt2: 1,
+		state.AppState.Projects = map[string]state.ProjectState{
+			"git-wt": {
+				Worktrees: map[string]state.WorktreeState{
+					wt1: {Ports: map[string]int{"api": 0, "web": 0}},
+					wt2: {Ports: map[string]int{"api": 1, "web": 1}},
+				},
+			},
 		}
 		state.SaveState()
 
@@ -103,7 +111,7 @@ func TestPortsCmd(t *testing.T) {
 		}
 
 		output := buf.String()
-		if !strings.Contains(output, "Base Ports Configuration:") {
+		if !strings.Contains(output, "Base Ports Configuration") {
 			t.Errorf("Expected base ports section not found: %s", output)
 		}
 		if !strings.Contains(output, "api: 8080") {
@@ -111,9 +119,6 @@ func TestPortsCmd(t *testing.T) {
 		}
 
 		// Check table content for calculated ports
-		// Columns: INDEX  WORKTREE PATH  API   WEB
-		// Row 0:   0      [path]         8080  3000
-		// Row 1:   1      [path]         8081  3001
 		if !strings.Contains(output, "8080") || !strings.Contains(output, "3000") {
 			t.Errorf("Expected ports 8080/3000 for index 0 not found: %s", output)
 		}

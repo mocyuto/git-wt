@@ -161,3 +161,24 @@ func loadEnvCasePreserved(path string) error {
 	}
 	return nil
 }
+
+// LoadPortsFromPath loads only the ports configuration from a git-wt.config.yml/yaml in the given directory
+func LoadPortsFromPath(root string) (map[string]int, error) {
+	v := viper.New()
+	v.AddConfigPath(root)
+	v.SetConfigName("git-wt.config")
+	v.SetConfigType("yaml")
+
+	if err := v.ReadInConfig(); err != nil {
+		return nil, err
+	}
+
+	var cfg struct {
+		Ports map[string]int `mapstructure:"ports"`
+	}
+	if err := v.Unmarshal(&cfg); err != nil {
+		return nil, err
+	}
+
+	return cfg.Ports, nil
+}

@@ -86,7 +86,9 @@ func AssignPortIndex(projectName, path, portKey string, basePort int) int {
 
 	proj, ok := AppState.Projects[projectName]
 	if !ok {
-		proj = ProjectState{Worktrees: make(map[string]WorktreeState)}
+		proj = ProjectState{
+			Worktrees: make(map[string]WorktreeState),
+		}
 	}
 
 	wt, ok := proj.Worktrees[path]
