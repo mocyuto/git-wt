@@ -132,15 +132,26 @@ ports:
   web: 3000
 ```
 
-### Port Management Logic
-
-When you add a worktree with `git-wt add`, it is assigned a unique `PortIndex` (starting from 0).
-Calling `git-wt env` will export environment variables using the pattern `UPPER_NAME_PORT = BasePort + PortIndex`.
-
-Example for `PortIndex: 1` with the config above:
-
-- `API_PORT=8081`
 - `WEB_PORT=3001`
+
+### Custom Environment Variables
+
+You can define custom environment variables in the `env` section. These variables support placeholders and automatically exported via `git-wt env`.
+
+```yaml
+env:
+  COMPOSE_PROJECT_NAME: "git-wt-{{.Repo}}"
+  DEBUG: "true"
+```
+
+In your terminal:
+
+```bash
+eval $(git-wt env)
+echo $COMPOSE_PROJECT_NAME # git-wt-myrepo
+```
+
+These variables are also available during [Custom Hooks](#custom-hooks) execution.
 
 ### Custom Ignore Patterns
 
@@ -168,6 +179,8 @@ hooks:
 ```
 
 #### Available Placeholders
+
+Placeholders can be used in `hooks` and `env` values.
 
 | Placeholder   | Description                                   |
 | :------------ | :-------------------------------------------- |
