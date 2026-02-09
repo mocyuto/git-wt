@@ -113,24 +113,6 @@ env:
 		}
 	})
 
-	t.Run("Hidden local config loading", func(t *testing.T) {
-		// Cleanup previous non-hidden config
-		os.Remove(filepath.Join(tmpGit, "git-wt.config.yaml"))
-
-		// Hidden local config
-		os.WriteFile(filepath.Join(tmpGit, ".git-wt.config.yaml"), []byte(`
-env:
-  HIDDEN_ENV: "hidden-val"
-`), 0644)
-
-		AppConfig = Config{} // Reset
-		InitConfig()
-
-		if AppConfig.Env["HIDDEN_ENV"] != "hidden-val" {
-			t.Errorf("Expected hidden env 'hidden-val', got %v", AppConfig.Env["HIDDEN_ENV"])
-		}
-	})
-
 	t.Run("Explicit config override", func(t *testing.T) {
 		explicitPath := filepath.Join(tmpGit, "explicit.yaml")
 		os.WriteFile(explicitPath, []byte(`

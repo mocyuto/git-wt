@@ -71,7 +71,6 @@ func InitConfig() {
 
 	// 2. Load local config
 	gitRoot, _ := git.GetGitRoot()
-	// ... (omitting middle part for clarity, will use AllowMultiple or specific chunks)
 	if gitRoot != "" {
 		localV := viper.New()
 		localV.AddConfigPath(gitRoot)
@@ -81,9 +80,6 @@ func InitConfig() {
 		var localPath string
 		if err := localV.ReadInConfig(); err == nil {
 			localPath = localV.ConfigFileUsed()
-		} else {
-			// Try hidden config file
-			fmt.Println("Local config load failed", err)
 		}
 
 		var localConfig Config
