@@ -18,6 +18,7 @@ Git's `worktree` feature is powerful, but files ignored by `.gitignore` (such as
 - **Lifecycle Management**: Support for listing (`list`/`ls`) and removing (`remove`/`rm`) worktrees.
 - **Port Management**: Automatically assigns unique port indexes to each worktree to prevent port collisions.
 - **Custom Hooks**: Execute multiple shell commands naturally after creating (`add`) or removing (`rm`) worktrees.
+- **Configuration Visibility**: `config` subcommand to inspect the final merged configuration.
 
 ## Badges
 
@@ -77,6 +78,7 @@ git-wt add feature-login
 When running multiple servers across different worktrees, port collisions are a common pain point. `git-wt` solves this:
 
 - **Behavior**: Every worktree is assigned a stable index (`0, 1, 2...`).
+- **Dynamic Calculation**: Port numbers are calculated by adding the index to the base port defined in the `git-wt.config.yml` of the worktree's project root. This ensures correct calculation even with different base ports across projects.
 - **Usage**: Define base ports (e.g., `api: 8080`) in your config. `git-wt env` generates environment variables (e.g., `8080`, `8081`...) specific to that worktree.
 
 ```bash
@@ -102,8 +104,9 @@ git-wt rm feature-login
 
 ### 4. Monitoring Assignments (`list` / `ports`)
 
-- `list`: Shows which worktrees are active, their branch status, GitHub PR details, and whether they have uncommitted changes.
-- `ports`: Shows the mapping of worktree paths to their assigned port indexes.
+- `list`: Shows which worktrees are active, their branch status, GitHub PR details, assigned ports, and whether they have uncommitted changes (`[DIRTY]`).
+- `ports`: Shows the mapping of worktree paths to their assigned port indexes and actual port numbers. Use `-a` / `--all` to see assignments across all projects.
+- `config`: Displays the final merged configuration (global + project + flags) in YAML format.
 
 ## Configuration
 
