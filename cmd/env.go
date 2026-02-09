@@ -1,13 +1,13 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/mocyuto/git-wt/internal/config"
 	"github.com/mocyuto/git-wt/internal/git"
+	"github.com/mocyuto/git-wt/internal/logger"
 	"github.com/mocyuto/git-wt/internal/state"
 	"github.com/mocyuto/git-wt/internal/template"
 	"github.com/spf13/cobra"
@@ -22,7 +22,7 @@ Usage: eval $(git-wt env)`,
 		_ = state.LoadState()
 		idx, found := state.GetCurrentWorktreePortIndex()
 		if !found {
-			return fmt.Errorf("current directory is not a managed worktree index")
+			return logger.Errorf("current directory is not a managed worktree index")
 		}
 
 		// 1. Export ports

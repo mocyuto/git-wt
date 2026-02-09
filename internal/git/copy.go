@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/mocyuto/git-wt/internal/logger"
 )
 
 func CopyIgnoredFiles(sourceRoot, targetPath string, ignorePatterns []string, verbose bool) error {
@@ -93,7 +95,7 @@ func CopyIgnoredFiles(sourceRoot, targetPath string, ignorePatterns []string, ve
 			err := checkCmd.Run()
 			if err != nil {
 				// Exit code is non-zero if not ignored
-				fmt.Printf("\033[33mWarning: %s exists but is not in .gitignore. It will not be copied to the new worktree.\033[0m\n", cfg)
+				logger.Warn("%s exists but is not in .gitignore. It will not be copied to the new worktree.", cfg)
 			}
 		}
 	}
@@ -126,7 +128,7 @@ func CopyIgnoredFiles(sourceRoot, targetPath string, ignorePatterns []string, ve
 			if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
 				mu.Lock()
 				if firstErr == nil {
-					firstErr = fmt.Errorf("failed to create directory for %s: %v", dst, err)
+					firstErr = logger.Errorf("failed to create directory for %s: %v", dst, err)
 				}
 				mu.Unlock()
 				return

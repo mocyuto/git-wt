@@ -8,6 +8,7 @@ import (
 	"github.com/mocyuto/git-wt/internal/config"
 	"github.com/mocyuto/git-wt/internal/git"
 	"github.com/mocyuto/git-wt/internal/hook"
+	"github.com/mocyuto/git-wt/internal/logger"
 	"github.com/mocyuto/git-wt/internal/state"
 	"github.com/mocyuto/git-wt/internal/template"
 	"github.com/spf13/cobra"
@@ -33,16 +34,16 @@ automatically copy ignored configuration files (like .env) from the main tree.`,
 			// Auto-create branch if it doesn't exist
 			if !git.BranchExists(branch) && newBranch == "" {
 				newBranch = branch
-				fmt.Printf("Branch '%s' does not exist. It will be created.\n", branch)
+				logger.Info("Branch '%s' does not exist. It will be created.", branch)
 			}
 
 			cwd, err := os.Getwd()
 			if err != nil {
-				return fmt.Errorf("failed to get current directory: %v", err)
+				return logger.Errorf("failed to get current directory: %v", err)
 			}
 			projectName := filepath.Base(cwd)
 			targetPath = filepath.Join("..", fmt.Sprintf("%s-%s", projectName, branch))
-			fmt.Printf("Automated path: %s\n", targetPath)
+			logger.Info("Automated path: %s", targetPath)
 		} else {
 			targetPath = args[0]
 			branch = args[1]
@@ -50,34 +51,34 @@ automatically copy ignored configuration files (like .env) from the main tree.`,
 			// Auto-create branch if it doesn't exist
 			if !git.BranchExists(branch) && newBranch == "" {
 				newBranch = branch
-				fmt.Printf("Branch '%s' does not exist. It will be created.\n", branch)
+				logger.Info("Branch '%s' does not exist. It will be created.", branch)
 			}
 		}
 
 		sourceRoot, err := git.GetGitRoot()
 		if err != nil {
-			return fmt.Errorf("failed to get git root: %v", err)
+			return logger.Errorf("failed to get git root: %v", err)
 		}
 
-		fmt.Printf("--- Creating worktree at %s ---\n", targetPath)
+		logger.Info("--- Creating worktree at %s ---", targetPath)
 		if err := git.CreateWorktree(targetPath, newBranch, branch); err != nil {
-			return fmt.Errorf("error creating worktree: %v", err)
+			return logger.Errorf("error creating worktree: %v", err)
 		}
 
-		fmt.Println("--- Copying ignored configuration files ---")
+		logger.Info("--- Copying ignored configuration files ---")
 		if err := git.CopyIgnoredFiles(sourceRoot, targetPath, config.AppConfig.Ignore, verbose); err != nil {
-			return fmt.Errorf("error copying files: %v", err)
+			return logger.Errorf("error copying files: %v", err)
 		}
 
-		fmt.Println("--- Done! ---")
-		fmt.Printf("New worktree is ready at: %s\n", targetPath)
+		logger.Success("--- Done! ---")
+		logger.Success("New worktree is ready at: %s", targetPath)
 
 		// Assign port index
 		absPath, _ := filepath.Abs(targetPath)
 		_ = state.LoadState()
 		idx := state.AssignPortIndex(absPath)
 		_ = state.SaveState()
-		fmt.Printf("Assigned Port Index: %d\n", idx)
+		logger.Info("Assigned Port Index: %d", idx)
 
 		// Run add hooks
 		hook.RunHooks("add", template.Context{

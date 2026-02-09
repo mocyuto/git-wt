@@ -3,9 +3,10 @@ package git
 import (
 	"bufio"
 	"encoding/json"
-	"fmt"
 	"os/exec"
 	"strings"
+
+	"github.com/mocyuto/git-wt/internal/logger"
 )
 
 type PRInfo struct {
@@ -26,7 +27,7 @@ func GetWorktrees() ([]Worktree, error) {
 	cmd := exec.Command("git", "worktree", "list", "--porcelain")
 	out, err := cmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("failed to list worktrees: %v", err)
+		return nil, logger.Errorf("failed to list worktrees: %v", err)
 	}
 
 	var wts []Worktree

@@ -7,6 +7,7 @@ import (
 
 	"github.com/mocyuto/git-wt/internal/config"
 	"github.com/mocyuto/git-wt/internal/git"
+	"github.com/mocyuto/git-wt/internal/logger"
 	"github.com/mocyuto/git-wt/internal/template"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -32,7 +33,7 @@ var configCmd = &cobra.Command{
 
 		data, err := yaml.Marshal(replacedConfig)
 		if err != nil {
-			return fmt.Errorf("error marshaling config: %v", err)
+			return logger.Errorf("error marshaling config: %v", err)
 		}
 
 		fmt.Println("--- Merged Configuration (Placeholders Replaced) ---")
