@@ -84,7 +84,7 @@ When running multiple servers across different worktrees, port collisions are a 
 ```bash
 # Move to a worktree and load its specific environment
 cd ../my-project-feature-login
-eval $(git-wt env)
+eval "$(git-wt env)"
 
 # $API_PORT is now 8081, preventing collision with other worktrees
 npm start
@@ -150,7 +150,7 @@ env:
 In your terminal:
 
 ```bash
-eval $(git-wt env)
+eval "$(git-wt env)"
 echo $COMPOSE_PROJECT_NAME # git-wt-myrepo
 ```
 
