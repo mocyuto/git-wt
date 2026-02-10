@@ -80,7 +80,7 @@ var removeCmd = &cobra.Command{
 		})
 
 		// Release port index
-		absPath, _ := filepath.Abs(path)
+		absPath := state.NormalizePath(path)
 		gitRoot, _ = git.GetGitRoot()
 		projectName := filepath.Base(gitRoot)
 		_ = state.LoadState()

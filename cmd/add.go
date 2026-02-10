@@ -74,7 +74,7 @@ automatically copy ignored configuration files (like .env) from the main tree.`,
 		logger.Success("New worktree is ready at: %s", targetPath)
 
 		// Assign port index
-		absPath, _ := filepath.Abs(targetPath)
+		absPath := state.NormalizePath(targetPath)
 		_ = state.LoadState() // Assign ports
 		gitRoot, _ := git.GetMainProjectRoot()
 		projectName := filepath.Base(gitRoot)
