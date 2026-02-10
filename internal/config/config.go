@@ -1,6 +1,7 @@
 package config
 
 import (
+	"io"
 	"maps"
 	"os"
 	"path/filepath"
@@ -139,6 +140,9 @@ func loadEnvCasePreserved(path string) error {
 
 	var raw map[string]interface{}
 	if err := yaml.NewDecoder(f).Decode(&raw); err != nil {
+		if err == io.EOF {
+			return nil
+		}
 		return err
 	}
 
