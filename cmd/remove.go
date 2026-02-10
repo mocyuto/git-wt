@@ -3,6 +3,8 @@ package cmd
 import (
 	"path/filepath"
 
+	"strings"
+
 	"github.com/mocyuto/git-wt/internal/git"
 	"github.com/mocyuto/git-wt/internal/hook"
 	"github.com/mocyuto/git-wt/internal/logger"
@@ -21,6 +23,25 @@ var removeCmd = &cobra.Command{
 	Aliases: []string{"rm"},
 	Short:   "Remove a worktree by branch name",
 	Args:    cobra.ExactArgs(1),
+	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		if len(args) != 0 {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		}
+		wts, err := git.GetWorktrees()
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+
+		var completions []string
+		for _, wt := range wts {
+			if wt.Branch != "" {
+				// strip refs/heads/
+				branch := strings.TrimPrefix(wt.Branch, "refs/heads/")
+				completions = append(completions, branch)
+			}
+		}
+		return completions, cobra.ShellCompDirectiveNoFileComp
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		branchOrPath := args[0]
 		var path, branch string
