@@ -10,6 +10,18 @@ import (
 	"strings"
 )
 
+func NormalizePath(path string) string {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return path
+	}
+	eval, err := filepath.EvalSymlinks(abs)
+	if err != nil {
+		return abs
+	}
+	return eval
+}
+
 type State struct {
 	Projects map[string]ProjectState `json:"projects"` // map[projectName]ProjectState
 }
@@ -80,6 +92,7 @@ func SaveState() error {
 }
 
 func AssignPortIndex(projectName, path, portKey string, basePort int) int {
+	path = NormalizePath(path)
 	if AppState.Projects == nil {
 		AppState.Projects = make(map[string]ProjectState)
 	}
@@ -149,6 +162,7 @@ func isPortAvailable(port int) bool {
 }
 
 func ReleasePortIndex(projectName, path string) {
+	path = NormalizePath(path)
 	if proj, ok := AppState.Projects[projectName]; ok {
 		delete(proj.Worktrees, path)
 		if len(proj.Worktrees) == 0 {
@@ -184,7 +198,7 @@ func GetCurrentWorktreePorts() (map[string]int, bool) {
 	if err != nil {
 		return nil, false
 	}
-	absCwd, _ := filepath.Abs(cwd)
+	absCwd := NormalizePath(cwd)
 
 	// Search across all projects for the best matching worktree path
 	type wtMatch struct {

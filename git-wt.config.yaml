@@ -1,4 +1,0 @@
-ports:
-  api: 3000
-env:
-  COMPOSE_PROJECT_NAME: "{{.Repo}}-{{.Branch}}"

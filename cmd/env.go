@@ -27,8 +27,8 @@ Usage: eval $(git-wt env)`,
 			gitRoot, err := git.GetGitRoot()
 			if err == nil {
 				cwd, _ := os.Getwd()
-				absCwd, _ := filepath.Abs(cwd)
-				absGitRoot, _ := filepath.Abs(gitRoot)
+				absCwd := state.NormalizePath(cwd)
+				absGitRoot := state.NormalizePath(gitRoot)
 				if absCwd == absGitRoot {
 					projectName := filepath.Base(gitRoot)
 					for name, basePort := range config.AppConfig.Ports {
