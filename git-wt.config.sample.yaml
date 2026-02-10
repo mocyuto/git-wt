@@ -4,4 +4,4 @@ env:
   COMPOSE_PROJECT_NAME: "{{.Repo}}-{{.Branch}}"
 hooks:
   add:
-    - "tmux new-window -d -n [{{.Repo}}]{{.Branch}} -c {{.Path}} 'agy .; exec $SHELL'"
+    - "tmux new-window -d -n [{{.Repo}}]{{.Branch}} -c {{.Path}} 'claude; exec $SHELL'"
