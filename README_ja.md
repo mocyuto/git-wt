@@ -83,7 +83,7 @@ git-wt add feature-login
 ```bash
 # ワークツリーに移動して環境変数を読み込む
 cd ../my-project-feature-login
-eval $(git-wt env)
+eval "$(git-wt env)"
 
 # これで $API_PORT が 8081 など、他のワークツリーと被らない値になります
 npm start
@@ -149,7 +149,7 @@ env:
 実行例：
 
 ```bash
-eval $(git-wt env)
+eval "$(git-wt env)"
 echo $COMPOSE_PROJECT_NAME # git-wt-myrepo
 ```
 

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,7 +18,7 @@ var envCmd = &cobra.Command{
 	Use:   "env",
 	Short: "Export environment variables for assigned ports",
 	Long: `Generate shell export commands for the ports assigned to the current worktree.
-Usage: eval $(git-wt env)`,
+Usage: eval "$(git-wt env)"`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		_ = state.LoadState()
 		ports, found := state.GetCurrentWorktreePorts()
@@ -26,13 +27,19 @@ Usage: eval $(git-wt env)`,
 			// If so, automatically assign index 0.
 			gitRoot, err := git.GetGitRoot()
 			if err == nil {
-				cwd, _ := os.Getwd()
-				absCwd := state.NormalizePath(cwd)
 				absGitRoot := state.NormalizePath(gitRoot)
-				if absCwd == absGitRoot {
-					projectName := filepath.Base(gitRoot)
+				mainRoot, err := git.GetMainProjectRoot()
+				if err == nil {
+					absMainRoot := state.NormalizePath(mainRoot)
+					projectName := filepath.Base(absMainRoot)
 					for name, basePort := range config.AppConfig.Ports {
-						state.AssignPortIndex(projectName, absCwd, name, basePort)
+						state.AssignPortIndex(projectName, absMainRoot, name, basePort)
+					}
+					// Also assign for the current git root if it's different (e.g. linked worktree)
+					if absGitRoot != absMainRoot {
+						for name, basePort := range config.AppConfig.Ports {
+							state.AssignPortIndex(projectName, absGitRoot, name, basePort)
+						}
 					}
 					_ = state.SaveState()
 					ports, found = state.GetCurrentWorktreePorts()
@@ -44,9 +51,7 @@ Usage: eval $(git-wt env)`,
 			return logger.Errorf("current directory is not a managed worktree")
 		}
 
-		// 1. Export ports
 		if len(config.AppConfig.Ports) > 0 {
-			cmd.Println("# Port Assignments")
 			for name, basePort := range config.AppConfig.Ports {
 				idx, ok := ports[name]
 				if !ok {
@@ -54,13 +59,11 @@ Usage: eval $(git-wt env)`,
 				}
 				envName := strings.ToUpper(name) + "_PORT"
 				port := basePort + idx
-				cmd.Printf("export %s=%d\n", envName, port)
+				fmt.Printf("export %s=%d\n", envName, port)
 			}
 		}
 
-		// 2. Export env from config with placeholder replacement
 		if len(config.AppConfig.Env) > 0 {
-			cmd.Println("# Custom Environment Variables")
 			cwd, _ := os.Getwd()
 			gitRoot, _ := git.GetGitRoot()
 			branch, _ := git.GetCurrentBranch()
@@ -73,7 +76,7 @@ Usage: eval $(git-wt env)`,
 
 			replacedEnv := template.ReplaceMap(config.AppConfig.Env, ctx)
 			for k, v := range replacedEnv {
-				cmd.Printf("export %s=%q\n", k, v)
+				fmt.Printf("export %s=%q\n", k, v)
 			}
 		}
 
