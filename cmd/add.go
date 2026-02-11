@@ -20,10 +20,21 @@ var (
 )
 
 var addCmd = &cobra.Command{
-	Use:   "add <path> [<branch>]",
+	Use:   "add [path] <branch>",
 	Short: "Create git worktree and copy ignored files",
 	Long: `Create a new git worktree, optionally creating a new branch, and
-automatically copy ignored configuration files (like .env) from the main tree.`,
+automatically copy ignored configuration files (like .env) from the main tree.
+
+If only one argument is provided, it is treated as the branch name, and the
+worktree path is automatically determined based on the current directory name.
+If two arguments are provided, the first is the target path and the second is the branch.
+
+Both forms will automatically create the branch if it does not already exist.`,
+	Example: `  # Automated path: if current dir is 'myapp', creates worktree at '../myapp-feat'
+  git-wt add feat
+
+  # Explicit path:
+  git-wt add ./experimental-worktree feat`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var targetPath, branch string
