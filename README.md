@@ -129,6 +129,16 @@ git-wt sync
 2. Global configuration (`~/.config/git-wt/config.yaml`)
 3. Explicit configuration path provided via `--config` flag
 
+### Initializing Configuration (`init`)
+
+You can generate a default configuration file (`git-wt.config.yml`) in your project's root directory:
+
+```bash
+git-wt init
+```
+
+This command creates a configuration file with sensible defaults for port management, environment templates, and sample hooks. If `git-wt.config.yml` or `git-wt.config.yaml` already exists, the command will skip creation to prevent overwritting your existing settings.
+
 ### Project-Specific Configuration
 
 You can create a `git-wt.config.yaml` (or `.yml`) in your project's root directory to define settings specific to that project. Local settings for `hooks` and `ignore` will be **appended** to the global settings.
