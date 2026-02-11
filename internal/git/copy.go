@@ -1,95 +1,30 @@
 package git
 
 import (
-	"bufio"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	"github.com/mocyuto/git-wt/internal/logger"
 )
 
 func CopyIgnoredFiles(sourceRoot, targetPath string, ignorePatterns []string, verbose bool) error {
-	cmd := exec.Command("git", "ls-files", "--others", "--ignored", "--exclude-standard")
-	cmd.Dir = sourceRoot
-	stdout, err := cmd.StdoutPipe()
+	allFiles, err := getIgnoredFilesBase(sourceRoot)
 	if err != nil {
 		return err
 	}
 
-	if err := cmd.Start(); err != nil {
-		return err
-	}
-
-	// Collect all files to copy first
 	var filesToCopy []string
-	scanner := bufio.NewScanner(stdout)
-	for scanner.Scan() {
-		relPath := scanner.Text()
-
-		// Filter by ignore patterns (gitignore style)
-		ignored := false
-		for _, pattern := range ignorePatterns {
-			// Check if pattern matches the full path
-			match, err := filepath.Match(pattern, relPath)
-			if err == nil && match {
-				ignored = true
-				break
-			}
-
-			// Check if pattern matches any part of the path
-			pathParts := strings.Split(relPath, string(os.PathSeparator))
-			for i := range pathParts {
-				match, err := filepath.Match(pattern, pathParts[i])
-				if err == nil && match {
-					ignored = true
-					break
-				}
-
-				subPath := strings.Join(pathParts[i:], string(os.PathSeparator))
-				match, err = filepath.Match(pattern, subPath)
-				if err == nil && match {
-					ignored = true
-					break
-				}
-			}
-
-			if ignored {
-				break
-			}
-		}
-
-		if ignored {
+	for _, relPath := range allFiles {
+		if isPathIgnoredByPatterns(relPath, ignorePatterns) {
 			if verbose {
 				fmt.Printf("Skipping ignored file: %s\n", relPath)
 			}
 			continue
 		}
-
-		// Explicitly skip git-wt configuration files
-		if relPath == "git-wt.config.yml" || relPath == "git-wt.config.yaml" {
-			if verbose {
-				fmt.Printf("Skipping configuration file: %s\n", relPath)
-			}
-			continue
-		}
-
-		// Check if it's a file (not directory)
-		src := filepath.Join(sourceRoot, relPath)
-		info, err := os.Stat(src)
-		if err != nil || info.IsDir() {
-			continue
-		}
-
 		filesToCopy = append(filesToCopy, relPath)
-	}
-
-	if err := cmd.Wait(); err != nil {
-		return err
 	}
 
 	// Warning for uncommitted/untracked config files NOT in .gitignore
@@ -168,29 +103,4 @@ func CopyIgnoredFiles(sourceRoot, targetPath string, ignorePatterns []string, ve
 	}
 
 	return firstErr
-}
-
-func copyFile(src, dst string) error {
-	sourceFile, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer sourceFile.Close()
-
-	destFile, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer destFile.Close()
-
-	_, err = io.Copy(destFile, sourceFile)
-	if err != nil {
-		return err
-	}
-
-	sourceInfo, err := os.Stat(src)
-	if err != nil {
-		return err
-	}
-	return os.Chmod(dst, sourceInfo.Mode())
 }
