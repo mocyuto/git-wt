@@ -8,6 +8,7 @@ import (
 	"github.com/mocyuto/git-wt/internal/logger"
 )
 
+// GetGitRoot returns the absolute path to the root of the current git repository.
 func GetGitRoot() (string, error) {
 	out, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
 	if err != nil {
@@ -16,10 +17,15 @@ func GetGitRoot() (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
+// GetMainProjectRoot returns the absolute path to the main project root directory.
+// It is a wrapper around GetMainProjectRootFromPath using the current working directory.
 func GetMainProjectRoot() (string, error) {
 	return GetMainProjectRootFromPath("")
 }
 
+// GetMainProjectRootFromPath returns the absolute path to the main project root for the given directory.
+// If the directory is part of a git worktree, it returns the main repository's working directory
+// rather than the worktree path.
 func GetMainProjectRootFromPath(dir string) (string, error) {
 	cmd := exec.Command("git", "rev-parse", "--path-format=absolute", "--git-common-dir")
 	if dir != "" {
