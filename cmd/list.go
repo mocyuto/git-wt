@@ -37,7 +37,10 @@ func ListWorktrees() error {
 		prs, err := git.GetPRs()
 		if err == nil {
 			for _, pr := range prs {
-				prMap[pr.HeadRefName] = pr
+				// Keep the latest PR for the same branch
+				if existing, ok := prMap[pr.HeadRefName]; !ok || pr.Number > existing.Number {
+					prMap[pr.HeadRefName] = pr
+				}
 			}
 		}
 	}

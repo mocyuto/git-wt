@@ -7,9 +7,9 @@ description: Create o Update a draft pull request targeting the main branch
 3. Analyze all diffs between the current branch and `main` to understand the full scope of changes.
 4. Check if a pull request already exists for the current branch.
 5. If a PR exists, compare its current title/body with the latest changes and update them if there are improvements or new details to add.
-6. If no PR exists, create a new draft pull request targeting the `main` branch.
-   - **Title**: Concise summary of the entire PR's changes in English.
-   - **Body**: A detailed overview outlining the PR's purpose, key changes, and affected scope in English.
+6. If no PR exists, create a new draft pull request targeting the `main` branch in **English**.
+   - **Title**: Concise summary of the entire PR's changes.
+   - **Body**: A detailed overview outlining the PR's purpose, key changes, and affected scope.
    - **Status**: Draft (when creating new).
 
 Command to run:
