@@ -19,6 +19,7 @@ Git's `worktree` feature is powerful, but files ignored by `.gitignore` (such as
 - **Port Management**: Automatically assigns unique port indexes to each worktree to prevent port collisions.
 - **Custom Hooks**: Execute multiple shell commands naturally after creating (`add`) or removing (`rm`) worktrees.
 - **Configuration Visibility**: `config` subcommand to inspect the final merged configuration.
+- **Bi-directional Sync**: `sync` subcommand to synchronize ignored files from worktree back to the project root.
 
 ## Badges
 
@@ -102,7 +103,19 @@ When a feature is finished, `git-wt` handles the teardown in one go.
 git-wt rm feature-login
 ```
 
-### 4. Monitoring Assignments (`list` / `ports`)
+### 4. Synchronizing Ignored Files (`sync`)
+
+If you've made changes to ignored configuration files (like `.env`) within your worktree and want to reflect those changes back to the main project root:
+
+- **Interactive Mode**: Run `git-wt sync` to open a TUI (powered by `rivo/tview`) where you can selectively choose which files to sync.
+- **Bulk Sync**: Use `-a` / `--all` (or `--force`) to sync all ignored files immediately.
+
+```bash
+# Selectively sync changes back to root
+git-wt sync
+```
+
+### 5. Monitoring Assignments (`list` / `ports`)
 
 - `list`: Shows which worktrees are active, their branch status, GitHub PR details, assigned ports, and whether they have uncommitted changes (`[DIRTY]`).
 - `ports`: Shows the mapping of worktree paths to their assigned port indexes and actual port numbers. Use `-a` / `--all` to see assignments across all projects.
