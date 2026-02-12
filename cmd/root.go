@@ -7,14 +7,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var Version = ""
+
 var rootCmd = &cobra.Command{
-	Use:   "git-wt",
-	Short: "Create git worktree and copy ignored files",
+	Use:     "git-wt",
+	Short:   "Create git worktree and copy ignored files",
+	Version: Version,
 	Long: `git-wt is a CLI tool that extends 'git worktree add' by automatically
 copying ignored configuration files (like .env) from the main tree to the new worktree.`,
 }
 
-func Execute() {
+func Execute(version string) {
+	Version = version
+	rootCmd.Version = Version
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
