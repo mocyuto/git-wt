@@ -39,7 +39,7 @@ brew install mocyuto/tap/git-wt
 ### ビルド
 
 ```bash
-go build -o git-wt main.go
+go build -o git-wt .
 ```
 
 ### パスの設定
@@ -227,5 +227,5 @@ hooks:
 
 ```bash
 # テストの実行
-go test -v .
+go test -v ./...
 ```

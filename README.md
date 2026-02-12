@@ -40,7 +40,7 @@ brew install mocyuto/tap/git-wt
 ### Build
 
 ```bash
-go build -o git-wt main.go
+go build -o git-wt .
 ```
 
 ### Move to PATH
@@ -120,6 +120,7 @@ git-wt sync
 - `list`: Shows which worktrees are active, their branch status, GitHub PR details, assigned ports, and whether they have uncommitted changes (`[DIRTY]`).
 - `ports`: Shows the mapping of worktree paths to their assigned port indexes and actual port numbers. Use `-a` / `--all` to see assignments across all projects.
 - `config`: Displays the final merged configuration (global + project + flags) in YAML format.
+- `version`: Prints the version number of `git-wt`.
 
 ## Configuration
 
@@ -227,5 +228,5 @@ Placeholders can be used in `hooks` and `env` values.
 
 ```bash
 # Run tests
-go test -v .
+go test -v ./...
 ```
