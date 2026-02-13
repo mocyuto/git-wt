@@ -27,7 +27,7 @@ type State struct {
 }
 
 type ProjectState struct {
-	Worktrees map[string]WorktreeState `json:"worktrees"` // map[absPath]WorktreeState
+	Worktrees map[string]*WorktreeState `json:"worktrees"` // map[absPath]*WorktreeState
 }
 
 type WorktreeState struct {
@@ -100,13 +100,13 @@ func AssignPortIndex(projectName, path, portKey string, basePort int) int {
 	proj, ok := AppState.Projects[projectName]
 	if !ok {
 		proj = ProjectState{
-			Worktrees: make(map[string]WorktreeState),
+			Worktrees: make(map[string]*WorktreeState),
 		}
 	}
 
 	wt, ok := proj.Worktrees[path]
 	if !ok {
-		wt = WorktreeState{Ports: make(map[string]int)}
+		wt = &WorktreeState{Ports: make(map[string]int)}
 	}
 
 	if idx, ok := wt.Ports[portKey]; ok {

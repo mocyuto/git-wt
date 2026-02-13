@@ -68,7 +68,7 @@ func TestCleanupState(t *testing.T) {
 
 	AppState.Projects = map[string]ProjectState{
 		"pj": {
-			Worktrees: map[string]WorktreeState{
+			Worktrees: map[string]*WorktreeState{
 				existingPath:    {Ports: map[string]int{"http": 0}},
 				nonExistingPath: {Ports: map[string]int{"http": 1}},
 			},
@@ -106,7 +106,7 @@ func TestGetCurrentWorktreePorts(t *testing.T) {
 
 	AppState.Projects = map[string]ProjectState{
 		"pj": {
-			Worktrees: map[string]WorktreeState{
+			Worktrees: map[string]*WorktreeState{
 				wtPath: {Ports: map[string]int{"http": 5}},
 			},
 		},
@@ -145,7 +145,7 @@ func TestSaveLoadState(t *testing.T) {
 	// Setup state
 	AppState.Projects = map[string]ProjectState{
 		"pj1": {
-			Worktrees: map[string]WorktreeState{
+			Worktrees: map[string]*WorktreeState{
 				"/abs/path/1": {Ports: map[string]int{"http": 10}},
 			},
 		},
