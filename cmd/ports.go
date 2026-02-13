@@ -33,15 +33,30 @@ var portsCmd = &cobra.Command{
 			currentProject = filepath.Base(mainRoot)
 		}
 
-		// Collect all possible port names (from current config AND state)
+		// Collect all possible port names
 		portNamesSet := make(map[string]bool)
+
+		// Always include current project's config ports
 		for name := range config.AppConfig.Ports {
 			portNamesSet[name] = true
 		}
-		for _, proj := range state.AppState.Projects {
-			for _, wt := range proj.Worktrees {
-				for name := range wt.Ports {
-					portNamesSet[name] = true
+
+		if showAllPorts {
+			// Include everything from all projects in state
+			for _, proj := range state.AppState.Projects {
+				for _, wt := range proj.Worktrees {
+					for name := range wt.Ports {
+						portNamesSet[name] = true
+					}
+				}
+			}
+		} else if currentProject != "" {
+			// Only include ports assigned in the current project
+			if proj, ok := state.AppState.Projects[currentProject]; ok {
+				for _, wt := range proj.Worktrees {
+					for name := range wt.Ports {
+						portNamesSet[name] = true
+					}
 				}
 			}
 		}

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/mocyuto/git-wt/internal/config"
+	"github.com/mocyuto/git-wt/internal/git"
 	"github.com/mocyuto/git-wt/internal/state"
 )
 
@@ -124,6 +125,83 @@ func TestPortsCmd(t *testing.T) {
 		}
 		if !strings.Contains(output, "8081") || !strings.Contains(output, "3001") {
 			t.Errorf("Expected ports 8081/3001 for index 1 not found: %s", output)
+		}
+	})
+
+	t.Run("Filtering of port keys", func(t *testing.T) {
+		mainRoot, _ := git.GetMainProjectRoot()
+		currentProject := filepath.Base(mainRoot)
+		t.Logf("Detected current project: %s", currentProject)
+
+		config.AppConfig.Ports = map[string]int{
+			"api": 8080,
+		}
+
+		pa1 := filepath.Join(tmpHome, "pa1")
+		pb1 := filepath.Join(tmpHome, "pb1")
+		os.MkdirAll(pa1, 0755)
+		os.MkdirAll(pb1, 0755)
+
+		// Current project: "project-a" (should match currentProject)
+		// Another project in state: "project-b" with "front" port
+		state.AppState.Projects = map[string]state.ProjectState{
+			currentProject: {
+				Worktrees: map[string]*state.WorktreeState{
+					pa1: {Ports: map[string]int{"api": 0}},
+				},
+			},
+			"other-project": {
+				Worktrees: map[string]*state.WorktreeState{
+					pb1: {Ports: map[string]int{"front": 0}},
+				},
+			},
+		}
+		state.SaveState()
+
+		// Mock GetMainProjectRoot to return project-a's root
+		// We actually rely on filepath.Base(mainRoot) in the command.
+		// Since we are running in a test, let's see how we can control 'currentProject'.
+		// cmd/ports.go:
+		// mainRoot, err := git.GetMainProjectRoot()
+		// currentProject = filepath.Base(mainRoot)
+
+		// This is hard to mock without refactoring git.go.
+		// But in this test environment, GetMainProjectRoot might fail or return something else.
+		// If it fails, currentProject is "".
+
+		buf := new(bytes.Buffer)
+		portsCmd.SetOut(buf)
+
+		// If currentProject is "", all ports should be collected if we don't handle it.
+		// But the refined logic says:
+		// else if currentProject != "" { ... }
+
+		// Let's assume currentProject is "" for now (as it might be in test depending on where it runs).
+		// If currentProject is "", then only config ports are shown.
+
+		err = portsCmd.RunE(portsCmd, []string{})
+		output := buf.String()
+
+		// Should contain API but NOT FRONT
+		if !strings.Contains(output, "API") {
+			t.Errorf("Expected API column, got: %s", output)
+		}
+		if strings.Contains(output, "FRONT") {
+			t.Errorf("Did not expect FRONT column, got: %s", output)
+		}
+
+		// Now with --all
+		showAllPorts = true // set flag
+		defer func() { showAllPorts = false }()
+
+		buf = new(bytes.Buffer)
+		portsCmd.SetOut(buf)
+		err = portsCmd.RunE(portsCmd, []string{})
+		output = buf.String()
+
+		// Should contain both
+		if !strings.Contains(output, "API") || !strings.Contains(output, "FRONT") {
+			t.Errorf("With --all, expected both API and FRONT columns, got: %s", output)
 		}
 	})
 }
