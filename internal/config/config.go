@@ -56,7 +56,7 @@ func InitConfig() {
 
 		if err := v.ReadInConfig(); err != nil {
 			if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-				ConfigError = err
+				ConfigError = logger.Errorf("reading global config: %v", err)
 			}
 		}
 	}
@@ -84,7 +84,7 @@ func InitConfig() {
 		var localPath string
 		if err := localV.ReadInConfig(); err != nil {
 			if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-				ConfigError = err
+				ConfigError = logger.Errorf("reading local config: %v", err)
 			}
 		} else {
 			localPath = localV.ConfigFileUsed()
@@ -124,7 +124,7 @@ func InitConfig() {
 		explicitV := viper.New()
 		explicitV.SetConfigFile(CfgFile)
 		if err := explicitV.ReadInConfig(); err != nil {
-			ConfigError = err
+			ConfigError = logger.Errorf("reading explicit config: %v", err)
 		} else {
 			// Full override if specific config is provided
 			if err := explicitV.Unmarshal(&AppConfig); err == nil {
@@ -183,14 +183,14 @@ func LoadPortsFromPath(root string) (map[string]int, error) {
 	v.SetConfigType("yaml")
 
 	if err := v.ReadInConfig(); err != nil {
-		return nil, err
+		return nil, logger.Errorf("reading config from path %s: %v", root, err)
 	}
 
 	var cfg struct {
 		Ports map[string]int `mapstructure:"ports"`
 	}
 	if err := v.Unmarshal(&cfg); err != nil {
-		return nil, err
+		return nil, logger.Errorf("unmarshaling config from path %s: %v", root, err)
 	}
 
 	return cfg.Ports, nil
