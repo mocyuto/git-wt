@@ -21,6 +21,10 @@ var envCmd = &cobra.Command{
 Usage: eval "$(git-wt env)"`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		_ = state.LoadState()
+
+		if config.ConfigError != nil {
+			return config.ConfigError
+		}
 		ports, found := state.GetCurrentWorktreePorts()
 		if !found {
 			// If not found, check if we are in the main git root.

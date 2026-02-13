@@ -13,11 +13,23 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+var (
+	configCheck bool
+)
+
 var configCmd = &cobra.Command{
 	Use:   "config",
 	Short: "Display the merged configuration",
 	Long:  "Display the merged configuration from global, project, and command-line sources in YAML format.",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if configCheck {
+			if config.ConfigError != nil {
+				return config.ConfigError
+			}
+			logger.Success("Configuration is valid.")
+			return nil
+		}
+
 		// Prepare context for placeholder replacement
 		cwd, _ := os.Getwd()
 		gitRoot, _ := git.GetGitRoot()
@@ -44,4 +56,5 @@ var configCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(configCmd)
+	configCmd.Flags().BoolVar(&configCheck, "check", false, "check configuration for errors")
 }

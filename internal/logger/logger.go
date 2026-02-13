@@ -3,6 +3,7 @@ package logger
 import (
 	"fmt"
 	"os"
+	"strings"
 )
 
 const (
@@ -18,6 +19,10 @@ func Error(format string, a ...interface{}) {
 }
 
 func Errorf(format string, a ...interface{}) error {
+	msg := fmt.Sprintf(format, a...)
+	if strings.Contains(msg, colorRed) {
+		return fmt.Errorf("%s", msg)
+	}
 	return fmt.Errorf(colorRed+"Error: "+format+colorReset, a...)
 }
 
