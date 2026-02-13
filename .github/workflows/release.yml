@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -21,7 +22,12 @@ jobs:
         with:
           go-version-file: 'go.mod'
           cache: true
-
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.SECRET_KEY }}
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
@@ -29,4 +35,4 @@ jobs:
           version: latest
           args: release --clean
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
