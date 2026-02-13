@@ -9,6 +9,7 @@ import (
 
 	"github.com/mocyuto/git-wt/internal/config"
 	"github.com/mocyuto/git-wt/internal/git"
+	"github.com/mocyuto/git-wt/internal/logger"
 	"github.com/mocyuto/git-wt/internal/state"
 	"github.com/spf13/cobra"
 )
@@ -165,7 +166,64 @@ var portsCmd = &cobra.Command{
 	},
 }
 
+var portsUpdateCmd = &cobra.Command{
+	Use:   "update",
+	Short: "Update port assignments based on current configuration",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		_ = state.LoadState()
+		state.CleanupState()
+
+		mainRoot, err := git.GetMainProjectRoot()
+		if err != nil {
+			return logger.Errorf("not a git repository: %v", err)
+		}
+		projectName := filepath.Base(mainRoot)
+
+		proj, ok := state.AppState.Projects[projectName]
+		if !ok {
+			cmd.Printf("No assignments found for project '%s'.\n", projectName)
+			return nil
+		}
+
+		updatedCount := 0
+		for path, wt := range proj.Worktrees {
+			changed := false
+			// Add missing ports from config
+			for name, basePort := range config.AppConfig.Ports {
+				if _, exists := wt.Ports[name]; !exists {
+					state.AssignPortIndex(projectName, path, name, basePort)
+					changed = true
+				}
+			}
+
+			// Remove ports no longer in config
+			for name := range wt.Ports {
+				if _, inConfig := config.AppConfig.Ports[name]; !inConfig {
+					delete(wt.Ports, name)
+					changed = true
+				}
+			}
+
+			if changed {
+				updatedCount++
+			}
+		}
+
+		if updatedCount > 0 {
+			if err := state.SaveState(); err != nil {
+				return logger.Errorf("failed to save state: %v", err)
+			}
+			cmd.Printf("Successfully updated %d worktree(s) in project '%s'.\n", updatedCount, projectName)
+		} else {
+			cmd.Printf("All worktrees in project '%s' are up to date.\n", projectName)
+		}
+
+		return nil
+	},
+}
+
 func init() {
 	portsCmd.Flags().BoolVarP(&showAllPorts, "all", "a", false, "show port assignments for all projects")
+	portsCmd.AddCommand(portsUpdateCmd)
 	rootCmd.AddCommand(portsCmd)
 }

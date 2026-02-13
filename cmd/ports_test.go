@@ -51,7 +51,7 @@ func TestPortsCmd(t *testing.T) {
 		// Setup initial state
 		state.AppState.Projects = map[string]state.ProjectState{
 			"git-wt": {
-				Worktrees: map[string]state.WorktreeState{
+				Worktrees: map[string]*state.WorktreeState{
 					wt1: {Ports: map[string]int{"api": 0}},
 					wt2: {Ports: map[string]int{"api": 1}},
 				},
@@ -94,7 +94,7 @@ func TestPortsCmd(t *testing.T) {
 		// Setup initial state
 		state.AppState.Projects = map[string]state.ProjectState{
 			"git-wt": {
-				Worktrees: map[string]state.WorktreeState{
+				Worktrees: map[string]*state.WorktreeState{
 					wt1: {Ports: map[string]int{"api": 0, "web": 0}},
 					wt2: {Ports: map[string]int{"api": 1, "web": 1}},
 				},
