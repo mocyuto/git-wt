@@ -14,7 +14,8 @@ import (
 )
 
 var (
-	CfgFile string
+	CfgFile     string
+	ConfigError error
 )
 
 type Config struct {
@@ -54,13 +55,15 @@ func InitConfig() {
 		}
 
 		if err := v.ReadInConfig(); err != nil {
-			// Ignore error if global config is not found
+			if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+				ConfigError = err
+			}
 		}
 	}
 
 	// Unmarshal global config into AppConfig
-	if err := v.Unmarshal(&AppConfig); err != nil {
-		logger.Error("unmarshaling global config: %v", err)
+	if err := v.Unmarshal(&AppConfig); err != nil && ConfigError == nil {
+		ConfigError = logger.Errorf("unmarshaling global config: %v", err)
 	}
 
 	// Fix case for global env if loaded
@@ -79,7 +82,11 @@ func InitConfig() {
 		localV.SetConfigType("yaml")
 
 		var localPath string
-		if err := localV.ReadInConfig(); err == nil {
+		if err := localV.ReadInConfig(); err != nil {
+			if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+				ConfigError = err
+			}
+		} else {
 			localPath = localV.ConfigFileUsed()
 		}
 
@@ -107,8 +114,8 @@ func InitConfig() {
 					logger.Warn("failed to restore environment variable case in local config: %v", err)
 				}
 			}
-		} else {
-			logger.Error("unmarshaling local config: %v", err)
+		} else if ConfigError == nil {
+			ConfigError = logger.Errorf("unmarshaling local config: %v", err)
 		}
 	}
 
@@ -116,15 +123,17 @@ func InitConfig() {
 	if CfgFile != "" {
 		explicitV := viper.New()
 		explicitV.SetConfigFile(CfgFile)
-		if err := explicitV.ReadInConfig(); err == nil {
+		if err := explicitV.ReadInConfig(); err != nil {
+			ConfigError = err
+		} else {
 			// Full override if specific config is provided
 			if err := explicitV.Unmarshal(&AppConfig); err == nil {
 				// Fix case for explicit env
 				if err := loadEnvCasePreserved(CfgFile); err != nil {
 					logger.Warn("failed to restore environment variable case in explicit config: %v", err)
 				}
-			} else {
-				logger.Error("unmarshaling explicit config: %v", err)
+			} else if ConfigError == nil {
+				ConfigError = logger.Errorf("unmarshaling explicit config: %v", err)
 			}
 		}
 	}

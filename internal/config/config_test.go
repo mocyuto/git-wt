@@ -154,6 +154,53 @@ env:
 			t.Errorf("Did not expect lowercased duplicate 'compose_project_name' to be present. Keys: %v", getKeys(AppConfig.Env))
 		}
 	})
+
+	t.Run("YAML syntax error detection - specific patterns", func(t *testing.T) {
+		patterns := []struct {
+			name    string
+			content string
+		}{
+			{"Indentation error", "ports:\n  app: 3000\n    sub: 4000"},
+			{"Unterminated string", "test: \"aaaaa"},
+			{"Mapping without space", "app:3000"}, // This is valid scalar but might fail if structure is expected? Let's check.
+		}
+
+		for _, p := range patterns {
+			t.Run(p.name, func(t *testing.T) {
+				explicitPath := filepath.Join(tmpGit, "invalid_"+p.name+".yaml")
+				os.WriteFile(explicitPath, []byte(p.content), 0644)
+
+				AppConfig = Config{} // Reset
+				ConfigError = nil    // Reset
+				CfgFile = explicitPath
+				defer func() { CfgFile = "" }()
+
+				InitConfig()
+
+				// If it's a syntax error, ReadInConfig should set ConfigError.
+				// If it's a structural error, Unmarshal might set ConfigError.
+				if ConfigError == nil {
+					t.Errorf("Expected InitConfig to set ConfigError for %s", p.name)
+				}
+			})
+		}
+	})
+
+	t.Run("Empty config file is valid", func(t *testing.T) {
+		explicitPath := filepath.Join(tmpGit, "empty.yaml")
+		os.WriteFile(explicitPath, []byte(""), 0644)
+
+		AppConfig = Config{} // Reset
+		ConfigError = nil    // Reset
+		CfgFile = explicitPath
+		defer func() { CfgFile = "" }()
+
+		InitConfig()
+
+		if ConfigError != nil {
+			t.Errorf("Expected InitConfig to NOT set ConfigError for empty YAML, got: %v", ConfigError)
+		}
+	})
 }
 
 func getKeys(m map[string]string) []string {

@@ -18,7 +18,7 @@ Git's `worktree` feature is powerful, but files ignored by `.gitignore` (such as
 - **Lifecycle Management**: Support for listing (`list`/`ls`) and removing (`remove`/`rm`) worktrees.
 - **Port Management**: Automatically assigns unique port indexes to each worktree to prevent port collisions.
 - **Custom Hooks**: Execute multiple shell commands naturally after creating (`add`) or removing (`rm`) worktrees.
-- **Configuration Visibility**: `config` subcommand to inspect the final merged configuration.
+- **Configuration Visibility**: `config` subcommand to inspect the final merged configuration and validate syntax.
 - **Bi-directional Sync**: `sync` subcommand to synchronize ignored files from worktree back to the project root.
 
 ## Badges
@@ -120,7 +120,7 @@ git-wt sync
 - `list`: Shows which worktrees are active, their branch status, GitHub PR details, assigned ports, and whether they have uncommitted changes (`[DIRTY]`).
 - `ports`: Shows the mapping of worktree paths to their assigned port indexes and actual port numbers. Use `-a` / `--all` to see assignments across all projects.
 - `ports update`: Synchronizes port assignments for the current project with the latest configuration. It adds missing port assignments and removes those no longer present in the configuration.
-- `config`: Displays the final merged configuration (global + project + flags) in YAML format.
+- `config`: Displays the final merged configuration (global + project + flags) in YAML format. Use `--check` to validate configuration syntax.
 - `version`: Prints the version number of `git-wt`.
 
 ## Configuration
