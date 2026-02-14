@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/mocyuto/zgt/internal/config"
@@ -27,11 +26,11 @@ var addCmd = &cobra.Command{
 automatically copy ignored configuration files (like .env) from the main tree.
 
 If only one argument is provided, it is treated as the branch name, and the
-worktree path is automatically determined based on the current directory name.
+worktree path is automatically determined based on the main repository root.
 If two arguments are provided, the first is the target path and the second is the branch.
 
 Both forms will automatically create the branch if it does not already exist.`,
-	Example: `  # Automated path: if current dir is 'myapp', creates worktree at '../myapp-feat'
+	Example: `  # Automated path: if repo root is 'path-to/myapp', creates worktree at 'path-to/myapp-feat'
   zgt add feat
 
   # Explicit path:
@@ -40,7 +39,7 @@ Both forms will automatically create the branch if it does not already exist.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var targetPath, branch string
 		if len(args) == 1 {
-			// Automate path: ../{current_dir}-{branch}
+			// Automate path: {main_root}-{branch}
 			branch = args[0]
 
 			// Auto-create branch if it doesn't exist
@@ -49,12 +48,12 @@ Both forms will automatically create the branch if it does not already exist.`,
 				logger.Info("Branch '%s' does not exist. It will be created.", branch)
 			}
 
-			cwd, err := os.Getwd()
+			mainRoot, err := gitroot.GetMainProjectRoot()
 			if err != nil {
-				return logger.Errorf("failed to get current directory: %v", err)
+				return logger.Errorf("failed to get main project root: %v", err)
 			}
-			projectName := filepath.Base(cwd)
-			targetPath = filepath.Join("..", fmt.Sprintf("%s-%s", projectName, branch))
+			projectName := filepath.Base(mainRoot)
+			targetPath = filepath.Join(filepath.Dir(mainRoot), fmt.Sprintf("%s-%s", projectName, branch))
 			logger.Info("Automated path: %s", targetPath)
 		} else {
 			targetPath = args[0]
