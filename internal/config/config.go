@@ -53,6 +53,19 @@ var (
 	ConfigError error
 )
 
+type TmuxPane struct {
+	Id       string   `mapstructure:"id"`
+	Target   string   `mapstructure:"target"`
+	Commands []string `mapstructure:"commands"`
+	Split    string   `mapstructure:"split"`
+	Size     string   `mapstructure:"size"`
+}
+
+type TmuxConfig struct {
+	Enabled bool       `mapstructure:"enabled"`
+	Panes   []TmuxPane `mapstructure:"panes"`
+}
+
 type Config struct {
 	Hooks struct {
 		Add []string `mapstructure:"add"`
@@ -61,6 +74,7 @@ type Config struct {
 	Ignore []string          `mapstructure:"ignore"`
 	Ports  map[string]int    `mapstructure:"ports"`
 	Env    map[string]string `mapstructure:"env"`
+	Tmux   TmuxConfig        `mapstructure:"tmux"`
 }
 
 var AppConfig Config
@@ -137,6 +151,14 @@ func InitConfig() {
 					AppConfig.Env = make(map[string]string)
 				}
 				maps.Copy(AppConfig.Env, localConfig.Env)
+
+				// Merge tmux
+				if localConfig.Tmux.Enabled {
+					AppConfig.Tmux.Enabled = true
+				}
+				if len(localConfig.Tmux.Panes) > 0 {
+					AppConfig.Tmux.Panes = localConfig.Tmux.Panes
+				}
 
 				// Fix case for local env
 				if err := loadEnvCasePreserved(localPath); err != nil {

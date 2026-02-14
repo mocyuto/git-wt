@@ -11,6 +11,7 @@ import (
 	"github.com/mocyuto/zgt/internal/logger"
 	"github.com/mocyuto/zgt/internal/state"
 	"github.com/mocyuto/zgt/internal/template"
+	"github.com/mocyuto/zgt/internal/tmux"
 	"github.com/spf13/cobra"
 )
 
@@ -93,6 +94,15 @@ Both forms will automatically create the branch if it does not already exist.`,
 			state.AssignPortIndex(projectName, absPath, name, basePort)
 		}
 		_ = state.SaveState()
+
+		// Run tmux setup
+		if err := tmux.Setup(template.Context{
+			Path:   absPath,
+			Branch: branch,
+			Repo:   filepath.Base(sourceRoot),
+		}); err != nil {
+			logger.Warn("tmux setup failed: %v", err)
+		}
 
 		// Run add hooks
 		hook.RunHooks("add", template.Context{
