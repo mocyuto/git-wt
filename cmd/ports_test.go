@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/mocyuto/zgt/internal/config"
-	"github.com/mocyuto/zgt/internal/git"
+	"github.com/mocyuto/zgt/internal/gitroot"
 	"github.com/mocyuto/zgt/internal/state"
 )
 
@@ -50,7 +50,7 @@ func TestPortsCmd(t *testing.T) {
 		os.MkdirAll(wt2, 0755)
 
 		// Setup initial state
-		mainRoot, _ := git.GetMainProjectRoot()
+		mainRoot, _ := gitroot.GetMainProjectRoot()
 		projectName := filepath.Base(mainRoot)
 
 		state.AppState.Projects = map[string]state.ProjectState{
@@ -96,7 +96,7 @@ func TestPortsCmd(t *testing.T) {
 		os.MkdirAll(wt2, 0755)
 
 		// Setup initial state
-		mainRoot, _ := git.GetMainProjectRoot()
+		mainRoot, _ := gitroot.GetMainProjectRoot()
 		projectName := filepath.Base(mainRoot)
 
 		state.AppState.Projects = map[string]state.ProjectState{
@@ -135,7 +135,7 @@ func TestPortsCmd(t *testing.T) {
 	})
 
 	t.Run("Filtering of port keys", func(t *testing.T) {
-		mainRoot, _ := git.GetMainProjectRoot()
+		mainRoot, _ := gitroot.GetMainProjectRoot()
 		currentProject := filepath.Base(mainRoot)
 		t.Logf("Detected current project: %s", currentProject)
 
@@ -168,7 +168,7 @@ func TestPortsCmd(t *testing.T) {
 		// We actually rely on filepath.Base(mainRoot) in the command.
 		// Since we are running in a test, let's see how we can control 'currentProject'.
 		// cmd/ports.go:
-		// mainRoot, err := git.GetMainProjectRoot()
+		// mainRoot, err := gitroot.GetMainProjectRoot()
 		// currentProject = filepath.Base(mainRoot)
 
 		// This is hard to mock without refactoring git.go.

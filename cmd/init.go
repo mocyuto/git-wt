@@ -6,7 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/mocyuto/zgt/internal/git"
+	"github.com/mocyuto/zgt/internal/config"
+	"github.com/mocyuto/zgt/internal/gitroot"
 	"github.com/mocyuto/zgt/internal/logger"
 	"github.com/spf13/cobra"
 )
@@ -16,25 +17,18 @@ var initCmd = &cobra.Command{
 	Short: "Initialize zgt configuration",
 	Long:  `Create a default zgt.config.yml in the project root directory.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		root, err := git.GetMainProjectRoot()
+		root, err := gitroot.GetMainProjectRoot()
 		if err != nil {
 			logger.Warn("Not in a git repository. Creating config in current directory.")
 			root = "."
 		}
-		configPath := filepath.Join(root, "zgt.config.yml")
-		altConfigPath := filepath.Join(root, "zgt.config.yaml")
 
-		// Check if the file already exists (both .yml and .yaml)
-		var existingPath string
-		if _, err := os.Stat(configPath); err == nil {
-			existingPath = configPath
-		} else if _, err := os.Stat(altConfigPath); err == nil {
-			existingPath = altConfigPath
-		}
+		existingPath := config.GetLocalConfigPath(root)
 
 		if existingPath != "" {
 			logger.Warn("%s already exists. Skipping creation.", existingPath)
 		} else {
+			configPath := filepath.Join(root, config.DefaultLocalConfigName)
 			defaultConfig := `ports:
   api: 3000
 env:
@@ -64,7 +58,7 @@ hooks:
 		}
 
 		content := string(data)
-		configsToIgnore := []string{"zgt.config.yml", "zgt.config.yaml"}
+		configsToIgnore := config.LocalConfigNames
 		var toAdd []string
 		for _, cfg := range configsToIgnore {
 			if !contains(content, cfg) {

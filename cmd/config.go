@@ -8,6 +8,7 @@ import (
 
 	"github.com/mocyuto/zgt/internal/config"
 	"github.com/mocyuto/zgt/internal/git"
+	"github.com/mocyuto/zgt/internal/gitroot"
 	"github.com/mocyuto/zgt/internal/logger"
 	"github.com/mocyuto/zgt/internal/template"
 	"github.com/spf13/cobra"
@@ -35,7 +36,7 @@ var configCmd = &cobra.Command{
 
 		// Prepare context for placeholder replacement
 		cwd, _ := os.Getwd()
-		gitRoot, _ := git.GetGitRoot()
+		gitRoot, _ := gitroot.GetGitRoot()
 		branch, _ := git.GetCurrentBranch()
 
 		ctx := template.Context{
@@ -64,30 +65,32 @@ var configEditCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var path string
 		if configGlobal {
-			home, err := os.UserHomeDir()
+			var err error
+			path, err = config.GetGlobalConfigPath()
 			if err != nil {
-				return logger.Errorf("could not get home directory: %v", err)
+				return logger.Errorf("could not get global config path: %v", err)
 			}
-			path = filepath.Join(home, ".config", "zgt", "config.yaml")
 		} else if configLocal {
-			gitRoot, err := git.GetMainProjectRoot()
+			gitRoot, err := gitroot.GetMainProjectRoot()
 			if err != nil || gitRoot == "" {
 				return logger.Errorf("not in a git repository or could not find project root")
 			}
-			path = filepath.Join(gitRoot, "zgt.config.yaml")
+			path = config.GetLocalConfigPath(gitRoot)
+			if path == "" {
+				// If not exists, use default name for creation/edit
+				path = filepath.Join(gitRoot, config.DefaultLocalConfigName)
+			}
 		} else {
 			// Default: check local, then global
-			gitRoot, _ := git.GetMainProjectRoot()
+			gitRoot, _ := gitroot.GetMainProjectRoot()
 			if gitRoot != "" {
-				localPath := filepath.Join(gitRoot, "zgt.config.yaml")
-				if _, err := os.Stat(localPath); err == nil {
-					path = localPath
-				}
+				path = config.GetLocalConfigPath(gitRoot)
 			}
 			if path == "" {
-				home, _ := os.UserHomeDir()
-				if home != "" {
-					path = filepath.Join(home, ".config", "zgt", "config.yaml")
+				var err error
+				path, err = config.GetGlobalConfigPath()
+				if err != nil {
+					return logger.Errorf("could not determine configuration file path: %v", err)
 				}
 			}
 		}

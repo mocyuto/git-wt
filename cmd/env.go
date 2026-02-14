@@ -8,6 +8,7 @@ import (
 
 	"github.com/mocyuto/zgt/internal/config"
 	"github.com/mocyuto/zgt/internal/git"
+	"github.com/mocyuto/zgt/internal/gitroot"
 	"github.com/mocyuto/zgt/internal/logger"
 	"github.com/mocyuto/zgt/internal/state"
 	"github.com/mocyuto/zgt/internal/template"
@@ -29,10 +30,10 @@ Usage: eval "$(zgt env)"`,
 		if !found {
 			// If not found, check if we are in the main git root.
 			// If so, automatically assign index 0.
-			gitRoot, err := git.GetGitRoot()
+			gitRoot, err := gitroot.GetGitRoot()
 			if err == nil {
 				absGitRoot := state.NormalizePath(gitRoot)
-				mainRoot, err := git.GetMainProjectRoot()
+				mainRoot, err := gitroot.GetMainProjectRoot()
 				if err == nil {
 					absMainRoot := state.NormalizePath(mainRoot)
 					projectName := filepath.Base(absMainRoot)
@@ -69,7 +70,7 @@ Usage: eval "$(zgt env)"`,
 
 		if len(config.AppConfig.Env) > 0 {
 			cwd, _ := os.Getwd()
-			gitRoot, _ := git.GetGitRoot()
+			gitRoot, _ := gitroot.GetGitRoot()
 			branch, _ := git.GetCurrentBranch()
 
 			ctx := template.Context{

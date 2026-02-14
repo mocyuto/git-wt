@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/mocyuto/zgt/internal/config"
 )
 
 // copyFile copies a single file from src to dst.
@@ -54,7 +56,14 @@ func getIgnoredFilesBase(dir string) ([]string, error) {
 		}
 
 		// Explicitly skip zgt configuration files
-		if relPath == "zgt.config.yml" || relPath == "zgt.config.yaml" {
+		isConfig := false
+		for _, cfgName := range config.LocalConfigNames {
+			if relPath == cfgName {
+				isConfig = true
+				break
+			}
+		}
+		if isConfig {
 			continue
 		}
 

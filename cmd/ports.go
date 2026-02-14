@@ -8,7 +8,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/mocyuto/zgt/internal/config"
-	"github.com/mocyuto/zgt/internal/git"
+	"github.com/mocyuto/zgt/internal/gitroot"
 	"github.com/mocyuto/zgt/internal/logger"
 	"github.com/mocyuto/zgt/internal/state"
 	"github.com/spf13/cobra"
@@ -28,7 +28,7 @@ var portsCmd = &cobra.Command{
 
 		// Get current project name for filtering
 		var currentProject string
-		mainRoot, err := git.GetMainProjectRoot()
+		mainRoot, err := gitroot.GetMainProjectRoot()
 		if err == nil {
 			currentProject = filepath.Base(mainRoot)
 		}
@@ -89,7 +89,7 @@ var portsCmd = &cobra.Command{
 			} else {
 				// Find first valid worktree path to get repo root
 				for p := range proj.Worktrees {
-					root, err := git.GetMainProjectRootFromPath(p)
+					root, err := gitroot.GetMainProjectRootFromPath(p)
 					if err == nil {
 						bp, err := config.LoadPortsFromPath(root)
 						if err == nil {
@@ -188,7 +188,7 @@ var portsUpdateCmd = &cobra.Command{
 		_ = state.LoadState()
 		state.CleanupState()
 
-		mainRoot, err := git.GetMainProjectRoot()
+		mainRoot, err := gitroot.GetMainProjectRoot()
 		if err != nil {
 			return logger.Errorf("not a git repository: %v", err)
 		}

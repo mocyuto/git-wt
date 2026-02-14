@@ -20,7 +20,7 @@ func TestInitCmd(t *testing.T) {
 	defer os.Chdir(oldCwd)
 
 	// Mocking Git Root for the test
-	// In the real app, it calls git.GetMainProjectRoot()
+	// In the real app, it calls gitroot.GetMainProjectRoot()
 	// Since we are in a fresh temp dir, it will fallback to "." as seen in init.go
 
 	// Run init command logic (manually triggering the Run logic or similar)

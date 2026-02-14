@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/mocyuto/zgt/internal/git"
+	"github.com/mocyuto/zgt/internal/gitroot"
 	"github.com/mocyuto/zgt/internal/hook"
 	"github.com/mocyuto/zgt/internal/logger"
 	"github.com/mocyuto/zgt/internal/state"
@@ -72,7 +73,7 @@ var removeCmd = &cobra.Command{
 		}
 
 		// Run removal hooks
-		gitRoot, _ := git.GetGitRoot()
+		gitRoot, _ := gitroot.GetGitRoot()
 		hook.RunHooks("rm", template.Context{
 			Path:   path,
 			Branch: branch,
@@ -81,7 +82,7 @@ var removeCmd = &cobra.Command{
 
 		// Release port index
 		absPath := state.NormalizePath(path)
-		gitRoot, _ = git.GetGitRoot()
+		gitRoot, _ = gitroot.GetGitRoot()
 		projectName := filepath.Base(gitRoot)
 		_ = state.LoadState()
 		state.ReleasePortIndex(projectName, absPath)
