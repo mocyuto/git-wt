@@ -18,7 +18,7 @@ var envCmd = &cobra.Command{
 	Use:   "env",
 	Short: "Export environment variables for assigned ports",
 	Long: `Generate shell export commands for the ports assigned to the current worktree.
-Usage: eval "$(git-wt env)"`,
+Usage: eval "$(zgt env)"`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		_ = state.LoadState()
 

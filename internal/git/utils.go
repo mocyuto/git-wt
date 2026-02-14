@@ -53,7 +53,7 @@ func getIgnoredFilesBase(dir string) ([]string, error) {
 			continue
 		}
 
-		// Explicitly skip git-wt configuration files
+		// Explicitly skip zgt configuration files
 		if relPath == "zgt.config.yml" || relPath == "zgt.config.yaml" {
 			continue
 		}

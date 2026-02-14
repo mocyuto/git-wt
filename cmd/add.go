@@ -31,10 +31,10 @@ If two arguments are provided, the first is the target path and the second is th
 
 Both forms will automatically create the branch if it does not already exist.`,
 	Example: `  # Automated path: if current dir is 'myapp', creates worktree at '../myapp-feat'
-  git-wt add feat
+  zgt add feat
 
   # Explicit path:
-  git-wt add ./experimental-worktree feat`,
+  zgt add ./experimental-worktree feat`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var targetPath, branch string
