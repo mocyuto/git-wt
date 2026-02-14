@@ -33,9 +33,16 @@ var initCmd = &cobra.Command{
   api: 3000
 env:
   COMPOSE_PROJECT_NAME: "{{.Repo}}-{{.Branch}}"
-hooks:
-  add:
-    - "tmux new-window -d -n [{{.Repo}}]{{.Branch}} -c {{.Path}} 'claude; exec $SHELL'"
+tmux:
+  enabled: true
+  panes:
+    - id: main
+      commands: ["yarn"]
+    - id: dev
+      target: main
+      split: horizontal
+      size: 50%
+      commands: ["yarn dev"]
 `
 			err := os.WriteFile(configPath, []byte(defaultConfig), 0644)
 			if err != nil {

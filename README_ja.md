@@ -176,6 +176,17 @@ hooks:
 ports:
   api: 8080
   web: 3000
+
+tmux:
+  enabled: true
+  panes:
+    - id: main
+      commands: ["yarn"]
+    - id: dev
+      target: main
+      split: horizontal
+      size: 50%
+      commands: ["yarn dev"]
 ```
 
 - `WEB_PORT=3001`
@@ -233,6 +244,49 @@ hooks:
 | `{{.Path}}`      | ワークツリーディレクトリの絶対パス   |
 | `{{.Branch}}`    | ブランチ名                           |
 | `{{.Repo}}`      | レポジトリ名（ベースディレクトリ名） |
+
+### Tmux 連携
+
+`zgt` は、`add` を実行したときに自動的に tmux のウィンドウを作成し、複数のペインに分割してコマンドを実行することができます。`id` を指定することで、特定のペインをターゲットにして分割することが可能です。
+
+```yaml
+tmux:
+  enabled: true
+  panes:
+    - id: main
+      commands: ["yarn"]
+    - id: side
+      target: main # main を左右に分割
+      split: horizontal
+      size: 50%
+      commands: ["yarn dev"]
+    - target: side # side を上下に分割
+      split: vertical
+      commands: ["yarn watch"]
+    - target: main # main を上下に分割
+      split: vertical
+      commands: ["tail -f logs/app.log"]
+```
+
+#### ペインのプロパティ
+
+| プロパティ | 説明                                                               |
+| :--------- | :----------------------------------------------------------------- |
+| `id`       | (任意) `target` から参照するための、ペインの一意識別子。           |
+| `target`   | (任意) 分割対象とするペインの ID。省略時は最後に作成されたペイン。 |
+| `commands` | そのペインで実行するコマンドのリスト。                             |
+| `split`    | 分割方向: `horizontal` (h) または `vertical` (v)。                 |
+| `size`     | ペインのサイズ (例: `20%` でパーセント指定、`20` で行/列数指定)。  |
+
+`enabled` が `true` の場合、`zgt` は以下の動作を行います：
+
+1. `[repo]branch` という名前の新しい tmux ウィンドウを作成します。
+2. `panes` のリストに従って分割を作成します。各分割は指定された `target` または直前に作成されたペインを対象とします。
+3. 各ペインで `commands` を実行し、終了後もシェルを開いたままにします。
+
+#### 注意事項
+
+- `tmux` がインストールされており、tmux セッションが実行中である必要があります。
 
 #### 補足
 

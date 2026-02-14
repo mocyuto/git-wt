@@ -178,6 +178,17 @@ hooks:
 ports:
   api: 8080
   web: 3000
+
+tmux:
+  enabled: true
+  panes:
+    - id: main
+      commands: ["yarn"]
+    - id: dev
+      target: main
+      split: horizontal
+      size: 50%
+      commands: ["yarn dev"]
 ```
 
 - `WEB_PORT=3001`
@@ -235,6 +246,49 @@ Placeholders can be used in `hooks` and `env` values.
 | `{{.Path}}`   | Absolute path of the worktree directory.      |
 | `{{.Branch}}` | Name of the branch.                           |
 | `{{.Repo}}`   | Name of the repository (base directory name). |
+
+### Tmux Integration
+
+`zgt` can automatically set up a tmux window with multiple panes and execute commands in each when you run `add`. You can explicitly target panes for splitting using IDs.
+
+```yaml
+tmux:
+  enabled: true
+  panes:
+    - id: main
+      commands: ["yarn"]
+    - id: side
+      target: main
+      split: horizontal
+      size: 50%
+      commands: ["yarn dev"]
+    - target: side
+      split: vertical
+      commands: ["yarn watch"]
+    - target: main
+      split: vertical
+      commands: ["tail -f logs/app.log"]
+```
+
+#### Pane Properties
+
+| Property   | Description                                                                   |
+| :--------- | :---------------------------------------------------------------------------- |
+| `id`       | (Optional) Unique ID for the pane to be referenced as a `target`.             |
+| `target`   | (Optional) ID of the pane to split. If omitted, splits the last created pane. |
+| `commands` | List of commands to execute in the pane.                                      |
+| `split`    | Split direction: `horizontal` (h) or `vertical` (v).                          |
+| `size`     | Pane size (e.g., `20%` for percentage or `20` for lines/columns).             |
+
+If `enabled` is `true`, `zgt` will:
+
+1. Create a new tmux window named `[repo]branch`.
+2. Follow the `panes` list to create splits. Each split targets the specified `target` or the last created pane.
+3. Execute the `commands` in each pane and keep the shell open.
+
+#### Note
+
+- Requires `tmux` to be installed and a tmux session to be running.
 
 #### Note
 

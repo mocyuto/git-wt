@@ -39,6 +39,16 @@ func ReplaceSlice(s []string, ctx Context) []string {
 	return res
 }
 
+// ReplaceTmuxPanes replaces placeholders in the commands of each TmuxPane
+func ReplaceTmuxPanes(panes []config.TmuxPane, ctx Context) []config.TmuxPane {
+	res := make([]config.TmuxPane, len(panes))
+	for i, p := range panes {
+		res[i] = p
+		res[i].Commands = ReplaceSlice(p.Commands, ctx)
+	}
+	return res
+}
+
 // ReplaceConfig returns a copy of the config with placeholders replaced
 func ReplaceConfig(cfg config.Config, ctx Context) config.Config {
 	res := cfg
@@ -46,5 +56,6 @@ func ReplaceConfig(cfg config.Config, ctx Context) config.Config {
 	res.Hooks.RM = ReplaceSlice(cfg.Hooks.RM, ctx)
 	res.Ignore = ReplaceSlice(cfg.Ignore, ctx)
 	res.Env = ReplaceMap(cfg.Env, ctx)
+	res.Tmux.Panes = ReplaceTmuxPanes(cfg.Tmux.Panes, ctx)
 	return res
 }
