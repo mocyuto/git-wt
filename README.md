@@ -17,7 +17,7 @@ but files ignored by `.gitignore` (such as `.env` or local configs) are not incl
 - **Auto-Discovery**: Automatically identifies and copies "ignored files" specified in `.gitignore`.
 - **Structural Integrity**: Maintains directory structure during copy (e.g., config files inside `node_modules`).
 - **Flexible Interface**: Powered by the Cobra framework for robust flag handling.
-- **Path Automation**: Automatically generates worktree paths based on branch names (`../{project}-{branch}`).
+- **Path Automation**: Automatically generates worktree paths based on branch names (`{project}-{branch}`) adjacent to the repository root.
 - **Lifecycle Management**: Support for listing (`list`/`ls`) and removing (`remove`/`rm`) worktrees.
 - **Port Management**: Automatically assigns unique port indexes to each worktree to prevent port collisions.
 - **Custom Hooks**: Execute multiple shell commands naturally after creating (`add`) or removing (`rm`) worktrees.
@@ -64,7 +64,7 @@ sudo mv zgt /usr/local/bin/zgt
 Running `git worktree add` usually leaves you with a fresh directory missing essential local files like `.env`. `zgt` automates the entire setup:
 
 1. **Worktree Creation**: Creates the directory and checks out the branch.
-2. **Auto-Path Generation**: Provide just the branch name, and it will be placed at `../{project}-{branch}` automatically.
+2. **Auto-Path Generation**: Provide just the branch name, and it will be placed as `{project}-{branch}` at the same level as your repository root automatically.
 3. **Config Synchronization**: Identifies "ignored files" (like `.env`) in your main tree and copies them over, maintaining the directory structure.
 4. **Port Reservation**: Reserves a unique "Port Index" for this specific worktree.
 5. **Automated Setup**: If you define hooks like `npm install` in `hooks.add`, they run immediately after creation.
