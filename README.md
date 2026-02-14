@@ -1,4 +1,4 @@
-# zgt
+# zgt (formerly `git-wt`)
 
 English | [日本語](./README_ja.md)
 
@@ -118,6 +118,7 @@ zgt sync
 - `ports`: Shows the mapping of worktree paths to their assigned port indexes and actual port numbers. Use `-a` / `--all` to see assignments across all projects.
 - `ports update`: Synchronizes port assignments for the current project with the latest configuration. It adds missing port assignments and removes those no longer present in the configuration.
 - `config`: Displays the final merged configuration (global + project + flags) in YAML format. Use `--check` to validate configuration syntax.
+- `config edit`: Edits the configuration file using the system editor.
 - `version`: Prints the version number of `zgt`.
 
 ## Configuration
@@ -137,6 +138,20 @@ zgt init
 ```
 
 This command creates a configuration file with sensible defaults for port management, environment templates, and sample hooks. If `zgt.config.yml` or `zgt.config.yaml` already exists, the command will skip creation to prevent overwritting your existing settings.
+
+### Customizing Configuration (`config edit`)
+
+You can edit your configuration files directly from the CLI using your preferred editor (defined by `$EDITOR` or `vi`):
+
+```bash
+# Edit local configuration
+zgt config edit --local
+
+# Edit global configuration
+zgt config edit --global
+```
+
+`zgt` will validate the YAML syntax before saving your changes.
 
 ### Project-Specific Configuration
 
