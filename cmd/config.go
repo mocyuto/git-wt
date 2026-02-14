@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	"github.com/mocyuto/zgt/internal/config"
@@ -14,7 +15,9 @@ import (
 )
 
 var (
-	configCheck bool
+	configCheck  bool
+	configGlobal bool
+	configLocal  bool
 )
 
 var configCmd = &cobra.Command{
@@ -54,7 +57,121 @@ var configCmd = &cobra.Command{
 	},
 }
 
+var configEditCmd = &cobra.Command{
+	Use:   "edit",
+	Short: "Edit the configuration file",
+	Long:  "Edit the global or local configuration file using the system editor.",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		var path string
+		if configGlobal {
+			home, err := os.UserHomeDir()
+			if err != nil {
+				return logger.Errorf("could not get home directory: %v", err)
+			}
+			path = filepath.Join(home, ".config", "zgt", "config.yaml")
+		} else if configLocal {
+			gitRoot, err := git.GetMainProjectRoot()
+			if err != nil || gitRoot == "" {
+				return logger.Errorf("not in a git repository or could not find project root")
+			}
+			path = filepath.Join(gitRoot, "zgt.config.yaml")
+		} else {
+			// Default: check local, then global
+			gitRoot, _ := git.GetMainProjectRoot()
+			if gitRoot != "" {
+				localPath := filepath.Join(gitRoot, "zgt.config.yaml")
+				if _, err := os.Stat(localPath); err == nil {
+					path = localPath
+				}
+			}
+			if path == "" {
+				home, _ := os.UserHomeDir()
+				if home != "" {
+					path = filepath.Join(home, ".config", "zgt", "config.yaml")
+				}
+			}
+		}
+
+		if path == "" {
+			return logger.Errorf("could not determine configuration file path")
+		}
+
+		// Ensure directory exists for global config
+		if configGlobal {
+			if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+				return logger.Errorf("failed to create config directory: %v", err)
+			}
+		}
+
+		return editFile(path)
+	},
+}
+
+func editFile(path string) error {
+	editor := os.Getenv("EDITOR")
+	if editor == "" {
+		editor = "vi"
+	}
+
+	// Read original content
+	content, err := os.ReadFile(path)
+	if err != nil && !os.IsNotExist(err) {
+		return logger.Errorf("failed to read config file: %v", err)
+	}
+
+	// Create temporary file
+	tmpFile, err := os.CreateTemp("", "zgt-config-*.yaml")
+	if err != nil {
+		return logger.Errorf("failed to create temp file: %v", err)
+	}
+	defer os.Remove(tmpFile.Name())
+
+	if _, err := tmpFile.Write(content); err != nil {
+		return logger.Errorf("failed to write to temp file: %v", err)
+	}
+	tmpFile.Close()
+
+	for {
+		cmd := exec.Command(editor, tmpFile.Name())
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		if err := cmd.Run(); err != nil {
+			return logger.Errorf("editor failed: %v", err)
+		}
+
+		// Validate YAML
+		newContent, err := os.ReadFile(tmpFile.Name())
+		if err != nil {
+			return logger.Errorf("failed to read edited file: %v", err)
+		}
+
+		var cfg config.Config
+		if err := yaml.Unmarshal(newContent, &cfg); err != nil {
+			fmt.Printf("YAML validation failed: %v\n", err)
+			fmt.Print("Press Enter to re-edit or Ctrl+C to abort...")
+			fmt.Scanln()
+			continue
+		}
+
+		// Write back to original file
+		if err := os.WriteFile(path, newContent, 0644); err != nil {
+			return logger.Errorf("failed to save config file: %v", err)
+		}
+
+		logger.Success("Configuration saved to %s", path)
+		break
+	}
+
+	return nil
+}
+
 func init() {
 	rootCmd.AddCommand(configCmd)
 	configCmd.Flags().BoolVar(&configCheck, "check", false, "check configuration for errors")
+
+	configCmd.AddCommand(configEditCmd)
+	configEditCmd.Flags().BoolVarP(&configGlobal, "global", "g", false, "edit global configuration")
+	configEditCmd.Flags().BoolVarP(&configLocal, "local", "l", false, "edit local configuration")
 }
