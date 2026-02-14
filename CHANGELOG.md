@@ -1,5 +1,10 @@
 # Changelog
 
+## [v0.5.0](https://github.com/mocyuto/zgt/compare/v0.4.0...v0.5.0) - 2026-02-14
+- Rename CLI tool from git-wt to zgt by @mocyuto in https://github.com/mocyuto/zgt/pull/21
+- feat: add config edit command and update README branding by @mocyuto in https://github.com/mocyuto/zgt/pull/22
+- Rename project to zgt and update init command to handle .gitignore by @mocyuto in https://github.com/mocyuto/zgt/pull/23
+
 ## [v0.4.0](https://github.com/mocyuto/zgt/compare/v0.3.0...v0.4.0) - 2026-02-13
 - add version command by @mocyuto in https://github.com/mocyuto/zgt/pull/16
 - feat: add ports update command and refine port key display by @mocyuto in https://github.com/mocyuto/zgt/pull/18
