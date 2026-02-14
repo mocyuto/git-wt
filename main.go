@@ -1,6 +1,6 @@
 package main
 
-import "github.com/mocyuto/git-wt/cmd"
+import "github.com/mocyuto/zgt/cmd"
 
 func main() {
 	cmd.Execute(version)

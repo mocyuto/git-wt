@@ -41,7 +41,7 @@ func getStateFilePath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(home, ".config", "git-wt", "state.json"), nil
+	return filepath.Join(home, ".config", "zgt", "state.json"), nil
 }
 
 func LoadState() error {

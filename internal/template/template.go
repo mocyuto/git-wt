@@ -3,7 +3,7 @@ package template
 import (
 	"strings"
 
-	"github.com/mocyuto/git-wt/internal/config"
+	"github.com/mocyuto/zgt/internal/config"
 )
 
 // Context holds information for template placeholders

@@ -9,13 +9,13 @@ import (
 
 func TestInitConfig(t *testing.T) {
 	// Setup temporary home and project root
-	tmpHome, err := os.MkdirTemp("", "git-wt-config-test-home")
+	tmpHome, err := os.MkdirTemp("", "zgt-config-test-home")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(tmpHome)
 
-	tmpGit, err := os.MkdirTemp("", "git-wt-config-test-git")
+	tmpGit, err := os.MkdirTemp("", "zgt-config-test-git")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,14 +40,14 @@ func TestInitConfig(t *testing.T) {
 		AppConfig = Config{} // Reset
 		InitConfig()
 
-		configPath := filepath.Join(tmpHome, ".config", "git-wt", "config.yaml")
+		configPath := filepath.Join(tmpHome, ".config", "zgt", "config.yaml")
 		if _, err := os.Stat(configPath); os.IsNotExist(err) {
 			t.Error("Global config.yaml should have been created with defaults")
 		}
 	})
 
 	t.Run("Global config loading", func(t *testing.T) {
-		configDir := filepath.Join(tmpHome, ".config", "git-wt")
+		configDir := filepath.Join(tmpHome, ".config", "zgt")
 		os.MkdirAll(configDir, 0755)
 		os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte(`
 hooks:
@@ -68,7 +68,7 @@ ignore: [".global-ignore"]
 
 	t.Run("Local config merging", func(t *testing.T) {
 		// Local config in tmpGit (current working directory)
-		os.WriteFile(filepath.Join(tmpGit, "git-wt.config.yaml"), []byte(`
+		os.WriteFile(filepath.Join(tmpGit, "zgt.config.yaml"), []byte(`
 hooks:
   add: ["local-add"]
 ignore: [".local-ignore"]
@@ -132,13 +132,13 @@ ports:
 	})
 
 	t.Run("Duplicate env keys prevention", func(t *testing.T) {
-		tmpRoot, _ := os.MkdirTemp("", "git-wt-dup-test")
+		tmpRoot, _ := os.MkdirTemp("", "zgt-dup-test")
 		defer os.RemoveAll(tmpRoot)
 
-		configPath := filepath.Join(tmpRoot, "git-wt.config.yaml")
+		configPath := filepath.Join(tmpRoot, "zgt.config.yaml")
 		_ = os.WriteFile(configPath, []byte(`
 env:
-  COMPOSE_PROJECT_NAME: "git-wt-pj-name"
+  COMPOSE_PROJECT_NAME: "zgt-pj-name"
 `), 0644)
 
 		AppConfig = Config{} // Reset

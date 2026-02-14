@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/mocyuto/git-wt/internal/logger"
+	"github.com/mocyuto/zgt/internal/logger"
 )
 
 func CopyIgnoredFiles(sourceRoot, targetPath string, ignorePatterns []string, verbose bool) error {
@@ -28,7 +28,7 @@ func CopyIgnoredFiles(sourceRoot, targetPath string, ignorePatterns []string, ve
 	}
 
 	// Warning for uncommitted/untracked config files NOT in .gitignore
-	configFiles := []string{"git-wt.config.yml", "git-wt.config.yaml"}
+	configFiles := []string{"zgt.config.yml", "zgt.config.yaml"}
 	for _, cfg := range configFiles {
 		src := filepath.Join(sourceRoot, cfg)
 		if info, err := os.Stat(src); err == nil && !info.IsDir() {

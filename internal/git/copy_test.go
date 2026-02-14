@@ -9,13 +9,13 @@ import (
 
 func TestCopyIgnoredFiles(t *testing.T) {
 	// Setup temporary source and target directories
-	tmpSrc, err := os.MkdirTemp("", "git-wt-copy-test-src")
+	tmpSrc, err := os.MkdirTemp("", "zgt-copy-test-src")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(tmpSrc)
 
-	tmpDst, err := os.MkdirTemp("", "git-wt-copy-test-dst")
+	tmpDst, err := os.MkdirTemp("", "zgt-copy-test-dst")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,8 +43,8 @@ func TestCopyIgnoredFiles(t *testing.T) {
 	os.MkdirAll(nmDir, 0755)
 	os.WriteFile(filepath.Join(nmDir, "dummy"), []byte("dummy content"), 0644)
 
-	// Create git-wt.config.yml (untracked/uncommitted)
-	configFile := filepath.Join(tmpSrc, "git-wt.config.yml")
+	// Create zgt.config.yml (untracked/uncommitted)
+	configFile := filepath.Join(tmpSrc, "zgt.config.yml")
 	configContent := "ports:\n  api: 8080\n"
 	os.WriteFile(configFile, []byte(configContent), 0644)
 
@@ -66,9 +66,9 @@ func TestCopyIgnoredFiles(t *testing.T) {
 			t.Error(".env should have been copied (ignored)")
 		}
 
-		// Verify git-wt.config.yml is NOT copied (it's untracked and NOT in .gitignore)
-		if _, err := os.Stat(filepath.Join(tmpDst, "git-wt.config.yml")); err == nil {
-			t.Error("git-wt.config.yml should NOT have been copied (untracked and not ignored)")
+		// Verify zgt.config.yml is NOT copied (it's untracked and NOT in .gitignore)
+		if _, err := os.Stat(filepath.Join(tmpDst, "zgt.config.yml")); err == nil {
+			t.Error("zgt.config.yml should NOT have been copied (untracked and not ignored)")
 		}
 	})
 
@@ -77,9 +77,9 @@ func TestCopyIgnoredFiles(t *testing.T) {
 		os.RemoveAll(tmpDst)
 		os.MkdirAll(tmpDst, 0755)
 
-		// Add git-wt.config.yml to .gitignore
+		// Add zgt.config.yml to .gitignore
 		f, _ := os.OpenFile(filepath.Join(tmpSrc, ".gitignore"), os.O_APPEND|os.O_WRONLY, 0644)
-		f.WriteString("git-wt.config.yml\n")
+		f.WriteString("zgt.config.yml\n")
 		f.Close()
 
 		err := CopyIgnoredFiles(tmpSrc, tmpDst, []string{}, false)
@@ -87,9 +87,9 @@ func TestCopyIgnoredFiles(t *testing.T) {
 			t.Fatalf("CopyIgnoredFiles failed: %v", err)
 		}
 
-		// Verify git-wt.config.yml is NOT copied
-		if _, err := os.Stat(filepath.Join(tmpDst, "git-wt.config.yml")); err == nil {
-			t.Error("git-wt.config.yml should NOT have been copied because it is now explicitly excluded")
+		// Verify zgt.config.yml is NOT copied
+		if _, err := os.Stat(filepath.Join(tmpDst, "zgt.config.yml")); err == nil {
+			t.Error("zgt.config.yml should NOT have been copied because it is now explicitly excluded")
 		}
 	})
 

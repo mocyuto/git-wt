@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/mocyuto/git-wt/internal/config"
+	"github.com/mocyuto/zgt/internal/config"
 )
 
 func TestReplace(t *testing.T) {

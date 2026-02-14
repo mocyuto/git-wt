@@ -8,7 +8,7 @@ import (
 )
 
 func TestAssignPortIndex(t *testing.T) {
-	tmpDir, _ := os.MkdirTemp("", "git-wt-assign-test")
+	tmpDir, _ := os.MkdirTemp("", "zgt-assign-test")
 	defer os.RemoveAll(tmpDir)
 
 	// Initialize git in tmpDir to make it a "main" project
@@ -56,7 +56,7 @@ func TestAssignPortIndex(t *testing.T) {
 }
 
 func TestCleanupState(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "git-wt-state-test")
+	tmpDir, err := os.MkdirTemp("", "zgt-state-test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,7 +89,7 @@ func TestGetCurrentWorktreePorts(t *testing.T) {
 	origWd, _ := os.Getwd()
 	defer os.Chdir(origWd)
 
-	tmpDir, err := os.MkdirTemp("", "git-wt-match-test")
+	tmpDir, err := os.MkdirTemp("", "zgt-match-test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,7 +132,7 @@ func TestGetCurrentWorktreePorts(t *testing.T) {
 }
 
 func TestSaveLoadState(t *testing.T) {
-	tmpHome, err := os.MkdirTemp("", "git-wt-home-test")
+	tmpHome, err := os.MkdirTemp("", "zgt-home-test")
 	if err != nil {
 		t.Fatal(err)
 	}

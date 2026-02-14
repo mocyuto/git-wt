@@ -12,7 +12,7 @@ func TestVersionCmd(t *testing.T) {
 
 	Execute("v0.3.0")
 
-	expected := "git-wt version " + Version + "\n"
+	expected := "zgt version " + Version + "\n"
 	if buf.String() != expected {
 		t.Errorf("expected %q, got %q", expected, buf.String())
 	}

@@ -7,14 +7,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mocyuto/git-wt/internal/config"
-	"github.com/mocyuto/git-wt/internal/git"
-	"github.com/mocyuto/git-wt/internal/state"
+	"github.com/mocyuto/zgt/internal/config"
+	"github.com/mocyuto/zgt/internal/git"
+	"github.com/mocyuto/zgt/internal/state"
 )
 
 func TestPortsCmd(t *testing.T) {
 	// Setup temporary home
-	tmpHome, err := os.MkdirTemp("", "git-wt-test-home")
+	tmpHome, err := os.MkdirTemp("", "zgt-test-home")
 	if err != nil {
 		t.Fatal(err)
 	}

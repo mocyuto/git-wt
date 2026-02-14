@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mocyuto/git-wt/internal/config"
-	"github.com/mocyuto/git-wt/internal/template"
+	"github.com/mocyuto/zgt/internal/config"
+	"github.com/mocyuto/zgt/internal/template"
 )
 
 func TestRunHooks_Env(t *testing.T) {

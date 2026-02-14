@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/mocyuto/git-wt/internal/git"
-	"github.com/mocyuto/git-wt/internal/logger"
+	"github.com/mocyuto/zgt/internal/git"
+	"github.com/mocyuto/zgt/internal/logger"
 	"github.com/spf13/cobra"
 )
 

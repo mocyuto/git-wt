@@ -1,4 +1,4 @@
-# git-wt
+# zgt
 
 English | [日本語](./README_ja.md)
 
@@ -6,7 +6,7 @@ A CLI tool that extends `git worktree add` by automatically copying ignored conf
 
 ## Overview
 
-Git's `worktree` feature is powerful, but files ignored by `.gitignore` (such as `.env` or local configs) are not included in the newly created worktree. `git-wt` automates the process of copying these files, allowing you to start development and testing immediately.
+Git's `worktree` feature is powerful, but files ignored by `.gitignore` (such as `.env` or local configs) are not included in the newly created worktree. `zgt` automates the process of copying these files, allowing you to start development and testing immediately.
 
 ## Features
 
@@ -23,9 +23,9 @@ Git's `worktree` feature is powerful, but files ignored by `.gitignore` (such as
 
 ## Badges
 
-[![Release](https://img.shields.io/github/release/mocyuto/git-wt.svg?style=for-the-badge)](https://github.com/mocyuto/git-wt/releases/latest)
+[![Release](https://img.shields.io/github/release/mocyuto/zgt.svg?style=for-the-badge)](https://github.com/mocyuto/zgt/releases/latest)
 [![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=for-the-badge)](/LICENSE.md)
-[![Build status](https://img.shields.io/github/actions/workflow/status/mocyuto/git-wt/ci.yml?style=for-the-badge&branch=main)](https://github.com/mocyuto/git-wt/actions?workflow=ci)
+[![Build status](https://img.shields.io/github/actions/workflow/status/mocyuto/zgt/ci.yml?style=for-the-badge&branch=main)](https://github.com/mocyuto/zgt/actions?workflow=ci)
 
 ## Installation
 
@@ -34,13 +34,13 @@ Git's `worktree` feature is powerful, but files ignored by `.gitignore` (such as
 The easiest way to install on macOS is via Homebrew:
 
 ```bash
-brew install mocyuto/tap/git-wt
+brew install mocyuto/tap/zgt
 ```
 
 ### Build
 
 ```bash
-go build -o git-wt .
+go build -o zgt .
 ```
 
 ### Move to PATH
@@ -49,19 +49,16 @@ Place the binary in a directory included in your `PATH`.
 
 ```bash
 # Example for macOS / Linux
-sudo mv git-wt /usr/local/bin/git-wt
+sudo mv zgt /usr/local/bin/zgt
 ```
-
-> [!TIP]
-> If you name the binary `git-wt` and place it in your `PATH`, you can also call it as `git wt ...`.
 
 ## Development Workflow & Behavior
 
-`git-wt` is designed to make context switching seamless for developers by automating the repetitive parts of managing worktrees.
+`zgt` is designed to make context switching seamless for developers by automating the repetitive parts of managing worktrees.
 
 ### 1. Starting a New Feature (`add`)
 
-Running `git worktree add` usually leaves you with a fresh directory missing essential local files like `.env`. `git-wt` automates the entire setup:
+Running `git worktree add` usually leaves you with a fresh directory missing essential local files like `.env`. `zgt` automates the entire setup:
 
 1. **Worktree Creation**: Creates the directory and checks out the branch.
 2. **Auto-Path Generation**: Provide just the branch name, and it will be placed at `../{project}-{branch}` automatically.
@@ -71,21 +68,21 @@ Running `git worktree add` usually leaves you with a fresh directory missing ess
 
 ```bash
 # Start a new feature in a fresh worktree
-git-wt add feature-login
+zgt add feature-login
 ```
 
 ### 2. Running Multiple Projects Simultaneously (`env` / `ports`)
 
-When running multiple servers across different worktrees, port collisions are a common pain point. `git-wt` solves this:
+When running multiple servers across different worktrees, port collisions are a common pain point. `zgt` solves this:
 
 - **Behavior**: Every worktree is assigned a stable index (`0, 1, 2...`).
-- **Dynamic Calculation**: Port numbers are calculated by adding the index to the base port defined in the `git-wt.config.yml` of the worktree's project root. This ensures correct calculation even with different base ports across projects.
-- **Usage**: Define base ports (e.g., `api: 8080`) in your config. `git-wt env` generates environment variables (e.g., `8080`, `8081`...) specific to that worktree.
+- **Dynamic Calculation**: Port numbers are calculated by adding the index to the base port defined in the `zgt.config.yml` of the worktree's project root. This ensures correct calculation even with different base ports across projects.
+- **Usage**: Define base ports (e.g., `api: 8080`) in your config. `zgt env` generates environment variables (e.g., `8080`, `8081`...) specific to that worktree.
 
 ```bash
 # Move to a worktree and load its specific environment
 cd ../my-project-feature-login
-eval "$(git-wt env)"
+eval "$(zgt env)"
 
 # $API_PORT is now 8081, preventing collision with other worktrees
 npm start
@@ -93,26 +90,26 @@ npm start
 
 ### 3. Cleaning Up (`remove`)
 
-When a feature is finished, `git-wt` handles the teardown in one go.
+When a feature is finished, `zgt` handles the teardown in one go.
 
 - **Behavior**: Deletes the worktree directory and its associated local branch simultaneously (configurable).
 - **Cleanup**: The Port Index is released and becomes available for future worktrees. You can also trigger cleanup scripts via `hooks.rm`.
 
 ```bash
 # Done with the feature. Delete both directory and branch.
-git-wt rm feature-login
+zgt rm feature-login
 ```
 
 ### 4. Synchronizing Ignored Files (`sync`)
 
 If you've made changes to ignored configuration files (like `.env`) within your worktree and want to reflect those changes back to the main project root:
 
-- **Interactive Mode**: Run `git-wt sync` to open a TUI (powered by `rivo/tview`) where you can selectively choose which files to sync.
+- **Interactive Mode**: Run `zgt sync` to open a TUI (powered by `rivo/tview`) where you can selectively choose which files to sync.
 - **Bulk Sync**: Use `-a` / `--all` (or `--force`) to sync all ignored files immediately.
 
 ```bash
 # Selectively sync changes back to root
-git-wt sync
+zgt sync
 ```
 
 ### 5. Monitoring Assignments (`list` / `ports`)
@@ -121,32 +118,32 @@ git-wt sync
 - `ports`: Shows the mapping of worktree paths to their assigned port indexes and actual port numbers. Use `-a` / `--all` to see assignments across all projects.
 - `ports update`: Synchronizes port assignments for the current project with the latest configuration. It adds missing port assignments and removes those no longer present in the configuration.
 - `config`: Displays the final merged configuration (global + project + flags) in YAML format. Use `--check` to validate configuration syntax.
-- `version`: Prints the version number of `git-wt`.
+- `version`: Prints the version number of `zgt`.
 
 ## Configuration
 
-`git-wt` loads configuration from three sources in this priority:
+`zgt` loads configuration from three sources in this priority:
 
-1. Local project configuration (`git-wt.config.yaml` or `git-wt.config.yml` in project root)
-2. Global configuration (`~/.config/git-wt/config.yaml`)
+1. Local project configuration (`zgt.config.yaml` or `zgt.config.yml` in project root)
+2. Global configuration (`~/.config/zgt/config.yaml`)
 3. Explicit configuration path provided via `--config` flag
 
 ### Initializing Configuration (`init`)
 
-You can generate a default configuration file (`git-wt.config.yml`) in your project's root directory:
+You can generate a default configuration file (`zgt.config.yml`) in your project's root directory:
 
 ```bash
-git-wt init
+zgt init
 ```
 
-This command creates a configuration file with sensible defaults for port management, environment templates, and sample hooks. If `git-wt.config.yml` or `git-wt.config.yaml` already exists, the command will skip creation to prevent overwritting your existing settings.
+This command creates a configuration file with sensible defaults for port management, environment templates, and sample hooks. If `zgt.config.yml` or `zgt.config.yaml` already exists, the command will skip creation to prevent overwritting your existing settings.
 
 ### Project-Specific Configuration
 
-You can create a `git-wt.config.yaml` (or `.yml`) in your project's root directory to define settings specific to that project. Local settings for `hooks` and `ignore` will be **appended** to the global settings.
+You can create a `zgt.config.yaml` (or `.yml`) in your project's root directory to define settings specific to that project. Local settings for `hooks` and `ignore` will be **appended** to the global settings.
 
 ```yaml
-# git-wt.config.yaml
+# zgt.config.yaml
 ignore:
   - "*.tmp"
   - "local-debug.log"
@@ -164,19 +161,19 @@ ports:
 
 ### Custom Environment Variables
 
-You can define custom environment variables in the `env` section. These variables support placeholders and automatically exported via `git-wt env`.
+You can define custom environment variables in the `env` section. These variables support placeholders and automatically exported via `zgt env`.
 
 ```yaml
 env:
-  COMPOSE_PROJECT_NAME: "git-wt-{{.Repo}}"
+  COMPOSE_PROJECT_NAME: "zgt-{{.Repo}}"
   DEBUG: "true"
 ```
 
 In your terminal:
 
 ```bash
-eval "$(git-wt env)"
-echo $COMPOSE_PROJECT_NAME # git-wt-myrepo
+eval "$(zgt env)"
+echo $COMPOSE_PROJECT_NAME # zgt-myrepo
 ```
 
 These variables are also available during [Custom Hooks](#custom-hooks) execution.

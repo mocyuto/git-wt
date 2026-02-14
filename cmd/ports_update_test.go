@@ -7,13 +7,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/mocyuto/git-wt/internal/config"
-	"github.com/mocyuto/git-wt/internal/state"
+	"github.com/mocyuto/zgt/internal/config"
+	"github.com/mocyuto/zgt/internal/state"
 )
 
 func TestPortsUpdateCmd(t *testing.T) {
 	// Setup temporary home
-	tmpHome, err := os.MkdirTemp("", "git-wt-test-home")
+	tmpHome, err := os.MkdirTemp("", "zgt-test-home")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -24,7 +24,7 @@ func TestPortsUpdateCmd(t *testing.T) {
 	defer os.Setenv("HOME", origHome)
 
 	// Setup fake git project
-	projectDir, _ := os.MkdirTemp("", "git-wt-project")
+	projectDir, _ := os.MkdirTemp("", "zgt-project")
 	projectDir = state.NormalizePath(projectDir)
 	defer os.RemoveAll(projectDir)
 	exec.Command("git", "init", projectDir).Run()
