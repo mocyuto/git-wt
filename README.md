@@ -6,7 +6,10 @@ A CLI tool that extends `git worktree add` by automatically copying ignored conf
 
 ## Overview
 
-Git's `worktree` feature is powerful, but files ignored by `.gitignore` (such as `.env` or local configs) are not included in the newly created worktree. `zgt` automates the process of copying these files, allowing you to start development and testing immediately.
+- [Migration Guide (from `git-wt`)](./MIGRATION.md)
+
+Git's `worktree` feature is powerful,
+but files ignored by `.gitignore` (such as `.env` or local configs) are not included in the newly created worktree. `zgt` automates the process of copying these files, allowing you to start development and testing immediately.
 
 ## Features
 
