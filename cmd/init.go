@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/mocyuto/zgt/internal/config"
-	"github.com/mocyuto/zgt/internal/git"
+	"github.com/mocyuto/zgt/internal/gitroot"
 	"github.com/mocyuto/zgt/internal/logger"
 	"github.com/spf13/cobra"
 )
@@ -17,7 +17,7 @@ var initCmd = &cobra.Command{
 	Short: "Initialize zgt configuration",
 	Long:  `Create a default zgt.config.yml in the project root directory.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		root, err := git.GetMainProjectRoot()
+		root, err := gitroot.GetMainProjectRoot()
 		if err != nil {
 			logger.Warn("Not in a git repository. Creating config in current directory.")
 			root = "."

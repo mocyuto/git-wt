@@ -7,6 +7,7 @@ import (
 
 	"github.com/mocyuto/zgt/internal/config"
 	"github.com/mocyuto/zgt/internal/git"
+	"github.com/mocyuto/zgt/internal/gitroot"
 	"github.com/mocyuto/zgt/internal/hook"
 	"github.com/mocyuto/zgt/internal/logger"
 	"github.com/mocyuto/zgt/internal/state"
@@ -66,7 +67,7 @@ Both forms will automatically create the branch if it does not already exist.`,
 			}
 		}
 
-		sourceRoot, err := git.GetGitRoot()
+		sourceRoot, err := gitroot.GetGitRoot()
 		if err != nil {
 			return logger.Errorf("failed to get git root: %v", err)
 		}
@@ -87,7 +88,7 @@ Both forms will automatically create the branch if it does not already exist.`,
 		// Assign port index
 		absPath := state.NormalizePath(targetPath)
 		_ = state.LoadState() // Assign ports
-		gitRoot, _ := git.GetMainProjectRoot()
+		gitRoot, _ := gitroot.GetMainProjectRoot()
 		projectName := filepath.Base(gitRoot)
 		for name, basePort := range config.AppConfig.Ports {
 			state.AssignPortIndex(projectName, absPath, name, basePort)

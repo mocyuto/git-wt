@@ -6,6 +6,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/mocyuto/zgt/internal/git"
+	"github.com/mocyuto/zgt/internal/gitroot"
 	"github.com/mocyuto/zgt/internal/logger"
 	"github.com/rivo/tview"
 	"github.com/spf13/cobra"
@@ -26,7 +27,7 @@ var syncCmd = &cobra.Command{
 		}
 
 		// 1. Identify main project root
-		mainRoot, err := git.GetMainProjectRootFromPath(cwd)
+		mainRoot, err := gitroot.GetMainProjectRootFromPath(cwd)
 		if err != nil {
 			return fmt.Errorf("failed to identify main project root: %v", err)
 		}

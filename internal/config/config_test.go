@@ -21,7 +21,7 @@ func TestInitConfig(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpGit)
 
-	// Initialize git repo to satisfy git.GetGitRoot()
+	// Initialize git repo to satisfy gitroot.GetGitRoot()
 	cmd := exec.Command("git", "init")
 	cmd.Dir = tmpGit
 	if err := cmd.Run(); err != nil {

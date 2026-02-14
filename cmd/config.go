@@ -8,6 +8,7 @@ import (
 
 	"github.com/mocyuto/zgt/internal/config"
 	"github.com/mocyuto/zgt/internal/git"
+	"github.com/mocyuto/zgt/internal/gitroot"
 	"github.com/mocyuto/zgt/internal/logger"
 	"github.com/mocyuto/zgt/internal/template"
 	"github.com/spf13/cobra"
@@ -35,7 +36,7 @@ var configCmd = &cobra.Command{
 
 		// Prepare context for placeholder replacement
 		cwd, _ := os.Getwd()
-		gitRoot, _ := git.GetGitRoot()
+		gitRoot, _ := gitroot.GetGitRoot()
 		branch, _ := git.GetCurrentBranch()
 
 		ctx := template.Context{
@@ -70,7 +71,7 @@ var configEditCmd = &cobra.Command{
 				return logger.Errorf("could not get global config path: %v", err)
 			}
 		} else if configLocal {
-			gitRoot, err := git.GetMainProjectRoot()
+			gitRoot, err := gitroot.GetMainProjectRoot()
 			if err != nil || gitRoot == "" {
 				return logger.Errorf("not in a git repository or could not find project root")
 			}
@@ -81,7 +82,7 @@ var configEditCmd = &cobra.Command{
 			}
 		} else {
 			// Default: check local, then global
-			gitRoot, _ := git.GetMainProjectRoot()
+			gitRoot, _ := gitroot.GetMainProjectRoot()
 			if gitRoot != "" {
 				path = config.GetLocalConfigPath(gitRoot)
 			}

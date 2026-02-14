@@ -5,24 +5,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/mocyuto/zgt/internal/gitroot"
 	"github.com/mocyuto/zgt/internal/logger"
 )
-
-// GetGitRoot returns the absolute path to the root of the current git repository.
-func GetGitRoot() (string, error) {
-	return gitroot.GetGitRoot()
-}
-
-// GetMainProjectRoot returns the absolute path to the main project root directory.
-func GetMainProjectRoot() (string, error) {
-	return gitroot.GetMainProjectRoot()
-}
-
-// GetMainProjectRootFromPath returns the absolute path to the main project root for the given directory.
-func GetMainProjectRootFromPath(dir string) (string, error) {
-	return gitroot.GetMainProjectRootFromPath(dir)
-}
 
 func GetCurrentBranch() (string, error) {
 	out, err := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD").Output()
