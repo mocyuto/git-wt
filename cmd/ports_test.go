@@ -50,8 +50,11 @@ func TestPortsCmd(t *testing.T) {
 		os.MkdirAll(wt2, 0755)
 
 		// Setup initial state
+		mainRoot, _ := git.GetMainProjectRoot()
+		projectName := filepath.Base(mainRoot)
+
 		state.AppState.Projects = map[string]state.ProjectState{
-			"git-wt": {
+			projectName: {
 				Worktrees: map[string]*state.WorktreeState{
 					wt1: {Ports: map[string]int{"api": 0}},
 					wt2: {Ports: map[string]int{"api": 1}},
@@ -72,10 +75,10 @@ func TestPortsCmd(t *testing.T) {
 		if !strings.Contains(output, "PROJECT") || !strings.Contains(output, "WORKTREE PATH") {
 			t.Errorf("Expected header not found in output: %s", output)
 		}
-		if !strings.Contains(output, "git-wt") || !strings.Contains(output, wt1) {
+		if !strings.Contains(output, projectName) || !strings.Contains(output, wt1) {
 			t.Errorf("Expected assignment for wt1 not found: %s", output)
 		}
-		if !strings.Contains(output, "git-wt") || !strings.Contains(output, wt2) {
+		if !strings.Contains(output, projectName) || !strings.Contains(output, wt2) {
 			t.Errorf("Expected assignment for wt2 not found: %s", output)
 		}
 	})
@@ -93,8 +96,11 @@ func TestPortsCmd(t *testing.T) {
 		os.MkdirAll(wt2, 0755)
 
 		// Setup initial state
+		mainRoot, _ := git.GetMainProjectRoot()
+		projectName := filepath.Base(mainRoot)
+
 		state.AppState.Projects = map[string]state.ProjectState{
-			"git-wt": {
+			projectName: {
 				Worktrees: map[string]*state.WorktreeState{
 					wt1: {Ports: map[string]int{"api": 0, "web": 0}},
 					wt2: {Ports: map[string]int{"api": 1, "web": 1}},
