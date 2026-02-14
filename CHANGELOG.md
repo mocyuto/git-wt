@@ -1,5 +1,11 @@
 # Changelog
 
+## [v0.6.0](https://github.com/mocyuto/zgt/compare/v0.5.1...v0.6.0) - 2026-02-14
+- feat: change default worktree path to be adjacent to repository root by @mocyuto in https://github.com/mocyuto/zgt/pull/28
+- fix(ci): avoid detached HEAD in tagpr workflow by @mocyuto in https://github.com/mocyuto/zgt/pull/30
+- feat: multi-pane tmux integration support by @mocyuto in https://github.com/mocyuto/zgt/pull/31
+- fix: ensure tagpr runs on main branch for labeled events by @mocyuto in https://github.com/mocyuto/zgt/pull/32
+
 ## [v0.5.1](https://github.com/mocyuto/zgt/compare/v0.5.0...v0.5.1) - 2026-02-14
 - Use GitHub App token for tagpr workflow by @mocyuto in https://github.com/mocyuto/zgt/pull/24
 - docs: add migration guide and fix tagpr checkout issue by @mocyuto in https://github.com/mocyuto/zgt/pull/26
