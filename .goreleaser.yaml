@@ -1,7 +1,7 @@
 # .goreleaser.yaml
 
 version: 2
-project_name: git-wt
+project_name: zgt
 
 before:
   hooks:
@@ -30,14 +30,14 @@ archives:
       {{- .Arch }}
 
 checksum:
-  name_template: 'checksums.txt'
+  name_template: "checksums.txt"
 
 snapshot:
-  name_template: '{{ incpatch .Version }}-next'
+  name_template: "{{ incpatch .Version }}-next"
 
 changelog:
   sort: asc
   filters:
     exclude:
-      - '^docs:'
-      - '^test:'
+      - "^docs:"
+      - "^test:"

@@ -175,7 +175,7 @@ func loadEnvCasePreserved(path string) error {
 	return nil
 }
 
-// LoadPortsFromPath loads only the ports configuration from a git-wt.config.yml/yaml in the given directory
+// LoadPortsFromPath loads only the ports configuration from a zgt.config.yml/yaml in the given directory
 func LoadPortsFromPath(root string) (map[string]int, error) {
 	v := viper.New()
 	v.AddConfigPath(root)

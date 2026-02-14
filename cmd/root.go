@@ -11,12 +11,12 @@ import (
 var Version = ""
 
 var rootCmd = &cobra.Command{
-	Use:           "git-wt",
+	Use:           "zgt",
 	Short:         "Create git worktree and copy ignored files",
 	Version:       Version,
 	SilenceErrors: true,
 	SilenceUsage:  true,
-	Long: `git-wt is a CLI tool that extends 'git worktree add' by automatically
+	Long: `zgt is a CLI tool that extends 'git worktree add' by automatically
 copying ignored configuration files (like .env) from the main tree to the new worktree.`,
 }
 
@@ -32,5 +32,5 @@ func Execute(version string) {
 func init() {
 	cobra.OnInitialize(config.InitConfig)
 
-	rootCmd.PersistentFlags().StringVar(&config.CfgFile, "config", "", "config file (default is $HOME/.config/git-wt/config.yaml)")
+	rootCmd.PersistentFlags().StringVar(&config.CfgFile, "config", "", "config file (default is $HOME/.config/zgt/config.yaml)")
 }

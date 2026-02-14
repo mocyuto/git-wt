@@ -137,7 +137,12 @@ You can generate a default configuration file (`zgt.config.yml`) in your project
 zgt init
 ```
 
-This command creates a configuration file with sensible defaults for port management, environment templates, and sample hooks. If `zgt.config.yml` or `zgt.config.yaml` already exists, the command will skip creation to prevent overwritting your existing settings.
+This command performs the following:
+
+1.  Creates a `zgt.config.yml` with sensible defaults for port management, environment templates, and sample hooks.
+2.  Automatically appends `zgt.config.yml` and `zgt.config.yaml` to your `.gitignore` file to ensure they are not accidentally committed.
+
+If `zgt.config.yml` or `zgt.config.yaml` already exists, the command will skip creation to prevent overwriting your existing settings.
 
 ### Customizing Configuration (`config edit`)
 

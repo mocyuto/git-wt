@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/mocyuto/zgt/internal/git"
 	"github.com/mocyuto/zgt/internal/logger"
@@ -12,16 +13,16 @@ import (
 
 var initCmd = &cobra.Command{
 	Use:   "init",
-	Short: "Initialize git-wt configuration",
-	Long:  `Create a default git-wt.config.yml in the project root directory.`,
+	Short: "Initialize zgt configuration",
+	Long:  `Create a default zgt.config.yml in the project root directory.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		root, err := git.GetMainProjectRoot()
 		if err != nil {
 			logger.Warn("Not in a git repository. Creating config in current directory.")
 			root = "."
 		}
-		configPath := filepath.Join(root, "git-wt.config.yml")
-		altConfigPath := filepath.Join(root, "git-wt.config.yaml")
+		configPath := filepath.Join(root, "zgt.config.yml")
+		altConfigPath := filepath.Join(root, "zgt.config.yaml")
 
 		// Check if the file already exists (both .yml and .yaml)
 		var existingPath string
@@ -51,9 +52,60 @@ hooks:
 		}
 
 		fmt.Println("\nUsage of 'add' command:")
-		fmt.Printf("  git-wt add <branch>          # Create worktree at ../%s-{branch}\n", filepath.Base(root))
-		fmt.Println("  git-wt add <path> <branch>   # Create worktree at specified path")
+		fmt.Printf("  zgt add <branch>          # Create worktree at ../%s-{branch}\n", filepath.Base(root))
+		fmt.Println("  zgt add <path> <branch>   # Create worktree at specified path")
+
+		// Add config files to .gitignore if not present
+		ignorePath := filepath.Join(root, ".gitignore")
+		data, err := os.ReadFile(ignorePath)
+		if err != nil && !os.IsNotExist(err) {
+			logger.Warn("failed to read .gitignore: %v", err)
+			return
+		}
+
+		content := string(data)
+		configsToIgnore := []string{"zgt.config.yml", "zgt.config.yaml"}
+		var toAdd []string
+		for _, cfg := range configsToIgnore {
+			if !contains(content, cfg) {
+				toAdd = append(toAdd, cfg)
+			}
+		}
+
+		if len(toAdd) > 0 {
+			f, err := os.OpenFile(ignorePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+			if err != nil {
+				logger.Warn("failed to open .gitignore: %v", err)
+				return
+			}
+			defer f.Close()
+
+			if content != "" && !strings.HasSuffix(content, "\n") {
+				if _, err := f.WriteString("\n"); err != nil {
+					logger.Warn("failed to write to .gitignore: %v", err)
+					return
+				}
+			}
+
+			for _, cfg := range toAdd {
+				if _, err := f.WriteString(cfg + "\n"); err != nil {
+					logger.Warn("failed to write to .gitignore: %v", err)
+					return
+				}
+			}
+			logger.Success("Added %v to .gitignore", toAdd)
+		}
 	},
+}
+
+func contains(content, target string) bool {
+	lines := strings.SplitSeq(content, "\n")
+	for line := range lines {
+		if strings.TrimSpace(line) == target {
+			return true
+		}
+	}
+	return false
 }
 
 func init() {
