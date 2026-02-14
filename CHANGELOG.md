@@ -1,5 +1,10 @@
 # Changelog
 
+## [v0.5.1](https://github.com/mocyuto/zgt/compare/v0.5.0...v0.5.1) - 2026-02-14
+- Use GitHub App token for tagpr workflow by @mocyuto in https://github.com/mocyuto/zgt/pull/24
+- docs: add migration guide and fix tagpr checkout issue by @mocyuto in https://github.com/mocyuto/zgt/pull/26
+- Consolidate config paths and refactor Git root discovery by @mocyuto in https://github.com/mocyuto/zgt/pull/27
+
 ## [v0.5.0](https://github.com/mocyuto/zgt/compare/v0.4.0...v0.5.0) - 2026-02-14
 - Rename CLI tool from git-wt to zgt by @mocyuto in https://github.com/mocyuto/zgt/pull/21
 - feat: add config edit command and update README branding by @mocyuto in https://github.com/mocyuto/zgt/pull/22
