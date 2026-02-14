@@ -5,11 +5,11 @@ import (
 
 	"strings"
 
-	"github.com/mocyuto/git-wt/internal/git"
-	"github.com/mocyuto/git-wt/internal/hook"
-	"github.com/mocyuto/git-wt/internal/logger"
-	"github.com/mocyuto/git-wt/internal/state"
-	"github.com/mocyuto/git-wt/internal/template"
+	"github.com/mocyuto/zgt/internal/git"
+	"github.com/mocyuto/zgt/internal/hook"
+	"github.com/mocyuto/zgt/internal/logger"
+	"github.com/mocyuto/zgt/internal/state"
+	"github.com/mocyuto/zgt/internal/template"
 	"github.com/spf13/cobra"
 )
 

@@ -5,10 +5,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/mocyuto/git-wt/internal/config"
-	"github.com/mocyuto/git-wt/internal/git"
-	"github.com/mocyuto/git-wt/internal/logger"
-	"github.com/mocyuto/git-wt/internal/template"
+	"github.com/mocyuto/zgt/internal/config"
+	"github.com/mocyuto/zgt/internal/git"
+	"github.com/mocyuto/zgt/internal/logger"
+	"github.com/mocyuto/zgt/internal/template"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )

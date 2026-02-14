@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/mocyuto/git-wt/internal/git"
-	"github.com/mocyuto/git-wt/internal/logger"
+	"github.com/mocyuto/zgt/internal/git"
+	"github.com/mocyuto/zgt/internal/logger"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
 )
@@ -38,7 +38,7 @@ func InitConfig() {
 	var globalPath string
 	home, err := os.UserHomeDir()
 	if err == nil {
-		configDir := filepath.Join(home, ".config", "git-wt")
+		configDir := filepath.Join(home, ".config", "zgt")
 		v.AddConfigPath(configDir)
 		v.SetConfigName("config")
 		v.SetConfigType("yaml")
@@ -78,7 +78,7 @@ func InitConfig() {
 	if gitRoot != "" {
 		localV := viper.New()
 		localV.AddConfigPath(gitRoot)
-		localV.SetConfigName("git-wt.config")
+		localV.SetConfigName("zgt.config")
 		localV.SetConfigType("yaml")
 
 		var localPath string
@@ -179,7 +179,7 @@ func loadEnvCasePreserved(path string) error {
 func LoadPortsFromPath(root string) (map[string]int, error) {
 	v := viper.New()
 	v.AddConfigPath(root)
-	v.SetConfigName("git-wt.config")
+	v.SetConfigName("zgt.config")
 	v.SetConfigType("yaml")
 
 	if err := v.ReadInConfig(); err != nil {

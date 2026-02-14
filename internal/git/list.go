@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/mocyuto/git-wt/internal/logger"
+	"github.com/mocyuto/zgt/internal/logger"
 )
 
 type PRInfo struct {

@@ -1,4 +1,4 @@
-module github.com/mocyuto/git-wt
+module github.com/mocyuto/zgt
 
 go 1.24.1
 

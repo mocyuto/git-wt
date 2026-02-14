@@ -3,8 +3,8 @@ package cmd
 import (
 	"os"
 
-	"github.com/mocyuto/git-wt/internal/config"
-	"github.com/mocyuto/git-wt/internal/logger"
+	"github.com/mocyuto/zgt/internal/config"
+	"github.com/mocyuto/zgt/internal/logger"
 	"github.com/spf13/cobra"
 )
 

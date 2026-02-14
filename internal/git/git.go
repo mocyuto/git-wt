@@ -5,7 +5,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/mocyuto/git-wt/internal/logger"
+	"github.com/mocyuto/zgt/internal/logger"
 )
 
 // GetGitRoot returns the absolute path to the root of the current git repository.

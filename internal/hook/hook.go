@@ -6,8 +6,8 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/mocyuto/git-wt/internal/config"
-	"github.com/mocyuto/git-wt/internal/template"
+	"github.com/mocyuto/zgt/internal/config"
+	"github.com/mocyuto/zgt/internal/template"
 )
 
 // RunHooks executes hooks for a given action (e.g., "add", "rm")

@@ -1,10 +1,10 @@
-# git-wt
+# zgt
 
 `git worktree` を作成する際、設定ファイル（`.env` など）を自動的にコピーして新しいディレクトリを作成する CLI ツールです。
 
 ## 概要
 
-Git の `worktree` 機能は便利ですが、`.gitignore` で除外されている `.env` やローカルの設定ファイルなどは、新しく作成したワークツリーには含まれません。`git-wt` を使うことで、これらを自動的にコピーし、すぐに開発やテストが可能なワークツリーを作成できます。
+Git の `worktree` 機能は便利ですが、`.gitignore` で除外されている `.env` やローカルの設定ファイルなどは、新しく作成したワークツリーには含まれません。`zgt` を使うことで、これらを自動的にコピーし、すぐに開発やテストが可能なワークツリーを作成できます。
 
 ## 特徴
 
@@ -22,9 +22,9 @@ Git の `worktree` 機能は便利ですが、`.gitignore` で除外されてい
 
 ## Badges
 
-[![Release](https://img.shields.io/github/release/mocyuto/git-wt.svg?style=for-the-badge)](https://github.com/mocyuto/git-wt/releases/latest)
+[![Release](https://img.shields.io/github/release/mocyuto/zgt.svg?style=for-the-badge)](https://github.com/mocyuto/zgt/releases/latest)
 [![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=for-the-badge)](/LICENSE.md)
-[![Build status](https://img.shields.io/github/actions/workflow/status/mocyuto/git-wt/ci.yml?style=for-the-badge&branch=main)](https://github.com/mocyuto/git-wt/actions?workflow=ci)
+[![Build status](https://img.shields.io/github/actions/workflow/status/mocyuto/zgt/ci.yml?style=for-the-badge&branch=main)](https://github.com/mocyuto/zgt/actions?workflow=ci)
 
 ## インストール
 
@@ -33,13 +33,13 @@ Git の `worktree` 機能は便利ですが、`.gitignore` で除外されてい
 macOS での最も簡単なインストール方法は Homebrew を使用することです:
 
 ```bash
-brew install mocyuto/tap/git-wt
+brew install mocyuto/tap/zgt
 ```
 
 ### ビルド
 
 ```bash
-go build -o git-wt .
+go build -o zgt .
 ```
 
 ### パスの設定
@@ -48,19 +48,16 @@ go build -o git-wt .
 
 ```bash
 # mac / linux の例
-sudo mv git-wt /usr/local/bin/git-wt
+sudo mv zgt /usr/local/bin/zgt
 ```
-
-> [!TIP]
-> `PATH` 内に `git-wt` という名前で配置すると、`git wt ...` という形式で呼び出すことも可能です。
 
 ## 開発フローと挙動
 
-`git-wt` は単なるコマンドのラッパーではなく、開発者のコンテキスト切り替えをシームレスにすることを目的としています。
+`zgt` は単なるコマンドのラッパーではなく、開発者のコンテキスト切り替えをシームレスにすることを目的としています。
 
 ### 1. 新しい機能の開発を始める (`add`)
 
-`git worktree add` を実行すると、通常は `.env` などの設定ファイルが欠落した状態で新しいディレクトリが作成されます。`git-wt` は以下の手順を自動化します：
+`git worktree add` を実行すると、通常は `.env` などの設定ファイルが欠落した状態で新しいディレクトリが作成されます。`zgt` は以下の手順を自動化します：
 
 1. **ワークツリーの作成**: 指定されたパスにディレクトリを作成し、ブランチをチェックアウトします。
 2. **自動パス生成**: ブランチ名だけを指定すれば、`../{プロジェクト名}-{ブランチ名}` に自動で配置されます。
@@ -70,21 +67,21 @@ sudo mv git-wt /usr/local/bin/git-wt
 
 ```bash
 # feature-login ブランチを新しいワークツリーで開始
-git-wt add feature-login
+zgt add feature-login
 ```
 
 ### 2. 複数プロジェクトを同時に動かす (`env` / `ports`)
 
-複数のワークツリーでサーバーを同時に立ち上げる際、ポートの衝突が問題になります。`git-wt` はこれを解決します。
+複数のワークツリーでサーバーを同時に立ち上げる際、ポートの衝突が問題になります。`zgt` はこれを解決します。
 
 - **挙動**: 各ワークツリーには `0, 1, 2...` とインデックスが振られます。
-- **動的な計算**: ポート番号は、そのワークツリーのプロジェクトルートにある `git-wt.config.yml` の `ports` 設定（ベースポート）にインデックスを加算して算出されます。これにより、プロジェクトごとに異なるベースポートを設定していても、正しく計算されます。
-- **活用**: 設定ファイルで `api: 8080` と定義しておけば、`git-wt env` はそのワークツリーに応じたポート（`8080`, `8081`...）を環境変数として出力します。
+- **動的な計算**: ポート番号は、そのワークツリーのプロジェクトルートにある `zgt.config.yml` の `ports` 設定（ベースポート）にインデックスを加算して算出されます。これにより、プロジェクトごとに異なるベースポートを設定していても、正しく計算されます。
+- **活用**: 設定ファイルで `api: 8080` と定義しておけば、`zgt env` はそのワークツリーに応じたポート（`8080`, `8081`...）を環境変数として出力します。
 
 ```bash
 # ワークツリーに移動して環境変数を読み込む
 cd ../my-project-feature-login
-eval "$(git-wt env)"
+eval "$(zgt env)"
 
 # これで $API_PORT が 8081 など、他のワークツリーと被らない値になります
 npm start
@@ -99,19 +96,19 @@ npm start
 
 ```bash
 # 作業完了。ディレクトリとブランチを削除
-git-wt rm feature-login
+zgt rm feature-login
 ```
 
 ### 4. 無視ファイルの同期 (`sync`)
 
 ワークツリー内で `.env` などの設定ファイルを編集し、その内容をメインプロジェクトのルートディレクトリに反映させたい場合：
 
-- **対話モード**: `git-wt sync` を実行すると TUI（`rivo/tview` を利用）が起動し、同期したいファイルを個別に選択できます。
+- **対話モード**: `zgt sync` を実行すると TUI（`rivo/tview` を利用）が起動し、同期したいファイルを個別に選択できます。
 - **一括同期**: `-a` / `--all`（または `--force`）フラグを使用すると、すべての無視ファイルを即座に同期します。
 
 ```bash
 # 変更内容を選択してルートに同期
-git-wt sync
+zgt sync
 ```
 
 ### 5. 割り当て状況を確認する (`list` / `ports`)
@@ -123,28 +120,28 @@ git-wt sync
 
 ## 設定
 
-`git-wt` は以下の優先順位で設定ファイルを読み込みます（YAML形式）。
+`zgt` は以下の優先順位で設定ファイルを読み込みます（YAML形式）。
 
-1. プロジェクトごとの設定（プロジェクトルートの `git-wt.config.yaml` または `.yml`）
-2. グローバル設定（`~/.config/git-wt/config.yaml`）
+1. プロジェクトごとの設定（プロジェクトルートの `zgt.config.yaml` または `.yml`）
+2. グローバル設定（`~/.config/zgt/config.yaml`）
 3. `--config` フラグで明示的に指定されたパス
 
 ### 設定ファイルの生成 (`init`)
 
-プロジェクトのルートディレクトリで以下のコマンドを実行することで、デフォルトの設定ファイル（`git-wt.config.yml`）を生成できます。
+プロジェクトのルートディレクトリで以下のコマンドを実行することで、デフォルトの設定ファイル（`zgt.config.yml`）を生成できます。
 
 ```bash
-git-wt init
+zgt init
 ```
 
-このコマンドは、ポート管理や環境変数のテンプレート、サンプルフックを含む設定ファイルを作成します。すでに `git-wt.config.yml` または `git-wt.config.yaml` が存在する場合は、上書きを防止するためにスキップされます。
+このコマンドは、ポート管理や環境変数のテンプレート、サンプルフックを含む設定ファイルを作成します。すでに `zgt.config.yml` または `zgt.config.yaml` が存在する場合は、上書きを防止するためにスキップされます。
 
 ### プロジェクトごとの設定
 
-プロジェクトのルートディレクトリに `git-wt.config.yaml`（または `.yml`）を作成することで、そのプロジェクト固有の設定を定義できます。`hooks` や `ignore` の設定は、グローバル設定に**追加（マージ）**されます。
+プロジェクトのルートディレクトリに `zgt.config.yaml`（または `.yml`）を作成することで、そのプロジェクト固有の設定を定義できます。`hooks` や `ignore` の設定は、グローバル設定に**追加（マージ）**されます。
 
 ```yaml
-# git-wt.config.yaml
+# zgt.config.yaml
 ignore:
   - "*.tmp"
   - "local-debug.log"
@@ -162,19 +159,19 @@ ports:
 
 ### カスタム環境変数
 
-`env` セクションで独自の環境変数を定義できます。これらの値にはプレースホルダーを使用でき、`git-wt env` を介して自動的にエクスポートされます。
+`env` セクションで独自の環境変数を定義できます。これらの値にはプレースホルダーを使用でき、`zgt env` を介して自動的にエクスポートされます。
 
 ```yaml
 env:
-  COMPOSE_PROJECT_NAME: "git-wt-{{.Repo}}"
+  COMPOSE_PROJECT_NAME: "zgt-{{.Repo}}"
   DEBUG: "true"
 ```
 
 実行例：
 
 ```bash
-eval "$(git-wt env)"
-echo $COMPOSE_PROJECT_NAME # git-wt-myrepo
+eval "$(zgt env)"
+echo $COMPOSE_PROJECT_NAME # zgt-myrepo
 ```
 
 これらの環境変数は、[カスタムフック](#カスタムフック) の実行時にも適用されます。

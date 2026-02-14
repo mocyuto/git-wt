@@ -6,10 +6,10 @@ import (
 
 var versionCmd = &cobra.Command{
 	Use:   "version",
-	Short: "Print the version number of git-wt",
-	Long:  `All software has versions. This is git-wt's.`,
+	Short: "Print the version number of zgt",
+	Long:  `All software has versions. This is zgt's.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Printf("git-wt version %s\n", Version)
+		cmd.Printf("zgt version %s\n", Version)
 	},
 }
 

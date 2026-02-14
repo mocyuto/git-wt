@@ -9,13 +9,13 @@ import (
 
 func TestSyncLogic(t *testing.T) {
 	// Setup temporary source and target directories
-	tmpSrc, err := os.MkdirTemp("", "git-wt-sync-test-src")
+	tmpSrc, err := os.MkdirTemp("", "zgt-sync-test-src")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(tmpSrc)
 
-	tmpDst, err := os.MkdirTemp("", "git-wt-sync-test-dst")
+	tmpDst, err := os.MkdirTemp("", "zgt-sync-test-dst")
 	if err != nil {
 		t.Fatal(err)
 	}
