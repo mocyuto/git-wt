@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/mocyuto/zgt/internal/config"
@@ -32,5 +33,9 @@ func Execute(version string) {
 func init() {
 	cobra.OnInitialize(config.InitConfig)
 
-	rootCmd.PersistentFlags().StringVar(&config.CfgFile, "config", "", "config file (default is $HOME/.config/zgt/config.yaml)")
+	desc := "config file"
+	if globalPath, err := config.GetGlobalConfigPath(); err == nil {
+		desc = fmt.Sprintf("config file (default is %s)", globalPath)
+	}
+	rootCmd.PersistentFlags().StringVar(&config.CfgFile, "config", "", desc)
 }

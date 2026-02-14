@@ -7,11 +7,46 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/mocyuto/zgt/internal/git"
+	"github.com/mocyuto/zgt/internal/gitroot"
 	"github.com/mocyuto/zgt/internal/logger"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
 )
+
+const (
+	GlobalConfigDir  = ".config/zgt"
+	GlobalConfigName = "config"
+	GlobalConfigExt  = "yaml"
+
+	DefaultLocalConfigName = "zgt.config.yml"
+)
+
+var (
+	LocalConfigNames = []string{
+		"zgt.config.yml",
+		"zgt.config.yaml",
+		"git-wt.config.yml",
+		"git-wt.config.yaml",
+	}
+)
+
+func GetGlobalConfigPath() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, GlobalConfigDir, GlobalConfigName+"."+GlobalConfigExt), nil
+}
+
+func GetLocalConfigPath(root string) string {
+	for _, name := range LocalConfigNames {
+		path := filepath.Join(root, name)
+		if _, err := os.Stat(path); err == nil {
+			return path
+		}
+	}
+	return ""
+}
 
 var (
 	CfgFile     string
@@ -35,16 +70,14 @@ func InitConfig() {
 	v := viper.New()
 
 	// 1. Load global config
-	var globalPath string
-	home, err := os.UserHomeDir()
+	globalPath, err := GetGlobalConfigPath()
 	if err == nil {
-		configDir := filepath.Join(home, ".config", "zgt")
+		configDir := filepath.Dir(globalPath)
 		v.AddConfigPath(configDir)
-		v.SetConfigName("config")
-		v.SetConfigType("yaml")
+		v.SetConfigName(GlobalConfigName)
+		v.SetConfigType(GlobalConfigExt)
 
 		// Create default global config if it doesn't exist
-		globalPath = filepath.Join(configDir, "config.yaml")
 		if _, err := os.Stat(globalPath); os.IsNotExist(err) {
 			if err := os.MkdirAll(configDir, 0755); err == nil {
 				v.SetDefault("hooks.add", []string{})
@@ -68,54 +101,50 @@ func InitConfig() {
 
 	// Fix case for global env if loaded
 	if globalPath != "" {
-		if err := loadEnvCasePreserved(globalPath); err != nil {
-			logger.Warn("failed to restore environment variable case in global config: %v", err)
+		if _, err := os.Stat(globalPath); err == nil {
+			if err := loadEnvCasePreserved(globalPath); err != nil {
+				logger.Warn("failed to restore environment variable case in global config: %v", err)
+			}
 		}
 	}
 
 	// 2. Load local config
-	gitRoot, _ := git.GetMainProjectRoot()
+	gitRoot, _ := gitroot.GetMainProjectRoot()
 	if gitRoot != "" {
-		localV := viper.New()
-		localV.AddConfigPath(gitRoot)
-		localV.SetConfigName("zgt.config")
-		localV.SetConfigType("yaml")
+		localPath := GetLocalConfigPath(gitRoot)
+		if localPath != "" {
+			localV := viper.New()
+			localV.SetConfigFile(localPath)
 
-		var localPath string
-		if err := localV.ReadInConfig(); err != nil {
-			if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			if err := localV.ReadInConfig(); err != nil {
 				ConfigError = logger.Errorf("reading local config: %v", err)
 			}
-		} else {
-			localPath = localV.ConfigFileUsed()
-		}
 
-		var localConfig Config
-		if err := localV.Unmarshal(&localConfig); err == nil {
-			// Merge hooks
-			AppConfig.Hooks.Add = append(AppConfig.Hooks.Add, localConfig.Hooks.Add...)
-			AppConfig.Hooks.RM = append(AppConfig.Hooks.RM, localConfig.Hooks.RM...)
-			// Merge ignore patterns
-			AppConfig.Ignore = append(AppConfig.Ignore, localConfig.Ignore...)
-			// Merge ports
-			if AppConfig.Ports == nil {
-				AppConfig.Ports = make(map[string]int)
-			}
-			maps.Copy(AppConfig.Ports, localConfig.Ports)
-			// Merge env
-			if AppConfig.Env == nil {
-				AppConfig.Env = make(map[string]string)
-			}
-			maps.Copy(AppConfig.Env, localConfig.Env)
+			var localConfig Config
+			if err := localV.Unmarshal(&localConfig); err == nil {
+				// Merge hooks
+				AppConfig.Hooks.Add = append(AppConfig.Hooks.Add, localConfig.Hooks.Add...)
+				AppConfig.Hooks.RM = append(AppConfig.Hooks.RM, localConfig.Hooks.RM...)
+				// Merge ignore patterns
+				AppConfig.Ignore = append(AppConfig.Ignore, localConfig.Ignore...)
+				// Merge ports
+				if AppConfig.Ports == nil {
+					AppConfig.Ports = make(map[string]int)
+				}
+				maps.Copy(AppConfig.Ports, localConfig.Ports)
+				// Merge env
+				if AppConfig.Env == nil {
+					AppConfig.Env = make(map[string]string)
+				}
+				maps.Copy(AppConfig.Env, localConfig.Env)
 
-			// Fix case for local env
-			if localPath != "" {
+				// Fix case for local env
 				if err := loadEnvCasePreserved(localPath); err != nil {
 					logger.Warn("failed to restore environment variable case in local config: %v", err)
 				}
+			} else if ConfigError == nil {
+				ConfigError = logger.Errorf("unmarshaling local config: %v", err)
 			}
-		} else if ConfigError == nil {
-			ConfigError = logger.Errorf("unmarshaling local config: %v", err)
 		}
 	}
 
@@ -177,20 +206,23 @@ func loadEnvCasePreserved(path string) error {
 
 // LoadPortsFromPath loads only the ports configuration from a zgt.config.yml/yaml in the given directory
 func LoadPortsFromPath(root string) (map[string]int, error) {
+	localPath := GetLocalConfigPath(root)
+	if localPath == "" {
+		return nil, logger.Errorf("no config file found in path %s", root)
+	}
+
 	v := viper.New()
-	v.AddConfigPath(root)
-	v.SetConfigName("zgt.config")
-	v.SetConfigType("yaml")
+	v.SetConfigFile(localPath)
 
 	if err := v.ReadInConfig(); err != nil {
-		return nil, logger.Errorf("reading config from path %s: %v", root, err)
+		return nil, logger.Errorf("reading config from path %s: %v", localPath, err)
 	}
 
 	var cfg struct {
 		Ports map[string]int `mapstructure:"ports"`
 	}
 	if err := v.Unmarshal(&cfg); err != nil {
-		return nil, logger.Errorf("unmarshaling config from path %s: %v", root, err)
+		return nil, logger.Errorf("unmarshaling config from path %s: %v", localPath, err)
 	}
 
 	return cfg.Ports, nil

@@ -40,16 +40,17 @@ func TestInitConfig(t *testing.T) {
 		AppConfig = Config{} // Reset
 		InitConfig()
 
-		configPath := filepath.Join(tmpHome, ".config", "zgt", "config.yaml")
+		configPath, _ := GetGlobalConfigPath()
 		if _, err := os.Stat(configPath); os.IsNotExist(err) {
-			t.Error("Global config.yaml should have been created with defaults")
+			t.Errorf("%s should have been created with defaults", configPath)
 		}
 	})
 
 	t.Run("Global config loading", func(t *testing.T) {
-		configDir := filepath.Join(tmpHome, ".config", "zgt")
+		configPath, _ := GetGlobalConfigPath()
+		configDir := filepath.Dir(configPath)
 		os.MkdirAll(configDir, 0755)
-		os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte(`
+		os.WriteFile(configPath, []byte(`
 hooks:
   add: ["global-add"]
 ignore: [".global-ignore"]
@@ -66,9 +67,9 @@ ignore: [".global-ignore"]
 		}
 	})
 
-	t.Run("Local config merging", func(t *testing.T) {
-		// Local config in tmpGit (current working directory)
-		os.WriteFile(filepath.Join(tmpGit, "zgt.config.yaml"), []byte(`
+	t.Run("Local config merging (git-wt.config.yaml)", func(t *testing.T) {
+		// Local config in tmpGit (current working directory) using alternative name
+		os.WriteFile(filepath.Join(tmpGit, "git-wt.config.yaml"), []byte(`
 hooks:
   add: ["local-add"]
 ignore: [".local-ignore"]
