@@ -214,7 +214,7 @@ echo $COMPOSE_PROJECT_NAME # zgt-myrepo
 
 コピー時に除外したいファイルパターンを `ignore` セクションで指定できます。
 
-````yaml
+```yaml
 ignore:
   - ".env.production"
   - "secrets/*"
@@ -243,7 +243,7 @@ hooks:
   # 'remove'（削除）後に実行するコマンド
   rm:
     - "echo 'Cleanup for {{.Branch}}'"
-````
+```
 
 #### 使用可能なプレースホルダー
 
