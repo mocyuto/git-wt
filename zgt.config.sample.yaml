@@ -5,3 +5,5 @@ env:
 hooks:
   add:
     - "tmux new-window -d -n [{{.Repo}}]{{.Branch}} -c {{.Path}} 'claude; exec $SHELL'"
+  rm:
+    - "git pull origin main:main"

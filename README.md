@@ -222,6 +222,16 @@ ignore:
   - "secrets/*"
 ```
 
+### Pull Default Branch After Removal
+
+You can automatically pull the default branch from the remote repository after removing a worktree by adding a git command to your `rm` hooks.
+
+```yaml
+hooks:
+  rm:
+    - "git pull origin main:main"
+```
+
 ### Custom Hooks
 
 Hooks allow you to run automated shell commands when worktrees are managed.
