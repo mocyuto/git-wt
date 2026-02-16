@@ -1,5 +1,10 @@
 # Changelog
 
+## [v0.7.0](https://github.com/mocyuto/zgt/compare/v0.6.0...v0.7.0) - 2026-02-16
+- fix: release workflow trigger and tagpr token usage by @mocyuto in https://github.com/mocyuto/zgt/pull/33
+- docs: add example for pulling default branch and CI updates by @mocyuto in https://github.com/mocyuto/zgt/pull/35
+- Refactor CreateWorktree and add support for creating worktrees from default branch by @mocyuto in https://github.com/mocyuto/zgt/pull/36
+
 ## [v0.6.0](https://github.com/mocyuto/zgt/compare/v0.5.1...v0.6.0) - 2026-02-14
 - feat: change default worktree path to be adjacent to repository root by @mocyuto in https://github.com/mocyuto/zgt/pull/28
 - fix(ci): avoid detached HEAD in tagpr workflow by @mocyuto in https://github.com/mocyuto/zgt/pull/30
