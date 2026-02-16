@@ -126,6 +126,18 @@ zgt sync
 
 ## Configuration
 
+You can configure `zgt` globally (`~/.config/zgt/config.yaml`) or locally (`zgt.config.yml` in project root).
+
+```yaml
+# Examples of available configuration options
+add:
+  from_default: true # Always base new worktrees on the default branch (e.g., main)
+  auto_pull: true # Pull updates on the default branch before creating a new worktree
+
+ignore:
+  - .env
+```
+
 `zgt` loads configuration from three sources in this priority:
 
 1. Local project configuration (`zgt.config.yaml` or `zgt.config.yml` in project root)

@@ -40,15 +40,7 @@ Both forms will automatically create the branch if it does not already exist.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var targetPath, branch string
 		if len(args) == 1 {
-			// Automate path: {main_root}-{branch}
 			branch = args[0]
-
-			// Auto-create branch if it doesn't exist
-			if !git.BranchExists(branch) && newBranch == "" {
-				newBranch = branch
-				logger.Info("Branch '%s' does not exist. It will be created.", branch)
-			}
-
 			mainRoot, err := gitroot.GetMainProjectRoot()
 			if err != nil {
 				return logger.Errorf("failed to get main project root: %v", err)
@@ -59,12 +51,6 @@ Both forms will automatically create the branch if it does not already exist.`,
 		} else {
 			targetPath = args[0]
 			branch = args[1]
-
-			// Auto-create branch if it doesn't exist
-			if !git.BranchExists(branch) && newBranch == "" {
-				newBranch = branch
-				logger.Info("Branch '%s' does not exist. It will be created.", branch)
-			}
 		}
 
 		sourceRoot, err := gitroot.GetGitRoot()
@@ -72,8 +58,27 @@ Both forms will automatically create the branch if it does not already exist.`,
 			return logger.Errorf("failed to get git root: %v", err)
 		}
 
+		var baseBranch string
+		if config.AppConfig.Add.FromDefault {
+			defaultBranch, err := git.GetDefaultBranch()
+			if err != nil {
+				return logger.Errorf("failed to get default branch: %v", err)
+			}
+			baseBranch = defaultBranch
+			logger.Info("Using default branch '%s' as base", baseBranch)
+
+			if config.AppConfig.Add.AutoPull {
+				logger.Info("Updating branch '%s'...", baseBranch)
+				if err := git.Pull(baseBranch, baseBranch); err != nil {
+					logger.Warn("pull failed: %v", err)
+				} else {
+					logger.Success("Successfully updated '%s'", baseBranch)
+				}
+			}
+		}
+
 		logger.Info("--- Creating worktree at %s ---", targetPath)
-		if err := git.CreateWorktree(targetPath, newBranch, branch); err != nil {
+		if err := git.CreateWorktree(targetPath, branch, baseBranch); err != nil {
 			return logger.Errorf("error creating worktree: %v", err)
 		}
 

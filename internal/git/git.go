@@ -27,11 +27,44 @@ func BranchExists(branch string) bool {
 	return err == nil
 }
 
-func CreateWorktree(path, newBranch, branch string) error {
+func GetDefaultBranch() (string, error) {
+	out, err := exec.Command("git", "remote", "show", "origin").Output()
+	if err == nil {
+		lines := strings.Split(string(out), "\n")
+		for _, line := range lines {
+			if strings.Contains(line, "HEAD branch:") {
+				return strings.TrimSpace(strings.Split(line, ":")[1]), nil
+			}
+		}
+	}
+
+	// Fallback to git config or common names
+	out, err = exec.Command("git", "config", "init.defaultBranch").Output()
+	if err == nil && len(out) > 0 {
+		return strings.TrimSpace(string(out)), nil
+	}
+
+	if BranchExists("main") {
+		return "main", nil
+	}
+	return "master", nil
+}
+
+func Pull(remoteBranch, localBranch string) error {
+	cmd := exec.Command("git", "pull", "origin", remoteBranch+":"+localBranch)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
+
+func CreateWorktree(path, branch, base string) error {
 	cmdArgs := []string{"worktree", "add", path}
-	if newBranch != "" {
-		cmdArgs = append(cmdArgs, "-b", newBranch)
-	} else if branch != "" {
+	if !BranchExists(branch) {
+		cmdArgs = append(cmdArgs, "-b", branch)
+		if base != "" {
+			cmdArgs = append(cmdArgs, base)
+		}
+	} else {
 		cmdArgs = append(cmdArgs, branch)
 	}
 

@@ -159,15 +159,20 @@ zgt config edit --global
 
 保存前に YAML の構文チェックが自動的に行われます。
 
-### プロジェクトごとの設定
+### 設定 (Configuration)
 
-プロジェクトのルートディレクトリに `zgt.config.yaml`（または `.yml`）を作成することで、そのプロジェクト固有の設定を定義できます。`hooks` や `ignore` の設定は、グローバル設定に**追加（マージ）**されます。
+`zgt` はグローバル (`~/.config/zgt/config.yaml`) またはローカル (プロジェクトのルートにある `zgt.config.yml`) で設定可能です。
 
 ```yaml
-# zgt.config.yaml
+# 利用可能な設定オプションの例
+add:
+  from_default: true # 新しい worktree を常にデフォルトブランチ (例: main) から作成する
+  auto_pull: true # worktree 作成前にデフォルトブランチの更新を pull する
+
 ignore:
   - "*.tmp"
   - "local-debug.log"
+  - ".env"
 
 hooks:
   add:

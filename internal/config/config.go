@@ -71,6 +71,10 @@ type Config struct {
 		Add []string `mapstructure:"add"`
 		RM  []string `mapstructure:"rm"`
 	} `mapstructure:"hooks"`
+	Add struct {
+		FromDefault bool `mapstructure:"from_default"`
+		AutoPull    bool `mapstructure:"auto_pull"`
+	} `mapstructure:"add"`
 	Ignore []string          `mapstructure:"ignore"`
 	Ports  map[string]int    `mapstructure:"ports"`
 	Env    map[string]string `mapstructure:"env"`
@@ -139,8 +143,15 @@ func InitConfig() {
 				// Merge hooks
 				AppConfig.Hooks.Add = append(AppConfig.Hooks.Add, localConfig.Hooks.Add...)
 				AppConfig.Hooks.RM = append(AppConfig.Hooks.RM, localConfig.Hooks.RM...)
-				// Merge ignore patterns
+				// Merge ignores
 				AppConfig.Ignore = append(AppConfig.Ignore, localConfig.Ignore...)
+				// Merge add config
+				if localConfig.Add.FromDefault {
+					AppConfig.Add.FromDefault = true
+				}
+				if localConfig.Add.AutoPull {
+					AppConfig.Add.AutoPull = true
+				}
 				// Merge ports
 				if AppConfig.Ports == nil {
 					AppConfig.Ports = make(map[string]int)
