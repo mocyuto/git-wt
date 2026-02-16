@@ -214,10 +214,20 @@ echo $COMPOSE_PROJECT_NAME # zgt-myrepo
 
 コピー時に除外したいファイルパターンを `ignore` セクションで指定できます。
 
-```yaml
+````yaml
 ignore:
   - ".env.production"
   - "secrets/*"
+```
+
+### 削除後のデフォルトブランチPULL
+
+ワークツリー削除後に、リモートからデフォルトブランチを自動的にプルするには、`rm` フックに git コマンドを追加します。
+
+```yaml
+hooks:
+  rm:
+    - "git pull origin main:main"
 ```
 
 ### カスタムフック
@@ -233,7 +243,7 @@ hooks:
   # 'remove'（削除）後に実行するコマンド
   rm:
     - "echo 'Cleanup for {{.Branch}}'"
-```
+````
 
 #### 使用可能なプレースホルダー
 

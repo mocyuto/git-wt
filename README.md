@@ -216,11 +216,21 @@ These variables are also available during [Custom Hooks](#custom-hooks) executio
 
 You can specify additional file patterns to be ignored during the copy process. These patterns follow the same format as `.gitignore` (using `filepath.Match`).
 
-```yaml
+````yaml
 ignore:
   - ".env.production"
   - "secrets/*"
+
+### Pull Default Branch After Removal
+
+You can automatically pull the default branch from the remote repository after removing a worktree by adding a git command to your `rm` hooks.
+
+```yaml
+hooks:
+  rm:
+    - "git pull origin main:main"
 ```
+````
 
 ### Custom Hooks
 
