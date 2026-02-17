@@ -57,5 +57,6 @@ func ReplaceConfig(cfg config.Config, ctx Context) config.Config {
 	res.Ignore = ReplaceSlice(cfg.Ignore, ctx)
 	res.Env = ReplaceMap(cfg.Env, ctx)
 	res.Tmux.Panes = ReplaceTmuxPanes(cfg.Tmux.Panes, ctx)
+	res.Tmux.WindowName = Replace(cfg.Tmux.WindowName, ctx)
 	return res
 }

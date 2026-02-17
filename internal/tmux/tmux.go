@@ -25,7 +25,10 @@ func Setup(ctx template.Context) error {
 		return fmt.Errorf("no tmux session running")
 	}
 
-	windowName := fmt.Sprintf("[%s]%s", ctx.Repo, ctx.Branch)
+	windowName := cfg.WindowName
+	if windowName == "" {
+		windowName = fmt.Sprintf("[%s]%s", ctx.Repo, ctx.Branch)
+	}
 	paneIDMap := make(map[string]string)
 
 	// Create first pane

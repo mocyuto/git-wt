@@ -294,17 +294,18 @@ tmux:
 
 #### Pane Properties
 
-| Property   | Description                                                                   |
-| :--------- | :---------------------------------------------------------------------------- |
-| `id`       | (Optional) Unique ID for the pane to be referenced as a `target`.             |
-| `target`   | (Optional) ID of the pane to split. If omitted, splits the last created pane. |
-| `commands` | List of commands to execute in the pane.                                      |
-| `split`    | Split direction: `horizontal` (h) or `vertical` (v).                          |
-| `size`     | Pane size (e.g., `20%` for percentage or `20` for lines/columns).             |
+| Property      | Description                                                                   |
+| :------------ | :---------------------------------------------------------------------------- |
+| `window_name` | (Optional) Template for the tmux window name.                                 |
+| `id`          | (Optional) Unique ID for the pane to be referenced as a `target`.             |
+| `target`      | (Optional) ID of the pane to split. If omitted, splits the last created pane. |
+| `commands`    | List of commands to execute in the pane.                                      |
+| `split`       | Split direction: `horizontal` (h) or `vertical` (v).                          |
+| `size`        | Pane size (e.g., `20%` for percentage or `20` for lines/columns).             |
 
 If `enabled` is `true`, `zgt` will:
 
-1. Create a new tmux window named `[repo]branch`.
+1. Create a new tmux window named as specified in `window_name` (defaults to `[repo]branch`).
 2. Follow the `panes` list to create splits. Each split targets the specified `target` or the last created pane.
 3. Execute the `commands` in each pane and keep the shell open.
 
