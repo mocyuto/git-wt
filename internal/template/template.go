@@ -8,9 +8,12 @@ import (
 
 // Context holds information for template placeholders
 type Context struct {
-	Path   string
-	Branch string
-	Repo   string
+	Path          string
+	Branch        string
+	Repo          string // Main project root directory name
+	CurrentDir    string // Current working directory name
+	TargetBranch  string // Alias for Branch
+	CurrentBranch string // Current branch name
 }
 
 // Replace replaces placeholders in the template string with values from the context
@@ -18,6 +21,9 @@ func Replace(tmpl string, ctx Context) string {
 	replaced := strings.ReplaceAll(tmpl, "{{.Path}}", ctx.Path)
 	replaced = strings.ReplaceAll(replaced, "{{.Branch}}", ctx.Branch)
 	replaced = strings.ReplaceAll(replaced, "{{.Repo}}", ctx.Repo)
+	replaced = strings.ReplaceAll(replaced, "{{.CurrentDir}}", ctx.CurrentDir)
+	replaced = strings.ReplaceAll(replaced, "{{.TargetBranch}}", ctx.TargetBranch)
+	replaced = strings.ReplaceAll(replaced, "{{.CurrentBranch}}", ctx.CurrentBranch)
 	return replaced
 }
 

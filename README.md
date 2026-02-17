@@ -261,13 +261,16 @@ hooks:
 
 #### Available Placeholders
 
-Placeholders can be used in `hooks` and `env` values.
+Placeholders can be used in `hooks`, `env`, and `tmux.window_name` values.
 
-| Placeholder   | Description                                   |
-| :------------ | :-------------------------------------------- |
-| `{{.Path}}`   | Absolute path of the worktree directory.      |
-| `{{.Branch}}` | Name of the branch.                           |
-| `{{.Repo}}`   | Name of the repository (base directory name). |
+| Placeholder          | Description                                                   |
+| :------------------- | :------------------------------------------------------------ |
+| `{{.Path}}`          | Absolute path of the worktree directory.                      |
+| `{{.Repo}}`          | Name of the main project root directory.                      |
+| `{{.CurrentDir}}`    | Name of the current working directory.                        |
+| `{{.Branch}}`        | Name of the target branch (provided as argument).             |
+| `{{.TargetBranch}}`  | Alias for `{{.Branch}}`.                                      |
+| `{{.CurrentBranch}}` | Name of the branch you are currently on when executing `zgt`. |
 
 ### Tmux Integration
 

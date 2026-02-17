@@ -101,19 +101,27 @@ Both forms will automatically create the branch if it does not already exist.`,
 		_ = state.SaveState()
 
 		// Run tmux setup
+		mainRoot, _ := gitroot.GetMainProjectRoot()
+		currentBranch, _ := git.GetCurrentBranch()
 		if err := tmux.Setup(template.Context{
-			Path:   absPath,
-			Branch: branch,
-			Repo:   filepath.Base(sourceRoot),
+			Path:          absPath,
+			Branch:        branch,
+			Repo:          filepath.Base(mainRoot),
+			CurrentDir:    filepath.Base(sourceRoot),
+			TargetBranch:  branch,
+			CurrentBranch: currentBranch,
 		}); err != nil {
 			logger.Warn("tmux setup failed: %v", err)
 		}
 
 		// Run add hooks
 		hook.RunHooks("add", template.Context{
-			Path:   targetPath,
-			Branch: branch,
-			Repo:   filepath.Base(sourceRoot),
+			Path:          targetPath,
+			Branch:        branch,
+			Repo:          filepath.Base(mainRoot),
+			CurrentDir:    filepath.Base(sourceRoot),
+			TargetBranch:  branch,
+			CurrentBranch: currentBranch,
 		})
 
 		return nil

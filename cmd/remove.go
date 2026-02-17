@@ -73,17 +73,21 @@ var removeCmd = &cobra.Command{
 		}
 
 		// Run removal hooks
-		gitRoot, _ := gitroot.GetGitRoot()
+		mainRoot, _ := gitroot.GetMainProjectRoot()
+		currentRoot, _ := gitroot.GetGitRoot()
+		currentBranch, _ := git.GetCurrentBranch()
 		hook.RunHooks("rm", template.Context{
-			Path:   path,
-			Branch: branch,
-			Repo:   filepath.Base(gitRoot),
+			Path:          path,
+			Branch:        branch,
+			Repo:          filepath.Base(mainRoot),
+			CurrentDir:    filepath.Base(currentRoot),
+			TargetBranch:  branch,
+			CurrentBranch: currentBranch,
 		})
 
 		// Release port index
 		absPath := state.NormalizePath(path)
-		gitRoot, _ = gitroot.GetGitRoot()
-		projectName := filepath.Base(gitRoot)
+		projectName := filepath.Base(mainRoot)
 		_ = state.LoadState()
 		state.ReleasePortIndex(projectName, absPath)
 		state.CleanupState()

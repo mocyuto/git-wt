@@ -36,13 +36,17 @@ var configCmd = &cobra.Command{
 
 		// Prepare context for placeholder replacement
 		cwd, _ := os.Getwd()
-		gitRoot, _ := gitroot.GetGitRoot()
-		branch, _ := git.GetCurrentBranch()
+		mainRoot, _ := gitroot.GetMainProjectRoot()
+		currentRoot, _ := gitroot.GetGitRoot()
+		currentBranch, _ := git.GetCurrentBranch()
 
 		ctx := template.Context{
-			Path:   cwd,
-			Branch: branch,
-			Repo:   filepath.Base(gitRoot),
+			Path:          cwd,
+			Branch:        currentBranch,
+			Repo:          filepath.Base(mainRoot),
+			CurrentDir:    filepath.Base(currentRoot),
+			TargetBranch:  currentBranch,
+			CurrentBranch: currentBranch,
 		}
 
 		replacedConfig := template.ReplaceConfig(config.AppConfig, ctx)
