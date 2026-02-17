@@ -9,9 +9,12 @@ import (
 
 func TestReplace(t *testing.T) {
 	ctx := Context{
-		Path:   "/path/to/repo-branch",
-		Branch: "branch",
-		Repo:   "repo",
+		Path:          "/path/to/repo-branch",
+		Branch:        "branch",
+		Repo:          "repo",
+		CurrentDir:    "curr-dir",
+		TargetBranch:  "target",
+		CurrentBranch: "curr-branch",
 	}
 
 	tests := []struct {
@@ -35,9 +38,24 @@ func TestReplace(t *testing.T) {
 			expected: "project repo",
 		},
 		{
+			name:     "Replace CurrentDir",
+			tmpl:     "dir {{.CurrentDir}}",
+			expected: "dir curr-dir",
+		},
+		{
+			name:     "Replace TargetBranch",
+			tmpl:     "target {{.TargetBranch}}",
+			expected: "target target",
+		},
+		{
+			name:     "Replace CurrentBranch",
+			tmpl:     "current {{.CurrentBranch}}",
+			expected: "current curr-branch",
+		},
+		{
 			name:     "Replace multiple",
-			tmpl:     "path: {{.Path}}, branch: {{.Branch}}, repo: {{.Repo}}",
-			expected: "path: /path/to/repo-branch, branch: branch, repo: repo",
+			tmpl:     "path: {{.Path}}, branch: {{.Branch}}, repo: {{.Repo}}, dir: {{.CurrentDir}}, target: {{.TargetBranch}}, current: {{.CurrentBranch}}",
+			expected: "path: /path/to/repo-branch, branch: branch, repo: repo, dir: curr-dir, target: target, current: curr-branch",
 		},
 		{
 			name:     "No placeholders",
@@ -58,15 +76,21 @@ func TestReplace(t *testing.T) {
 
 func TestReplaceMap(t *testing.T) {
 	ctx := Context{
-		Path:   "/path/to/repo-branch",
-		Branch: "branch",
-		Repo:   "repo",
+		Path:          "/path/to/repo-branch",
+		Branch:        "branch",
+		Repo:          "repo",
+		CurrentDir:    "curr-dir",
+		TargetBranch:  "target",
+		CurrentBranch: "curr-branch",
 	}
 
 	m := map[string]string{
 		"B": "{{.Branch}}",
 		"P": "{{.Path}}",
 		"R": "{{.Repo}}",
+		"D": "{{.CurrentDir}}",
+		"T": "{{.TargetBranch}}",
+		"C": "{{.CurrentBranch}}",
 		"S": "static",
 	}
 
@@ -76,6 +100,9 @@ func TestReplaceMap(t *testing.T) {
 		"B": "branch",
 		"P": "/path/to/repo-branch",
 		"R": "repo",
+		"D": "curr-dir",
+		"T": "target",
+		"C": "curr-branch",
 		"S": "static",
 	}
 
@@ -86,9 +113,12 @@ func TestReplaceMap(t *testing.T) {
 
 func TestReplaceConfig(t *testing.T) {
 	ctx := Context{
-		Path:   "/path",
-		Branch: "feat",
-		Repo:   "myrepo",
+		Path:          "/path",
+		Branch:        "feat",
+		Repo:          "myrepo",
+		CurrentDir:    "myrepo-feat",
+		TargetBranch:  "feat",
+		CurrentBranch: "main",
 	}
 
 	cfg := config.Config{}

@@ -10,8 +10,8 @@ import (
 	"github.com/mocyuto/zgt/internal/hook"
 	"github.com/mocyuto/zgt/internal/logger"
 	"github.com/mocyuto/zgt/internal/state"
-	"github.com/mocyuto/zgt/internal/template"
 	"github.com/mocyuto/zgt/internal/tmux"
+	"github.com/mocyuto/zgt/internal/zcontext"
 	"github.com/spf13/cobra"
 )
 
@@ -101,20 +101,13 @@ Both forms will automatically create the branch if it does not already exist.`,
 		_ = state.SaveState()
 
 		// Run tmux setup
-		if err := tmux.Setup(template.Context{
-			Path:   absPath,
-			Branch: branch,
-			Repo:   filepath.Base(sourceRoot),
-		}); err != nil {
+		ctx := zcontext.New(absPath, branch)
+		if err := tmux.Setup(ctx); err != nil {
 			logger.Warn("tmux setup failed: %v", err)
 		}
 
 		// Run add hooks
-		hook.RunHooks("add", template.Context{
-			Path:   targetPath,
-			Branch: branch,
-			Repo:   filepath.Base(sourceRoot),
-		})
+		hook.RunHooks("add", ctx)
 
 		return nil
 	},
