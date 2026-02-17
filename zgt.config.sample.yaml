@@ -7,3 +7,16 @@ hooks:
     - "tmux new-window -d -n [{{.Repo}}]{{.Branch}} -c {{.Path}} 'claude; exec $SHELL'"
   rm:
     - "git pull origin main:main"
+
+tmux:
+  enabled: true
+  window_name: "[{{.Repo}}]{{.Branch}}"
+  panes:
+    - commands:
+        - "echo 'Welcome to {{.Repo}}'"
+        - "ls -F"
+    - id: "server"
+      split: "horizontal"
+      size: "30%"
+      commands:
+        - "npm run dev"

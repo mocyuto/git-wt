@@ -62,8 +62,9 @@ type TmuxPane struct {
 }
 
 type TmuxConfig struct {
-	Enabled bool       `mapstructure:"enabled"`
-	Panes   []TmuxPane `mapstructure:"panes"`
+	Enabled    bool       `mapstructure:"enabled"`
+	WindowName string     `mapstructure:"window_name"`
+	Panes      []TmuxPane `mapstructure:"panes"`
 }
 
 type Config struct {

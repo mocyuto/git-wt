@@ -96,6 +96,8 @@ func TestReplaceConfig(t *testing.T) {
 	cfg.Hooks.RM = []string{"rm {{.Path}}"}
 	cfg.Ignore = []string{"{{.Repo}}.log"}
 	cfg.Env = map[string]string{"G": "{{.Repo}}"}
+	cfg.Tmux.WindowName = "work-{{.Branch}}"
+	cfg.Tmux.Panes = []config.TmuxPane{{Commands: []string{"echo {{.Repo}}"}}}
 
 	got := ReplaceConfig(cfg, ctx)
 
@@ -110,5 +112,11 @@ func TestReplaceConfig(t *testing.T) {
 	}
 	if got.Env["G"] != "myrepo" {
 		t.Errorf("Env mismatch: %v", got.Env)
+	}
+	if got.Tmux.WindowName != "work-feat" {
+		t.Errorf("Tmux.WindowName mismatch: %v", got.Tmux.WindowName)
+	}
+	if got.Tmux.Panes[0].Commands[0] != "echo myrepo" {
+		t.Errorf("Tmux.Panes[0].Commands[0] mismatch: %v", got.Tmux.Panes[0].Commands[0])
 	}
 }
