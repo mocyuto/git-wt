@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/mocyuto/zgt/internal/config"
 	"github.com/mocyuto/zgt/internal/git"
@@ -79,7 +80,16 @@ Both forms will automatically create the branch if it does not already exist.`,
 
 		logger.Info("--- Creating worktree at %s ---", targetPath)
 		if err := git.CreateWorktree(targetPath, branch, baseBranch); err != nil {
-			return logger.Errorf("error creating worktree: %v", err)
+			// If branch already exists and checked out in another worktree
+			if wtPath, wtBranch, resolveErr := git.ResolveWorktreeInfo(branch); resolveErr == nil && wtBranch == branch {
+				msg := fmt.Sprintf("Branch '%s' already has a worktree at '%s'. Execute hooks and post-creation processes?", branch, wtPath)
+				if !promptYesNo(msg) {
+					return nil
+				}
+				targetPath = wtPath
+			} else {
+				return logger.Errorf("error creating worktree: %v", err)
+			}
 		}
 
 		logger.Info("--- Copying ignored configuration files ---")
@@ -111,6 +121,17 @@ Both forms will automatically create the branch if it does not already exist.`,
 
 		return nil
 	},
+}
+
+func promptYesNo(message string) bool {
+	fmt.Printf("%s (y/N): ", message)
+	var response string
+	_, err := fmt.Scanln(&response)
+	if err != nil {
+		return false
+	}
+	response = strings.ToLower(strings.TrimSpace(response))
+	return response == "y" || response == "yes"
 }
 
 func init() {

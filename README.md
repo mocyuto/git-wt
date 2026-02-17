@@ -68,6 +68,7 @@ Running `git worktree add` usually leaves you with a fresh directory missing ess
 3. **Config Synchronization**: Identifies "ignored files" (like `.env`) in your main tree and copies them over, maintaining the directory structure.
 4. **Port Reservation**: Reserves a unique "Port Index" for this specific worktree.
 5. **Automated Setup**: If you define hooks like `npm install` in `hooks.add`, they run immediately after creation.
+6. **Existing Worktree Detection**: If you try to add a branch that already has a worktree, `zgt` will prompt you to whether to execute hooks and post-creation processes for that existing worktree instead of erroring out.
 
 ```bash
 # Start a new feature in a fresh worktree
