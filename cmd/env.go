@@ -7,11 +7,11 @@ import (
 	"strings"
 
 	"github.com/mocyuto/zgt/internal/config"
-	"github.com/mocyuto/zgt/internal/git"
 	"github.com/mocyuto/zgt/internal/gitroot"
 	"github.com/mocyuto/zgt/internal/logger"
 	"github.com/mocyuto/zgt/internal/state"
 	"github.com/mocyuto/zgt/internal/template"
+	"github.com/mocyuto/zgt/internal/zcontext"
 	"github.com/spf13/cobra"
 )
 
@@ -70,18 +70,7 @@ Usage: eval "$(zgt env)"`,
 
 		if len(config.AppConfig.Env) > 0 {
 			cwd, _ := os.Getwd()
-			mainRoot, _ := gitroot.GetMainProjectRoot()
-			currentRoot, _ := gitroot.GetGitRoot()
-			currentBranch, _ := git.GetCurrentBranch()
-
-			ctx := template.Context{
-				Path:          cwd,
-				Branch:        currentBranch,
-				Repo:          filepath.Base(mainRoot),
-				CurrentDir:    filepath.Base(currentRoot),
-				TargetBranch:  currentBranch,
-				CurrentBranch: currentBranch,
-			}
+			ctx := zcontext.New(cwd, "")
 
 			replacedEnv := template.ReplaceMap(config.AppConfig.Env, ctx)
 			for k, v := range replacedEnv {
