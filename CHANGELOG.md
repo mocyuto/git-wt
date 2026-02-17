@@ -1,5 +1,9 @@
 # Changelog
 
+## [v0.8.0](https://github.com/mocyuto/zgt/compare/v0.7.0...v0.8.0) - 2026-02-17
+- feat: support tmux window name configuration by @mocyuto in https://github.com/mocyuto/zgt/pull/37
+- feat: Expand and clarify placeholders, centralize context creation by @mocyuto in https://github.com/mocyuto/zgt/pull/39
+
 ## [v0.7.0](https://github.com/mocyuto/zgt/compare/v0.6.0...v0.7.0) - 2026-02-16
 - fix: release workflow trigger and tagpr token usage by @mocyuto in https://github.com/mocyuto/zgt/pull/33
 - docs: add example for pulling default branch and CI updates by @mocyuto in https://github.com/mocyuto/zgt/pull/35
