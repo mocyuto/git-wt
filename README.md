@@ -120,7 +120,7 @@ zgt sync
 - `list`: Shows which worktrees are active, their branch status, GitHub PR details, assigned ports, and whether they have uncommitted changes (`[DIRTY]`).
 - `ports`: Shows the mapping of worktree paths to their assigned port indexes and actual port numbers. Use `-a` / `--all` to see assignments across all projects.
 - `ports update`: Synchronizes port assignments for the current project with the latest configuration. It adds missing port assignments and removes those no longer present in the configuration.
-- `config`: Displays the final merged configuration (global + project + flags) in YAML format. Use `--check` to validate configuration syntax.
+- `config`: Displays the final merged configuration (global + project + flags) in YAML format. Use `--check` to validate configuration syntax, or `--raw` to skip placeholder replacement.
 - `config edit`: Edits the configuration file using the system editor.
 - `version`: Prints the version number of `zgt`.
 

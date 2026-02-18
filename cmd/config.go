@@ -19,6 +19,7 @@ var (
 	configCheck  bool
 	configGlobal bool
 	configLocal  bool
+	configRaw    bool
 )
 
 var configCmd = &cobra.Command{
@@ -38,15 +39,22 @@ var configCmd = &cobra.Command{
 		cwd, _ := os.Getwd()
 		ctx := zcontext.New(cwd, "")
 
-		replacedConfig := template.ReplaceConfig(config.AppConfig, ctx)
+		var replacedConfig config.Config
+		header := "--- Merged Configuration (Placeholders Replaced) ---"
+		if configRaw {
+			replacedConfig = config.AppConfig
+			header = "--- Merged Configuration (Raw) ---"
+		} else {
+			replacedConfig = template.ReplaceConfig(config.AppConfig, ctx)
+		}
 
 		data, err := yaml.Marshal(replacedConfig)
 		if err != nil {
 			return logger.Errorf("error marshaling config: %v", err)
 		}
 
-		fmt.Println("--- Merged Configuration (Placeholders Replaced) ---")
-		fmt.Print(string(data))
+		cmd.Println(header)
+		cmd.Print(string(data))
 		return nil
 	},
 }
@@ -166,6 +174,7 @@ func editFile(path string) error {
 func init() {
 	rootCmd.AddCommand(configCmd)
 	configCmd.Flags().BoolVar(&configCheck, "check", false, "check configuration for errors")
+	configCmd.Flags().BoolVar(&configRaw, "raw", false, "display configuration without placeholder replacement")
 
 	configCmd.AddCommand(configEditCmd)
 	configEditCmd.Flags().BoolVarP(&configGlobal, "global", "g", false, "edit global configuration")
