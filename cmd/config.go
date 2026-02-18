@@ -71,7 +71,8 @@ var configEditCmd = &cobra.Command{
 			if err != nil {
 				return logger.Errorf("could not get global config path: %v", err)
 			}
-		} else if configLocal {
+		} else {
+			// Default or --local: target local config
 			gitRoot, err := gitroot.GetMainProjectRoot()
 			if err != nil || gitRoot == "" {
 				return logger.Errorf("not in a git repository or could not find project root")
@@ -80,19 +81,6 @@ var configEditCmd = &cobra.Command{
 			if path == "" {
 				// If not exists, use default name for creation/edit
 				path = filepath.Join(gitRoot, config.DefaultLocalConfigName)
-			}
-		} else {
-			// Default: check local, then global
-			gitRoot, _ := gitroot.GetMainProjectRoot()
-			if gitRoot != "" {
-				path = config.GetLocalConfigPath(gitRoot)
-			}
-			if path == "" {
-				var err error
-				path, err = config.GetGlobalConfigPath()
-				if err != nil {
-					return logger.Errorf("could not determine configuration file path: %v", err)
-				}
 			}
 		}
 
