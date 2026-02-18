@@ -19,6 +19,7 @@ var (
 	configCheck  bool
 	configGlobal bool
 	configLocal  bool
+	configRaw    bool
 )
 
 var configCmd = &cobra.Command{
@@ -38,15 +39,22 @@ var configCmd = &cobra.Command{
 		cwd, _ := os.Getwd()
 		ctx := zcontext.New(cwd, "")
 
-		replacedConfig := template.ReplaceConfig(config.AppConfig, ctx)
+		var replacedConfig config.Config
+		header := "--- Merged Configuration (Placeholders Replaced) ---"
+		if configRaw {
+			replacedConfig = config.AppConfig
+			header = "--- Merged Configuration (Raw) ---"
+		} else {
+			replacedConfig = template.ReplaceConfig(config.AppConfig, ctx)
+		}
 
 		data, err := yaml.Marshal(replacedConfig)
 		if err != nil {
 			return logger.Errorf("error marshaling config: %v", err)
 		}
 
-		fmt.Println("--- Merged Configuration (Placeholders Replaced) ---")
-		fmt.Print(string(data))
+		cmd.Println(header)
+		cmd.Print(string(data))
 		return nil
 	},
 }
@@ -63,7 +71,8 @@ var configEditCmd = &cobra.Command{
 			if err != nil {
 				return logger.Errorf("could not get global config path: %v", err)
 			}
-		} else if configLocal {
+		} else {
+			// Default or --local: target local config
 			gitRoot, err := gitroot.GetMainProjectRoot()
 			if err != nil || gitRoot == "" {
 				return logger.Errorf("not in a git repository or could not find project root")
@@ -72,19 +81,6 @@ var configEditCmd = &cobra.Command{
 			if path == "" {
 				// If not exists, use default name for creation/edit
 				path = filepath.Join(gitRoot, config.DefaultLocalConfigName)
-			}
-		} else {
-			// Default: check local, then global
-			gitRoot, _ := gitroot.GetMainProjectRoot()
-			if gitRoot != "" {
-				path = config.GetLocalConfigPath(gitRoot)
-			}
-			if path == "" {
-				var err error
-				path, err = config.GetGlobalConfigPath()
-				if err != nil {
-					return logger.Errorf("could not determine configuration file path: %v", err)
-				}
 			}
 		}
 
@@ -166,6 +162,7 @@ func editFile(path string) error {
 func init() {
 	rootCmd.AddCommand(configCmd)
 	configCmd.Flags().BoolVar(&configCheck, "check", false, "check configuration for errors")
+	configCmd.Flags().BoolVar(&configRaw, "raw", false, "display configuration without placeholder replacement")
 
 	configCmd.AddCommand(configEditCmd)
 	configEditCmd.Flags().BoolVarP(&configGlobal, "global", "g", false, "edit global configuration")
