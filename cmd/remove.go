@@ -3,8 +3,6 @@ package cmd
 import (
 	"path/filepath"
 
-	"strings"
-
 	"github.com/mocyuto/zgt/internal/git"
 	"github.com/mocyuto/zgt/internal/gitroot"
 	"github.com/mocyuto/zgt/internal/hook"
@@ -28,18 +26,9 @@ var removeCmd = &cobra.Command{
 		if len(args) != 0 {
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		}
-		wts, err := git.GetWorktrees()
+		completions, err := git.GetWorktreeCompletions()
 		if err != nil {
 			return nil, cobra.ShellCompDirectiveError
-		}
-
-		var completions []string
-		for _, wt := range wts {
-			if wt.Branch != "" {
-				// strip refs/heads/
-				branch := strings.TrimPrefix(wt.Branch, "refs/heads/")
-				completions = append(completions, branch)
-			}
 		}
 		return completions, cobra.ShellCompDirectiveNoFileComp
 	},

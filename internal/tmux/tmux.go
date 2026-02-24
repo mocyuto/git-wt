@@ -39,10 +39,7 @@ func Setup(ctx template.Context) error {
 		return fmt.Errorf("no tmux session running")
 	}
 
-	windowName := cfg.WindowName
-	if windowName == "" {
-		windowName = fmt.Sprintf("[%s]%s", ctx.Repo, ctx.Branch)
-	}
+	windowName := GetWindowName(ctx)
 	paneIDMap := make(map[string]string)
 
 	// Create first pane
@@ -110,6 +107,38 @@ func Setup(ctx template.Context) error {
 	}
 
 	return nil
+}
+
+// GetWindowName returns the configured window name or a default one based on context.
+func GetWindowName(ctx template.Context) string {
+	cfg := config.AppConfig.Tmux
+	if cfg.WindowName != "" {
+		return template.Replace(cfg.WindowName, ctx)
+	}
+	return fmt.Sprintf("[%s]%s", ctx.Repo, ctx.Branch)
+}
+
+// ActivateWindow switches to the specified tmux window.
+func ActivateWindow(windowID string) error {
+	if !isTmuxAvailable() || !isTmuxRunning() {
+		return nil
+	}
+	cmd := exec.Command("tmux", "select-window", "-t", windowID)
+	return cmd.Run()
+}
+
+// GetWindowIDByName returns the window ID if a window with the given name exists.
+func GetWindowIDByName(name string) (string, bool, error) {
+	windows, err := ListWindows()
+	if err != nil {
+		return "", false, err
+	}
+	for _, w := range windows {
+		if w.Name == name {
+			return w.ID, true, nil
+		}
+	}
+	return "", false, nil
 }
 
 func isTmuxAvailable() bool {
