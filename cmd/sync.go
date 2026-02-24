@@ -8,7 +8,6 @@ import (
 	"github.com/mocyuto/zgt/internal/git"
 	"github.com/mocyuto/zgt/internal/gitroot"
 	"github.com/mocyuto/zgt/internal/logger"
-	"github.com/rivo/tview"
 	"github.com/spf13/cobra"
 )
 
@@ -51,8 +50,8 @@ var syncCmd = &cobra.Command{
 		if syncAll {
 			selectedFiles = files
 		} else {
-			// 3. TUI Selection
-			selectedFiles, err = selectFilesTUI(files)
+			// 3. Custom TUI Selection
+			selectedFiles, err = selectFilesCustomTUI(files)
 			if err != nil {
 				return err
 			}
@@ -81,64 +80,121 @@ func init() {
 	syncCmd.Flags().BoolVar(&syncAll, "force", false, "Alias for --all")
 }
 
-func selectFilesTUI(files []string) ([]string, error) {
-	app := tview.NewApplication()
-
-	list := tview.NewList()
-	list.SetTitle(" Select files to sync (Press Enter to toggle, 's' to finish, 'q' to cancel) ").
-		SetBorder(true)
-
-	selected := make(map[string]bool)
-	for _, f := range files {
-		selected[f] = false
-		updateListItem(list, f, false)
-	}
-
-	var result []string
-	var finalErr error
-
-	list.SetSelectedFunc(func(index int, mainText string, secondaryText string, shortcut rune) {
-		filename := files[index]
-		selected[filename] = !selected[filename]
-
-		// Update the list item text to show selection status
-		list.RemoveItem(index)
-		list.InsertItem(index, getListItemText(filename, selected[filename]), "", 0, nil)
-		list.SetCurrentItem(index)
-	})
-
-	list.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if event.Rune() == 's' {
-			for f, isSelected := range selected {
-				if isSelected {
-					result = append(result, f)
-				}
-			}
-			app.Stop()
-			return nil
-		}
-		if event.Rune() == 'q' || event.Key() == tcell.KeyEscape {
-			finalErr = fmt.Errorf("sync cancelled by user")
-			app.Stop()
-			return nil
-		}
-		return event
-	})
-
-	if err := app.SetRoot(list, true).Run(); err != nil {
+func selectFilesCustomTUI(files []string) ([]string, error) {
+	s, err := tcell.NewScreen()
+	if err != nil {
 		return nil, err
 	}
-
-	return result, finalErr
-}
-
-func getListItemText(filename string, isSelected bool) string {
-	if isSelected {
-		return "[green][x][white] " + filename
+	if err := s.Init(); err != nil {
+		return nil, err
 	}
-	return "[ ] " + filename
-}
+	defer s.Fini()
 
-func updateListItem(list *tview.List, filename string, isSelected bool) {
-	list.AddItem(getListItemText(filename, isSelected), "", 0, nil)
+	cursor := 0
+	selected := make(map[int]bool)
+	offset := 0
+
+	draw := func() {
+		s.Clear()
+		style := tcell.StyleDefault.Background(tcell.ColorReset).Foreground(tcell.ColorReset)
+		selectedStyle := style.Background(tcell.ColorGray).Foreground(tcell.ColorWhite)
+
+		_, height := s.Size()
+		maxDisplay := height - 6 // Reserved for title and footer
+		if maxDisplay < 1 {
+			maxDisplay = 1
+		}
+
+		// Title
+		title := " Select files to sync "
+		for i, r := range title {
+			s.SetContent(i+2, 1, r, nil, style.Bold(true))
+		}
+
+		// Adjust offset if cursor is out of view
+		if cursor < offset {
+			offset = cursor
+		} else if cursor >= offset+maxDisplay {
+			offset = cursor - maxDisplay + 1
+		}
+
+		// Items
+		for i := 0; i < maxDisplay && i+offset < len(files); i++ {
+			idx := i + offset
+			f := files[idx]
+			row := i + 3
+			itemStyle := style
+			if idx == cursor {
+				itemStyle = selectedStyle
+			}
+
+			checkbox := "[ ]"
+			if selected[idx] {
+				checkbox = "[x]"
+			}
+
+			text := fmt.Sprintf("%s %s", checkbox, f)
+			for j, r := range text {
+				s.SetContent(j+2, row, r, nil, itemStyle)
+			}
+		}
+
+		// Footer
+		footer := " (j/k, p/n, Up/Down: Move | Space/Enter: Toggle | s: Sync | q/Esc: Cancel) "
+		for i, r := range footer {
+			s.SetContent(i+2, height-2, r, nil, style.Italic(true))
+		}
+		s.Show()
+	}
+
+	for {
+		draw()
+		ev := s.PollEvent()
+		switch ev := ev.(type) {
+		case *tcell.EventKey:
+			switch ev.Key() {
+			case tcell.KeyEscape, tcell.KeyCtrlC:
+				return nil, fmt.Errorf("sync cancelled")
+			case tcell.KeyUp, tcell.KeyCtrlP:
+				cursor--
+				if cursor < 0 {
+					cursor = len(files) - 1
+				}
+			case tcell.KeyDown, tcell.KeyCtrlN:
+				cursor++
+				if cursor >= len(files) {
+					cursor = 0
+				}
+			case tcell.KeyEnter:
+				selected[cursor] = !selected[cursor]
+			case tcell.KeyRune:
+				switch ev.Rune() {
+				case 'q':
+					return nil, fmt.Errorf("sync cancelled")
+				case 'j':
+					cursor++
+					if cursor >= len(files) {
+						cursor = 0
+					}
+				case 'k':
+					cursor--
+					if cursor < 0 {
+						cursor = len(files) - 1
+					}
+				case ' ':
+					selected[cursor] = !selected[cursor]
+				case 's':
+					var result []string
+					for i, f := range files {
+						if selected[i] {
+							result = append(result, f)
+						}
+					}
+					return result, nil
+				}
+			}
+		case *tcell.EventResize:
+			s.Sync()
+		}
+	}
 }
