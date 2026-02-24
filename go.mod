@@ -4,7 +4,6 @@ go 1.24.1
 
 require (
 	github.com/gdamore/tcell/v2 v2.13.8
-	github.com/rivo/tview v0.42.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1

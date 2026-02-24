@@ -327,18 +327,6 @@ If `enabled` is `true`, `zgt` will:
 
 `zgt` provides a way to manage "Expert Skills" for AI agents. Skills are sets of instructions and resources that extend an agent's capabilities.
 
-### Distributing Skills
-
-Place your agent skills in a `skills/` directory at the root of your repository:
-
-```text
-skills/
-  my-awesome-skill/
-    SKILL.md    # Required: Main instruction file
-    scripts/    # Optional: Helper scripts
-    resources/  # Optional: Templates or assets
-```
-
 ### Installing Skills (`skill install`)
 
 To install the skills from the current repository so that your AI collaborator (like Claude) can use them:

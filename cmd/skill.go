@@ -8,7 +8,6 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/mocyuto/zgt/internal/logger"
-	"github.com/rivo/tview"
 	"github.com/spf13/cobra"
 )
 
@@ -38,7 +37,7 @@ to various agent skills directories (local/global .claude and .agent).`,
 func init() {
 	rootCmd.AddCommand(skillCmd)
 	skillCmd.AddCommand(skillInstallCmd)
-	skillInstallCmd.Flags().BoolVarP(&skillInstallAll, "all", "a", false, "Install to all targets without TUI selection")
+	skillInstallCmd.Flags().BoolVarP(&skillInstallAll, "all", "a", false, "Install to all targets without selection")
 }
 
 type installTarget struct {
@@ -81,7 +80,7 @@ func runInstall() error {
 			selectedPaths = append(selectedPaths, t.path)
 		}
 	} else {
-		selectedPaths, err = selectTargetsTUI(targets)
+		selectedPaths, err = selectTargetsCustomTUI(targets)
 		if err != nil {
 			return err
 		}
@@ -122,61 +121,104 @@ func runInstall() error {
 	return nil
 }
 
-func selectTargetsTUI(targets []installTarget) ([]string, error) {
-	app := tview.NewApplication()
-
-	list := tview.NewList()
-	list.SetTitle(" Select installation targets (Enter: Toggle, 's': Install, 'q': Cancel) ").
-		SetBorder(true)
-
-	selected := make(map[string]bool)
-	for _, t := range targets {
-		selected[t.path] = false
-		list.AddItem(getInstallItemText(t.name, false), "", 0, nil)
-	}
-
-	var result []string
-	var finalErr error
-
-	list.SetSelectedFunc(func(index int, mainText string, secondaryText string, shortcut rune) {
-		t := targets[index]
-		selected[t.path] = !selected[t.path]
-
-		list.RemoveItem(index)
-		list.InsertItem(index, getInstallItemText(t.name, selected[t.path]), "", 0, nil)
-		list.SetCurrentItem(index)
-	})
-
-	list.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if event.Rune() == 's' {
-			for _, t := range targets {
-				if selected[t.path] {
-					result = append(result, t.path)
-				}
-			}
-			app.Stop()
-			return nil
-		}
-		if event.Rune() == 'q' || event.Key() == tcell.KeyEscape {
-			finalErr = fmt.Errorf("installation cancelled by user")
-			app.Stop()
-			return nil
-		}
-		return event
-	})
-
-	if err := app.SetRoot(list, true).Run(); err != nil {
+func selectTargetsCustomTUI(targets []installTarget) ([]string, error) {
+	s, err := tcell.NewScreen()
+	if err != nil {
 		return nil, err
 	}
-
-	return result, finalErr
-}
-
-func getInstallItemText(name string, isSelected bool) string {
-	if isSelected {
-		return "[green][x][white] " + name
+	if err := s.Init(); err != nil {
+		return nil, err
 	}
-	return "[ ] " + name
+	defer s.Fini()
+
+	cursor := 0
+	selected := make(map[int]bool)
+
+	draw := func() {
+		s.Clear()
+		style := tcell.StyleDefault.Background(tcell.ColorReset).Foreground(tcell.ColorReset)
+		selectedStyle := style.Background(tcell.ColorGray).Foreground(tcell.ColorWhite)
+
+		title := " Select installation targets "
+		for i, r := range title {
+			s.SetContent(i+2, 1, r, nil, style.Bold(true))
+		}
+
+		for i, t := range targets {
+			row := i + 3
+			itemStyle := style
+			if i == cursor {
+				itemStyle = selectedStyle
+			}
+
+			checkbox := "[ ]"
+			if selected[i] {
+				checkbox = "[x]"
+			}
+
+			text := fmt.Sprintf("%s %s", checkbox, t.name)
+			for j, r := range text {
+				s.SetContent(j+2, row, r, nil, itemStyle)
+			}
+		}
+
+		footer := " (j/k, p/n, Up/Down: Move | Space/Enter: Toggle | s: Install | q/Esc: Cancel) "
+		for i, r := range footer {
+			s.SetContent(i+2, len(targets)+5, r, nil, style.Italic(true))
+		}
+		s.Show()
+	}
+
+	for {
+		draw()
+		ev := s.PollEvent()
+		switch ev := ev.(type) {
+		case *tcell.EventKey:
+			switch ev.Key() {
+			case tcell.KeyEscape, tcell.KeyCtrlC:
+				return nil, fmt.Errorf("installation cancelled")
+			case tcell.KeyUp, tcell.KeyCtrlP:
+				cursor--
+				if cursor < 0 {
+					cursor = len(targets) - 1
+				}
+			case tcell.KeyDown, tcell.KeyCtrlN:
+				cursor++
+				if cursor >= len(targets) {
+					cursor = 0
+				}
+			case tcell.KeyEnter:
+				selected[cursor] = !selected[cursor]
+			case tcell.KeyRune:
+				switch ev.Rune() {
+				case 'q':
+					return nil, fmt.Errorf("installation cancelled")
+				case 'j':
+					cursor++
+					if cursor >= len(targets) {
+						cursor = 0
+					}
+				case 'k':
+					cursor--
+					if cursor < 0 {
+						cursor = len(targets) - 1
+					}
+				case ' ':
+					selected[cursor] = !selected[cursor]
+				case 's':
+					var result []string
+					for i, t := range targets {
+						if selected[i] {
+							result = append(result, t.path)
+						}
+					}
+					return result, nil
+				}
+			}
+		case *tcell.EventResize:
+			s.Sync()
+		}
+	}
 }
 
 func copyDir(src, dest string) error {
