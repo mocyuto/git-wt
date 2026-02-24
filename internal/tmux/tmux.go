@@ -10,6 +10,20 @@ import (
 	"github.com/mocyuto/zgt/internal/template"
 )
 
+type PaneStatus struct {
+	ID        string
+	Title     string
+	Command   string
+	Running   string
+	IsRunning bool
+}
+
+type WindowStatus struct {
+	ID    string
+	Name  string
+	Panes []PaneStatus
+}
+
 // Setup creates a new tmux window and splits it into panes as configured.
 func Setup(ctx template.Context) error {
 	cfg := config.AppConfig.Tmux
@@ -111,4 +125,131 @@ func isTmuxRunning() bool {
 	// Also check if server is running
 	cmd := exec.Command("tmux", "ls")
 	return cmd.Run() == nil
+}
+
+// ListWindows returns a list of all tmux windows in all sessions.
+func ListWindows() ([]WindowStatus, error) {
+	if !isTmuxAvailable() || !isTmuxRunning() {
+		return nil, nil
+	}
+
+	cmd := exec.Command("tmux", "list-windows", "-a", "-F", "#{window_id} #{window_name}")
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+
+	return parseWindows(string(output))
+}
+
+// ListSessionWindows returns a list of all tmux windows in the current session.
+func ListSessionWindows() ([]WindowStatus, error) {
+	if !isTmuxAvailable() || !isTmuxRunning() {
+		return nil, nil
+	}
+
+	// Use current session
+	cmd := exec.Command("tmux", "list-windows", "-F", "#{window_id} #{window_name}")
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+
+	return parseWindows(string(output))
+}
+
+func parseWindows(output string) ([]WindowStatus, error) {
+	var windows []WindowStatus
+	lines := strings.Split(strings.TrimSpace(output), "\n")
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		parts := strings.SplitN(line, " ", 2)
+		if len(parts) < 2 {
+			continue
+		}
+		windows = append(windows, WindowStatus{
+			ID:   parts[0],
+			Name: parts[1],
+		})
+	}
+	return windows, nil
+}
+
+// GetWindowStatus returns the status of all panes in the given window.
+func GetWindowStatus(windowID string) (*WindowStatus, error) {
+	// window_id, window_name, pane_id, pane_current_command, pane_pid, pane_title
+	format := "#{window_id} #{window_name} #{pane_id} #{pane_current_command} #{pane_pid} #{pane_title}"
+	cmd := exec.Command("tmux", "list-panes", "-t", windowID, "-F", format)
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	if len(lines) == 0 || lines[0] == "" {
+		return nil, fmt.Errorf("no panes found for window %s", windowID)
+	}
+
+	firstLineParts := strings.SplitN(lines[0], " ", 6)
+	status := &WindowStatus{
+		ID:   firstLineParts[0],
+		Name: firstLineParts[1],
+	}
+
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		parts := strings.SplitN(line, " ", 6)
+		if len(parts) < 6 {
+			continue
+		}
+
+		id := parts[2]
+		currentCmd := parts[3]
+		pid := parts[4]
+		title := parts[5]
+
+		runningProcess := ""
+		isRunning := false
+
+		// Try to find the real running process under the shell
+		if currentCmd == "zsh" || currentCmd == "bash" || currentCmd == "sh" {
+			// Find child processes of the shell PID
+			childCmd := exec.Command("pgrep", "-P", pid)
+			childOutput, err := childCmd.Output()
+			if err == nil {
+				childPIDs := strings.Fields(strings.TrimSpace(string(childOutput)))
+				if len(childPIDs) > 0 {
+					// Get the command name of the first child process
+					psCmd := exec.Command("ps", "-o", "comm=", "-p", childPIDs[0])
+					psOutput, err := psCmd.Output()
+					if err == nil {
+						runningProcess = strings.TrimSpace(string(psOutput))
+						isRunning = true
+					}
+				}
+			}
+		} else {
+			// If it's not a shell, the current command itself is the running process
+			runningProcess = currentCmd
+			isRunning = true
+		}
+
+		if runningProcess == "" {
+			runningProcess = "Waiting/Idle"
+		}
+
+		status.Panes = append(status.Panes, PaneStatus{
+			ID:        id,
+			Title:     title,
+			Command:   currentCmd,
+			Running:   runningProcess,
+			IsRunning: isRunning,
+		})
+	}
+
+	return status, nil
 }

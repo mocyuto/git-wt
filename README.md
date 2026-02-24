@@ -118,6 +118,7 @@ zgt sync
 ### 5. Monitoring Assignments (`list` / `ports`)
 
 - `list`: Shows which worktrees are active, their branch status, GitHub PR details, assigned ports, and whether they have uncommitted changes (`[DIRTY]`).
+- `tmux ls`: Shows tmux windows and panes status (Running/Waiting) created by `zgt`.
 - `ports`: Shows the mapping of worktree paths to their assigned port indexes and actual port numbers. Use `-a` / `--all` to see assignments across all projects.
 - `ports update`: Synchronizes port assignments for the current project with the latest configuration. It adds missing port assignments and removes those no longer present in the configuration.
 - `config`: Displays the final merged configuration (global + project + flags) in YAML format. Use `--check` to validate configuration syntax, or `--raw` to skip placeholder replacement.
