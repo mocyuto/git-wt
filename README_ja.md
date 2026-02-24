@@ -331,9 +331,9 @@ zgt skill install
 実行すると、以下の 4 つのインストール先からインタラクティブに（チェックボックス形式で）選択できます。
 
 - **Local .claude**: `./.claude/skills/`
-- **Local .agent**: `./.agent/skills/`
+- **Local .agents**: `./.agents/skills/`
 - **Global .claude**: `~/.claude/skills/`
-- **Global .agent**: `~/.agent/skills/`
+- **Global .agents**: `~/.agents/skills/`
 
 `-a` または `--all` フラグを使用すると、すべてのターゲットに即座にインストールされます。
 
