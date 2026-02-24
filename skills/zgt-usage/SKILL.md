@@ -11,6 +11,8 @@ This skill provides instructions for AI agents on how to use `zgt` to manage Git
 
 `zgt` is a CLI tool that extends `git worktree add` by automatically copying ignored configuration files (like `.env`) to the new directory. It also manages ports and tmux sessions.
 
+For detailed configuration options, see the [Configuration Guide](./config.md).
+
 ## Core Commands
 
 ### 1. Adding a Worktree (`add`)
