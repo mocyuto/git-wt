@@ -23,6 +23,7 @@ but files ignored by `.gitignore` (such as `.env` or local configs) are not incl
 - **Custom Hooks**: Execute multiple shell commands naturally after creating (`add`) or removing (`rm`) worktrees.
 - **Configuration Visibility**: `config` subcommand to inspect the final merged configuration and validate syntax.
 - **Bi-directional Sync**: `sync` subcommand to synchronize ignored files from worktree back to the project root.
+- **Agent Skills**: Distribute and install expert skills for AI agents.
 
 ## Badges
 
@@ -123,6 +124,7 @@ zgt sync
 - `config`: Displays the final merged configuration (global + project + flags) in YAML format. Use `--check` to validate configuration syntax, or `--raw` to skip placeholder replacement.
 - `config edit`: Edits the configuration file using the system editor. Defaults to editing the local project configuration.
 - `version`: Prints the version number of `zgt`.
+- `skill install`: Installs skills from the current repository's `skills/` directory to the global agent skills directory (`~/.claude/skills/`).
 
 ## Configuration
 
@@ -320,6 +322,39 @@ If `enabled` is `true`, `zgt` will:
 
 - If you only need a single command, you can use a string instead of a list: `add: "echo hello"`.
 - Commands are executed via `/bin/sh -c`, allowing for pipes and status checks.
+
+## Agent Skill Management
+
+`zgt` provides a way to manage "Expert Skills" for AI agents. Skills are sets of instructions and resources that extend an agent's capabilities.
+
+### Distributing Skills
+
+Place your agent skills in a `skills/` directory at the root of your repository:
+
+```text
+skills/
+  my-awesome-skill/
+    SKILL.md    # Required: Main instruction file
+    scripts/    # Optional: Helper scripts
+    resources/  # Optional: Templates or assets
+```
+
+### Installing Skills (`skill install`)
+
+To install the skills from the current repository so that your AI collaborator (like Claude) can use them:
+
+```bash
+zgt skill install
+```
+
+This will open an interactive TUI to choose from 4 installation targets:
+
+- **Local .claude**: `./.claude/skills/`
+- **Local .agent**: `./.agent/skills/`
+- **Global .claude**: `~/.claude/skills/`
+- **Global .agent**: `~/.agent/skills/`
+
+Use `-a` or `--all` to install to all targets immediately.
 
 ## Requirements
 
