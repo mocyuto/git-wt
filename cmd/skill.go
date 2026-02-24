@@ -26,7 +26,7 @@ var skillInstallCmd = &cobra.Command{
 	Use:   "install",
 	Short: "Install skills from the local skills directory",
 	Long: `Install skills from the 'skills/' directory in the current repository
-to various agent skills directories (local/global .claude and .agent).`,
+to various agent skills directories (local/global .claude and .agents).`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := runInstall(); err != nil {
 			logger.Error("Failed to install skills: %v", err)
@@ -58,9 +58,9 @@ func getInstallTargets() ([]installTarget, error) {
 
 	return []installTarget{
 		{name: "local .claude", path: filepath.Join(cwd, ".claude", "skills")},
-		{name: "local .agent", path: filepath.Join(cwd, ".agent", "skills")},
+		{name: "local .agents", path: filepath.Join(cwd, ".agents", "skills")},
 		{name: "global .claude", path: filepath.Join(home, ".claude", "skills")},
-		{name: "global .agent", path: filepath.Join(home, ".agent", "skills")},
+		{name: "global .agents", path: filepath.Join(home, ".agents", "skills")},
 		{name: "global antigravity", path: filepath.Join(home, ".gemini", "antigravity", "skills")},
 	}, nil
 }

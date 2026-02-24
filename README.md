@@ -340,9 +340,9 @@ zgt skill install
 This will open an interactive TUI to choose from 4 installation targets:
 
 - **Local .claude**: `./.claude/skills/`
-- **Local .agent**: `./.agent/skills/`
+- **Local .agents**: `./.agents/skills/`
 - **Global .claude**: `~/.claude/skills/`
-- **Global .agent**: `~/.agent/skills/`
+- **Global .agents**: `~/.agents/skills/`
 
 Use `-a` or `--all` to install to all targets immediately.
 
