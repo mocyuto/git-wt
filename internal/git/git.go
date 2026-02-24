@@ -116,3 +116,21 @@ func ResolveWorktreeInfo(search string) (path, branch string, err error) {
 	}
 	return "", "", logger.Errorf("not found")
 }
+
+func GetWorktreeCompletions() ([]string, error) {
+	out, err := exec.Command("git", "worktree", "list", "--porcelain").Output()
+	if err != nil {
+		return nil, err
+	}
+
+	lines := strings.Split(string(out), "\n")
+	var completions []string
+	for _, line := range lines {
+		if strings.HasPrefix(line, "branch ") {
+			fullBranch := strings.TrimPrefix(line, "branch ")
+			branchName := strings.TrimPrefix(fullBranch, "refs/heads/")
+			completions = append(completions, branchName)
+		}
+	}
+	return completions, nil
+}
