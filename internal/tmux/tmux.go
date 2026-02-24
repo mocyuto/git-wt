@@ -19,9 +19,10 @@ type PaneStatus struct {
 }
 
 type WindowStatus struct {
-	ID    string
-	Name  string
-	Panes []PaneStatus
+	ID          string
+	Name        string
+	SessionName string
+	Panes       []PaneStatus
 }
 
 // Setup creates a new tmux window and splits it into panes as configured.
@@ -162,7 +163,7 @@ func ListWindows() ([]WindowStatus, error) {
 		return nil, nil
 	}
 
-	cmd := exec.Command("tmux", "list-windows", "-a", "-F", "#{window_id} #{window_name}")
+	cmd := exec.Command("tmux", "list-windows", "-a", "-F", "#{session_name} #{window_id} #{window_name}")
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, err
@@ -178,13 +179,27 @@ func ListSessionWindows() ([]WindowStatus, error) {
 	}
 
 	// Use current session
-	cmd := exec.Command("tmux", "list-windows", "-F", "#{window_id} #{window_name}")
+	cmd := exec.Command("tmux", "list-windows", "-F", "#{session_name} #{window_id} #{window_name}")
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, err
 	}
 
 	return parseWindows(string(output))
+}
+
+// GetCurrentSessionName returns the name of the current tmux session if available.
+func GetCurrentSessionName() (string, error) {
+	if !isTmuxAvailable() || !isTmuxRunning() {
+		return "", nil
+	}
+	cmd := exec.Command("tmux", "display-message", "-p", "#S")
+	output, err := cmd.Output()
+	if err != nil {
+		// If fails (e.g. not inside tmux), return empty
+		return "", nil
+	}
+	return strings.TrimSpace(string(output)), nil
 }
 
 func parseWindows(output string) ([]WindowStatus, error) {
@@ -194,13 +209,14 @@ func parseWindows(output string) ([]WindowStatus, error) {
 		if line == "" {
 			continue
 		}
-		parts := strings.SplitN(line, " ", 2)
-		if len(parts) < 2 {
+		parts := strings.SplitN(line, " ", 3)
+		if len(parts) < 3 {
 			continue
 		}
 		windows = append(windows, WindowStatus{
-			ID:   parts[0],
-			Name: parts[1],
+			SessionName: parts[0],
+			ID:          parts[1],
+			Name:        parts[2],
 		})
 	}
 	return windows, nil
@@ -223,8 +239,9 @@ func GetWindowStatus(windowID string) (*WindowStatus, error) {
 
 	firstLineParts := strings.SplitN(lines[0], " ", 6)
 	status := &WindowStatus{
-		ID:   firstLineParts[0],
-		Name: firstLineParts[1],
+		SessionName: firstLineParts[0],
+		ID:          firstLineParts[1],
+		Name:        firstLineParts[2],
 	}
 
 	for _, line := range lines {

@@ -2,9 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-	"strings"
-	"text/tabwriter"
 
 	"github.com/mocyuto/zgt/internal/tmux"
 	"github.com/spf13/cobra"
@@ -34,34 +31,62 @@ func ListTmuxWindows() error {
 		return nil
 	}
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "WINDOW\tPANE\tSTATUS\tPROCESS")
-
+	// Group windows by session
+	sessionWindows := make(map[string][]tmux.WindowStatus)
+	var sessions []string
 	for _, win := range windows {
-		status, err := tmux.GetWindowStatus(win.ID)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to get status for window %s: %v\n", win.ID, err)
-			continue
+		if _, ok := sessionWindows[win.SessionName]; !ok {
+			sessions = append(sessions, win.SessionName)
 		}
+		sessionWindows[win.SessionName] = append(sessionWindows[win.SessionName], win)
+	}
 
-		// Filter only windows created by zgt (heuristic: name starts with [)
-		// Or just show all if we want to be more permissive, but the user asked for zgt-monitor-tmux
-		if !strings.HasPrefix(win.Name, "[") {
-			// continue // Uncomment if we only want zgt windows
+	currentSession, _ := tmux.GetCurrentSessionName()
+
+	for i, session := range sessions {
+		sessionDisplay := session
+		if session == currentSession {
+			sessionDisplay = fmt.Sprintf("%s (current)", session)
 		}
+		fmt.Printf("%s\n", sessionDisplay)
+		wins := sessionWindows[session]
+		for j, win := range wins {
+			winPrefix := "├─"
+			if j == len(wins)-1 {
+				winPrefix = "└─"
+			}
+			fmt.Printf("%s %s (%s)\n", winPrefix, win.Name, win.ID)
 
-		for i, pane := range status.Panes {
-			windowName := win.Name
-			if i > 0 {
-				windowName = "" // Only show window name for the first pane
+			status, err := tmux.GetWindowStatus(win.ID)
+			if err != nil {
+				fmt.Printf("   (Error getting status: %v)\n", err)
+				continue
 			}
-			statusStr := "Waiting"
-			if pane.IsRunning {
-				statusStr = "Running"
+
+			for k, pane := range status.Panes {
+				panePrefix := "│  ├─"
+				if j == len(wins)-1 {
+					panePrefix = "   ├─"
+				}
+				if k == len(status.Panes)-1 {
+					if j == len(wins)-1 {
+						panePrefix = "   └─"
+					} else {
+						panePrefix = "│  └─"
+					}
+				}
+
+				statusStr := "Waiting"
+				if pane.IsRunning {
+					statusStr = "Running"
+				}
+				fmt.Printf("%s %s %s: %s\n", panePrefix, pane.ID, statusStr, pane.Running)
 			}
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", windowName, pane.ID, statusStr, pane.Running)
+		}
+		if i < len(sessions)-1 {
+			fmt.Println()
 		}
 	}
-	w.Flush()
+
 	return nil
 }
