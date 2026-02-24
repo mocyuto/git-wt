@@ -1,5 +1,8 @@
 # Changelog
 
+## [v0.9.1](https://github.com/mocyuto/zgt/compare/v0.9.0...v0.9.1) - 2026-02-24
+- feat(skill): support embedded skill installation for cross-project use by @mocyuto in https://github.com/mocyuto/zgt/pull/46
+
 ## [v0.9.0](https://github.com/mocyuto/zgt/compare/v0.8.1...v0.9.0) - 2026-02-24
 - feat: hierarchical tmux ls display and interactive open command by @mocyuto in https://github.com/mocyuto/zgt/pull/43
 - Implement Agent Skill plugin system and installation command by @mocyuto in https://github.com/mocyuto/zgt/pull/44
