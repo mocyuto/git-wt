@@ -2,12 +2,13 @@ package cmd
 
 import (
 	"fmt"
-	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/mocyuto/zgt/internal/logger"
+	"github.com/mocyuto/zgt/skills"
 	"github.com/spf13/cobra"
 )
 
@@ -60,14 +61,13 @@ func getInstallTargets() ([]installTarget, error) {
 		{name: "local .agent", path: filepath.Join(cwd, ".agent", "skills")},
 		{name: "global .claude", path: filepath.Join(home, ".claude", "skills")},
 		{name: "global .agent", path: filepath.Join(home, ".agent", "skills")},
+		{name: "global antigravity", path: filepath.Join(home, ".gemini", "antigravity", "skills")},
 	}, nil
 }
 
 func runInstall() error {
-	srcDir := "skills"
-	if _, err := os.Stat(srcDir); os.IsNotExist(err) {
-		return fmt.Errorf("directory '%s' not found in the current repository", srcDir)
-	}
+	srcFS := skills.FS
+	srcDir := "." // root of embedded FS
 
 	targets, err := getInstallTargets()
 	if err != nil {
@@ -91,9 +91,9 @@ func runInstall() error {
 		return nil
 	}
 
-	entries, err := os.ReadDir(srcDir)
+	entries, err := fs.ReadDir(srcFS, srcDir)
 	if err != nil {
-		return fmt.Errorf("failed to read skills directory: %v", err)
+		return fmt.Errorf("failed to read embedded skills: %v", err)
 	}
 
 	for _, destDir := range selectedPaths {
@@ -102,16 +102,17 @@ func runInstall() error {
 		}
 
 		for _, entry := range entries {
+			// Skip files in the root of embedded FS (like skills.go)
 			if !entry.IsDir() {
 				continue
 			}
 
 			skillName := entry.Name()
-			srcSkillPath := filepath.Join(srcDir, skillName)
+			srcSkillPath := skillName
 			destSkillPath := filepath.Join(destDir, skillName)
 
 			logger.Info("Installing %s to %s...", skillName, destDir)
-			if err := copyDir(srcSkillPath, destSkillPath); err != nil {
+			if err := copyEmbedDir(srcFS, srcSkillPath, destSkillPath); err != nil {
 				return fmt.Errorf("failed to copy skill '%s' to '%s': %v", skillName, destDir, err)
 			}
 		}
@@ -221,12 +222,12 @@ func selectTargetsCustomTUI(targets []installTarget) ([]string, error) {
 	}
 }
 
-func copyDir(src, dest string) error {
+func copyEmbedDir(srcFS fs.FS, src, dest string) error {
 	if err := os.RemoveAll(dest); err != nil {
 		return err
 	}
 
-	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+	return fs.WalkDir(srcFS, src, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -238,36 +239,15 @@ func copyDir(src, dest string) error {
 
 		destPath := filepath.Join(dest, relPath)
 
-		if info.IsDir() {
-			return os.MkdirAll(destPath, info.Mode())
+		if d.IsDir() {
+			return os.MkdirAll(destPath, 0755)
 		}
 
-		return skillCopyFile(path, destPath)
+		data, err := fs.ReadFile(srcFS, path)
+		if err != nil {
+			return err
+		}
+
+		return os.WriteFile(destPath, data, d.Type().Perm())
 	})
-}
-
-func skillCopyFile(src, dest string) error {
-	srcF, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer srcF.Close()
-
-	info, err := srcF.Stat()
-	if err != nil {
-		return err
-	}
-
-	destF, err := os.Create(dest)
-	if err != nil {
-		return err
-	}
-	defer destF.Close()
-
-	if err := os.Chmod(dest, info.Mode()); err != nil {
-		return err
-	}
-
-	_, err = io.Copy(destF, srcF)
-	return err
 }
