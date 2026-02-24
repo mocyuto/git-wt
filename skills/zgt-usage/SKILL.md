@@ -1,3 +1,8 @@
+---
+name: zgt-usage
+description: Instructions for AI agents on how to use `zgt` to manage Git worktrees and development environments effectively.
+---
+
 # ZGT Usage Skill
 
 This skill provides instructions for AI agents on how to use `zgt` to manage Git worktrees and development environments effectively.
