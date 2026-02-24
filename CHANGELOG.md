@@ -1,5 +1,8 @@
 # Changelog
 
+## [v0.9.2](https://github.com/mocyuto/zgt/compare/v0.9.1...v0.9.2) - 2026-02-24
+- Rename .agent to .agents and fix skill installation permissions by @mocyuto in https://github.com/mocyuto/zgt/pull/48
+
 ## [v0.9.1](https://github.com/mocyuto/zgt/compare/v0.9.0...v0.9.1) - 2026-02-24
 - feat(skill): support embedded skill installation for cross-project use by @mocyuto in https://github.com/mocyuto/zgt/pull/46
 
