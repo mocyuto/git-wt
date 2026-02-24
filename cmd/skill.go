@@ -248,6 +248,6 @@ func copyEmbedDir(srcFS fs.FS, src, dest string) error {
 			return err
 		}
 
-		return os.WriteFile(destPath, data, d.Type().Perm())
+		return os.WriteFile(destPath, data, 0644)
 	})
 }
