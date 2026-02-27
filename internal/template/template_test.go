@@ -8,19 +8,12 @@ import (
 )
 
 func TestReplace(t *testing.T) {
-	ctx := Context{
-		Path:          "/path/to/repo-branch",
-		Branch:        "branch",
-		Repo:          "repo",
-		CurrentDir:    "curr-dir",
-		TargetBranch:  "target",
-		CurrentBranch: "curr-branch",
-	}
-
 	tests := []struct {
 		name     string
 		tmpl     string
 		expected string
+		branch   string
+		path     string
 	}{
 		{
 			name:     "Replace Path",
@@ -62,10 +55,37 @@ func TestReplace(t *testing.T) {
 			tmpl:     "hello world",
 			expected: "hello world",
 		},
+		{
+			name:     "Replace Branch with hostname function",
+			tmpl:     "echo {{.Branch | hostname}}",
+			expected: "echo feat-test",
+			branch:   "feat_test",
+		},
+		{
+			name:     "Replace Path with hostname function",
+			tmpl:     "echo {{.Path | hostname}}",
+			expected: "echo -path-to-repo-branch",
+			path:     "/path/to/repo-branch",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctx := Context{
+				Path:          "/path/to/repo-branch",
+				Branch:        "branch",
+				Repo:          "repo",
+				CurrentDir:    "curr-dir",
+				TargetBranch:  "target",
+				CurrentBranch: "curr-branch",
+			}
+			if tt.branch != "" {
+				ctx.Branch = tt.branch
+			}
+			if tt.path != "" {
+				ctx.Path = tt.path
+			}
+
 			got := Replace(tt.tmpl, ctx)
 			if got != tt.expected {
 				t.Errorf("Replace() = %v, want %v", got, tt.expected)

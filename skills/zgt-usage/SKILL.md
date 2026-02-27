@@ -49,3 +49,4 @@ Use `zgt sync` to bring changes from a worktree back to the project root.
 2. **Path Context**: After `zgt add`, remember that the project root is sibling to your current repository.
 3. **Configuration**: If the user needs specific files copied, suggest adding them to the `ignore` list in `zgt.config.yml`.
 4. **Cleanup**: Proactively suggest `zgt rm` when a task is completed and the PR is merged.
+5. **Hostname Compatibility**: If using placeholders for hostnames (e.g., in tmux window names or environment variables), use the `hostname` function to replace illegal characters: `{{.Branch | hostname}}`.
