@@ -1,7 +1,9 @@
 package template
 
 import (
+	"bytes"
 	"strings"
+	"text/template"
 
 	"github.com/mocyuto/zgt/internal/config"
 )
@@ -16,15 +18,32 @@ type Context struct {
 	CurrentBranch string // Current branch name
 }
 
-// Replace replaces placeholders in the template string with values from the context
+func toHostname(s string) string {
+	r := strings.NewReplacer("_", "-", "/", "-")
+	return r.Replace(s)
+}
+
+// Replace replaces placeholders in the template string with values from the context.
+// It uses text/template for substitution and supports custom functions.
+// Available functions:
+// - hostname: replaces '_' and '/' with '-'
 func Replace(tmpl string, ctx Context) string {
-	replaced := strings.ReplaceAll(tmpl, "{{.Path}}", ctx.Path)
-	replaced = strings.ReplaceAll(replaced, "{{.Branch}}", ctx.Branch)
-	replaced = strings.ReplaceAll(replaced, "{{.Repo}}", ctx.Repo)
-	replaced = strings.ReplaceAll(replaced, "{{.CurrentDir}}", ctx.CurrentDir)
-	replaced = strings.ReplaceAll(replaced, "{{.TargetBranch}}", ctx.TargetBranch)
-	replaced = strings.ReplaceAll(replaced, "{{.CurrentBranch}}", ctx.CurrentBranch)
-	return replaced
+	funcMap := template.FuncMap{
+		"hostname": toHostname,
+	}
+
+	t, err := template.New("zgt").Funcs(funcMap).Parse(tmpl)
+	if err != nil {
+		// Fallback to original string if template parsing fails
+		return tmpl
+	}
+
+	var buf bytes.Buffer
+	if err := t.Execute(&buf, ctx); err != nil {
+		return tmpl
+	}
+
+	return buf.String()
 }
 
 // ReplaceMap replaces placeholders in all values of the map with values from the context

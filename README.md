@@ -276,6 +276,14 @@ Placeholders can be used in `hooks`, `env`, and `tmux.window_name` values.
 | `{{.TargetBranch}}`  | Alias for `{{.Branch}}`.                                      |
 | `{{.CurrentBranch}}` | Name of the branch you are currently on when executing `zgt`. |
 
+#### Template Functions
+
+You can use functions to transform placeholder values.
+
+| Function   | Description                                              | Example    |
+| :--------- | :------------------------------------------------------- | :--------- | ------------------------ |
+| `hostname` | Replaces hostname-unsafe characters (`_`, `/`) with `-`. | `{{.Branch | hostname}}`->`feat-test` |
+
 ### Tmux Integration
 
 `zgt` can automatically set up a tmux window with multiple panes and execute commands in each when you run `add`. You can explicitly target panes for splitting using IDs.
