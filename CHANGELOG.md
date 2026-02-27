@@ -1,5 +1,8 @@
 # Changelog
 
+## [v0.10.0](https://github.com/mocyuto/zgt/compare/v0.9.2...v0.10.0) - 2026-02-27
+- feat: implement hostname-safe placeholder function by @mocyuto in https://github.com/mocyuto/zgt/pull/50
+
 ## [v0.9.2](https://github.com/mocyuto/zgt/compare/v0.9.1...v0.9.2) - 2026-02-24
 - Rename .agent to .agents and fix skill installation permissions by @mocyuto in https://github.com/mocyuto/zgt/pull/48
 
