@@ -280,9 +280,9 @@ Placeholders can be used in `hooks`, `env`, and `tmux.window_name` values.
 
 You can use functions to transform placeholder values.
 
-| Function   | Description                                              | Example    |
-| :--------- | :------------------------------------------------------- | :--------- | ------------------------ |
-| `hostname` | Replaces hostname-unsafe characters (`_`, `/`) with `-`. | `{{.Branch | hostname}}`->`feat-test` |
+| Function   | Description                                              | Example                                |
+| :--------- | :------------------------------------------------------- | :------------------------------------- |
+| `hostname` | Replaces hostname-unsafe characters (`_`, `/`) with `-`. | `{{.Branch \| hostname}}`->`feat-test` |
 
 ### Tmux Integration
 
