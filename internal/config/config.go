@@ -261,3 +261,15 @@ func LoadPortsFromPath(root string) (map[string]int, error) {
 
 	return cfg.Ports, nil
 }
+
+// PrintConfig prints the current configuration to the log
+func PrintConfig() {
+	logger.Info("--- Current Configuration ---")
+	d, err := yaml.Marshal(&AppConfig)
+	if err != nil {
+		logger.Warn("failed to marshal config: %v", err)
+		return
+	}
+	logger.Log(string(d))
+	logger.Info("-----------------------------")
+}

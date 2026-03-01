@@ -31,11 +31,17 @@ func Execute(version string) {
 }
 
 func init() {
-	cobra.OnInitialize(config.InitConfig)
+	cobra.OnInitialize(func() {
+		config.InitConfig()
+		if logger.Verbose {
+			config.PrintConfig()
+		}
+	})
 
 	desc := "config file"
 	if globalPath, err := config.GetGlobalConfigPath(); err == nil {
 		desc = fmt.Sprintf("config file (default is %s)", globalPath)
 	}
 	rootCmd.PersistentFlags().StringVar(&config.CfgFile, "config", "", desc)
+	rootCmd.PersistentFlags().BoolVarP(&logger.Verbose, "verbose", "v", false, "show detailed output")
 }

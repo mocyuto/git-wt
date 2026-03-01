@@ -45,6 +45,10 @@ Use `zgt sync` to bring changes from a worktree back to the project root.
 - `zgt env`: Outputs export commands for environment variables (eval "$(zgt env)").
 - `zgt ports`: Shows port assignments.
 
+### 5. Global Flags
+
+- `--verbose` / `-v`: Shows detailed output and prints the current merged configuration at the start of any command execution.
+
 ## Best Practices for Agents
 
 1. **New Feature Development**: When starting a new task, always check if a worktree is needed. Use `zgt add` to set up a clean environment.

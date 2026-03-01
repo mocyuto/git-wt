@@ -18,7 +18,6 @@ import (
 var (
 	newBranch string
 	pathFlag  string
-	verbose   bool
 )
 
 var addCmd = &cobra.Command{
@@ -84,7 +83,7 @@ Both forms will automatically create the branch if it does not already exist.`,
 		}
 
 		logger.Info("--- Copying ignored configuration files ---")
-		if err := git.CopyIgnoredFiles(sourceRoot, targetPath, config.AppConfig.Ignore, verbose); err != nil {
+		if err := git.CopyIgnoredFiles(sourceRoot, targetPath, config.AppConfig.Ignore, logger.Verbose); err != nil {
 			return logger.Errorf("error copying files: %v", err)
 		}
 
@@ -117,6 +116,5 @@ Both forms will automatically create the branch if it does not already exist.`,
 func init() {
 	addCmd.Flags().StringVarP(&newBranch, "branch", "b", "", "create and checkout a new branch")
 	addCmd.Flags().StringVarP(&pathFlag, "path", "p", "", "custom target path for the worktree")
-	addCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "show detailed output")
 	rootCmd.AddCommand(addCmd)
 }
