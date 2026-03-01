@@ -14,6 +14,8 @@ const (
 	colorCyan   = "\033[36m"
 )
 
+var Verbose bool
+
 func Error(format string, a ...interface{}) {
 	fmt.Fprint(os.Stderr, Errorf(format, a...).Error()+"\n")
 }
