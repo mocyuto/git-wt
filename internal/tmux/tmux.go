@@ -45,12 +45,8 @@ func Setup(ctx template.Context) error {
 
 	// Create first pane
 	firstPane := cfg.Panes[0]
-	firstCmd := strings.Join(firstPane.Commands, "; ")
-	if firstCmd != "" {
-		firstCmd = fmt.Sprintf("%s; exec $SHELL", firstCmd)
-	}
 
-	cmd := exec.Command("tmux", "new-window", "-P", "-F", "#{pane_id}", "-n", windowName, "-c", ctx.Path, firstCmd)
+	cmd := exec.Command("tmux", "new-window", "-P", "-F", "#{pane_id}", "-n", windowName, "-c", ctx.Path)
 	output, err := cmd.Output()
 	if err != nil {
 		return fmt.Errorf("failed to create tmux window: %v", err)
@@ -59,6 +55,9 @@ func Setup(ctx template.Context) error {
 	if firstPane.Id != "" {
 		paneIDMap[firstPane.Id] = currentPaneID
 	}
+
+	// Send commands to first pane
+	sendKeys(currentPaneID, firstPane.Commands, ctx)
 
 	// Create additional panes
 	for i := 1; i < len(cfg.Panes); i++ {
@@ -88,12 +87,6 @@ func Setup(ctx template.Context) error {
 			}
 		}
 
-		paneCmd := strings.Join(p.Commands, "; ")
-		if paneCmd != "" {
-			paneCmd = fmt.Sprintf("%s; exec $SHELL", paneCmd)
-		}
-		args = append(args, paneCmd)
-
 		cmd := exec.Command("tmux", args...)
 		output, err := cmd.Output()
 		if err != nil {
@@ -105,9 +98,27 @@ func Setup(ctx template.Context) error {
 		if p.Id != "" {
 			paneIDMap[p.Id] = newPaneID
 		}
+
+		// Send commands to the new pane
+		sendKeys(newPaneID, p.Commands, ctx)
 	}
 
 	return nil
+}
+
+// sendKeys sends each command in commands to the specified tmux pane.
+func sendKeys(paneID string, commands []string, ctx template.Context) {
+	for _, c := range commands {
+		if c == "" {
+			continue
+		}
+		// Replace placeholders in command
+		substitutedCmd := template.Replace(c, ctx)
+		sendCmd := exec.Command("tmux", "send-keys", "-t", paneID, substitutedCmd, "Enter")
+		if err := sendCmd.Run(); err != nil {
+			fmt.Printf("Warning: failed to send command to pane %s: %v\n", paneID, err)
+		}
+	}
 }
 
 // GetWindowName returns the configured window name or a default one based on context.
