@@ -4,6 +4,10 @@
 - fix README by @mocyuto in https://github.com/mocyuto/zgt/pull/52
 - Change tmux command execution timing to post-shell startup by @mocyuto in https://github.com/mocyuto/zgt/pull/54
 
+## [v0.10.1](https://github.com/mocyuto/zgt/compare/v0.10.0...v0.10.1) - 2026-03-01
+- fix README by @mocyuto in https://github.com/mocyuto/zgt/pull/52
+- Change tmux command execution timing to post-shell startup by @mocyuto in https://github.com/mocyuto/zgt/pull/54
+
 ## [v0.10.0](https://github.com/mocyuto/zgt/compare/v0.9.2...v0.10.0) - 2026-02-27
 - feat: implement hostname-safe placeholder function by @mocyuto in https://github.com/mocyuto/zgt/pull/50
 
