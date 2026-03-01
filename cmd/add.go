@@ -17,30 +17,34 @@ import (
 
 var (
 	newBranch string
+	pathFlag  string
 	verbose   bool
 )
 
 var addCmd = &cobra.Command{
-	Use:   "add [path] <branch>",
+	Use:   "add <branch>",
 	Short: "Create git worktree and copy ignored files",
 	Long: `Create a new git worktree, optionally creating a new branch, and
 automatically copy ignored configuration files (like .env) from the main tree.
 
-If only one argument is provided, it is treated as the branch name, and the
-worktree path is automatically determined based on the main repository root.
-If two arguments are provided, the first is the target path and the second is the branch.
+The argument is treated as the branch name. By default, the worktree path
+is automatically determined based on the main repository root.
+Use the --path flag to specify a custom target path.
 
 Both forms will automatically create the branch if it does not already exist.`,
 	Example: `  # Automated path: if repo root is 'path-to/myapp', creates worktree at 'path-to/myapp-feat'
   zgt add feat
 
   # Explicit path:
-  zgt add ./experimental-worktree feat`,
-	Args: cobra.MinimumNArgs(1),
+  zgt add feat --path ./experimental-worktree`,
+	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		var targetPath, branch string
-		if len(args) == 1 {
-			branch = args[0]
+		branch := args[0]
+		var targetPath string
+
+		if pathFlag != "" {
+			targetPath = pathFlag
+		} else {
 			mainRoot, err := gitroot.GetMainProjectRoot()
 			if err != nil {
 				return logger.Errorf("failed to get main project root: %v", err)
@@ -48,9 +52,6 @@ Both forms will automatically create the branch if it does not already exist.`,
 			projectName := filepath.Base(mainRoot)
 			targetPath = filepath.Join(filepath.Dir(mainRoot), fmt.Sprintf("%s-%s", projectName, branch))
 			logger.Info("Automated path: %s", targetPath)
-		} else {
-			targetPath = args[0]
-			branch = args[1]
 		}
 
 		sourceRoot, err := gitroot.GetGitRoot()
@@ -115,6 +116,7 @@ Both forms will automatically create the branch if it does not already exist.`,
 
 func init() {
 	addCmd.Flags().StringVarP(&newBranch, "branch", "b", "", "create and checkout a new branch")
+	addCmd.Flags().StringVarP(&pathFlag, "path", "p", "", "custom target path for the worktree")
 	addCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "show detailed output")
 	rootCmd.AddCommand(addCmd)
 }

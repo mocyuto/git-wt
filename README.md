@@ -17,7 +17,7 @@ but files ignored by `.gitignore` (such as `.env` or local configs) are not incl
 - **Auto-Discovery**: Automatically identifies and copies "ignored files" specified in `.gitignore`.
 - **Structural Integrity**: Maintains directory structure during copy (e.g., config files inside `node_modules`).
 - **Flexible Interface**: Powered by the Cobra framework for robust flag handling.
-- **Path Automation**: Automatically generates worktree paths based on branch names (`{project}-{branch}`) adjacent to the repository root.
+- **Path Automation**: Automatically generates worktree paths based on branch names (`{project}-{branch}`) adjacent to the repository root. Use `--path` for custom locations.
 - **Lifecycle Management**: Support for listing (`list`/`ls`) and removing (`remove`/`rm`) worktrees.
 - **Port Management**: Automatically assigns unique port indexes to each worktree to prevent port collisions.
 - **Custom Hooks**: Execute multiple shell commands naturally after creating (`add`) or removing (`rm`) worktrees.
@@ -65,14 +65,17 @@ sudo mv zgt /usr/local/bin/zgt
 Running `git worktree add` usually leaves you with a fresh directory missing essential local files like `.env`. `zgt` automates the entire setup:
 
 1. **Worktree Creation**: Creates the directory and checks out the branch.
-2. **Auto-Path Generation**: Provide just the branch name, and it will be placed as `{project}-{branch}` at the same level as your repository root automatically.
+2. **Auto-Path Generation**: Provide just the branch name, and it will be placed as `{project}-{branch}` at the same level as your repository root automatically. You can specify a custom path with `--path` or `-p`.
 3. **Config Synchronization**: Identifies "ignored files" (like `.env`) in your main tree and copies them over, maintaining the directory structure.
 4. **Port Reservation**: Reserves a unique "Port Index" for this specific worktree.
 5. **Automated Setup**: If you define hooks like `npm install` in `hooks.add`, they run immediately after creation.
 
 ```bash
-# Start a new feature in a fresh worktree
+# Start a new feature in a fresh worktree (automated path)
 zgt add feature-login
+
+# Start a new feature in a custom directory
+zgt add feature-login --path ./experimental-worktree
 ```
 
 ### 2. Running Multiple Projects Simultaneously (`env` / `ports`)
@@ -364,3 +367,21 @@ Use `-a` or `--all` to install to all targets immediately.
 # Run tests
 go test -v ./...
 ```
+
+## FAQ
+
+### Q: What happens if I `add` a branch that already exists?
+
+`zgt` will check if the branch exists locally or on the remote (`origin`).
+
+- If it exists, `zgt` will use the existing branch for the new worktree.
+- Note that Git does not allow the same branch to be checked out in multiple worktrees simultaneously. If the branch is already in use elsewhere, the command will fail with a Git error.
+
+### Q: Does the `rm` command delete the created directory?
+
+Yes, `zgt rm` (or `remove`) will:
+
+1. Delete the worktree directory from your filesystem.
+2. Unregister the worktree from Git.
+3. Delete the associated local branch (unless `--keep-branch` is used).
+   If there are uncommitted changes, Git will protect the directory from deletion unless `-f` (`--force`) is used.
