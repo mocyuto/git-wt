@@ -22,13 +22,14 @@ Use `zgt add <branch>` to create a new worktree.
 - It automatically generates a path: `../{project}-{branch}`.
 - It copies ignored files specified in `.gitignore` or `zgt.config.yml`.
 - It executes `hooks.add` (e.g., `npm install`).
+- **Existing Branch**: If the branch already exists, it uses it. Note that a branch cannot be checked out in multiple worktrees at once.
 
 ### 2. Removing a Worktree (`remove` / `rm`)
 
 Use `zgt rm <branch>` to cleanup.
 
-- It deletes the worktree directory.
-- It deletes the associated local branch.
+- It deletes the worktree directory from your filesystem.
+- It deletes the associated local branch (controllable via `--keep-branch`).
 - It releases the assigned port index.
 
 ### 3. Synchronizing Ignored Files (`sync`)

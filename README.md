@@ -364,3 +364,21 @@ Use `-a` or `--all` to install to all targets immediately.
 # Run tests
 go test -v ./...
 ```
+
+## FAQ
+
+### Q: What happens if I `add` a branch that already exists?
+
+`zgt` will check if the branch exists locally or on the remote (`origin`).
+
+- If it exists, `zgt` will use the existing branch for the new worktree.
+- Note that Git does not allow the same branch to be checked out in multiple worktrees simultaneously. If the branch is already in use elsewhere, the command will fail with a Git error.
+
+### Q: Does the `rm` command delete the created directory?
+
+Yes, `zgt rm` (or `remove`) will:
+
+1. Delete the worktree directory from your filesystem.
+2. Unregister the worktree from Git.
+3. Delete the associated local branch (unless `--keep-branch` is used).
+   If there are uncommitted changes, Git will protect the directory from deletion unless `-f` (`--force`) is used.
