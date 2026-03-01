@@ -41,10 +41,11 @@ Use `zgt sync` to bring changes from a worktree back to the project root.
 - Use `zgt sync -a` for immediate sync of all files.
 - Without flags, it opens an interactive TUI.
 
-### 4. Environment and Ports (`env` / `ports`)
+### 4. Environment and Ports (`env` / `ports` / `tmux`)
 
 - `zgt env`: Outputs export commands for environment variables (eval "$(zgt env)").
 - `zgt ports`: Shows port assignments.
+- `zgt tmux close <branch>`: Gracefully closes the tmux window for a worktree.
 
 ### 5. Global Flags
 

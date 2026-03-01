@@ -51,7 +51,7 @@ var removeCmd = &cobra.Command{
 
 		// Gracefully close tmux window if configured
 		ctx := zcontext.New(path, branch)
-		if err := tmux.CloseWindow(ctx); err != nil {
+		if err := tmux.CloseWindow(ctx, false); err != nil {
 			logger.Warn("Failed to close tmux window: %v", err)
 		}
 
