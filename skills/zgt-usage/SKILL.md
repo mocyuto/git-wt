@@ -20,6 +20,7 @@ For detailed configuration options, see the [Configuration Guide](./config.md).
 Use `zgt add <branch>` to create a new worktree.
 
 - It automatically generates a path: `../{project}-{branch}`.
+- Use `--path <dir>` to specify a custom target directory.
 - It copies ignored files specified in `.gitignore` or `zgt.config.yml`.
 - It executes `hooks.add` (e.g., `npm install`).
 - **Existing Branch**: If the branch already exists, it uses it. Note that a branch cannot be checked out in multiple worktrees at once.
