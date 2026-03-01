@@ -45,12 +45,8 @@ func Setup(ctx template.Context) error {
 
 	// Create first pane
 	firstPane := cfg.Panes[0]
-	firstCmd := strings.Join(firstPane.Commands, "; ")
-	if firstCmd != "" {
-		firstCmd = fmt.Sprintf("%s; exec $SHELL", firstCmd)
-	}
 
-	cmd := exec.Command("tmux", "new-window", "-P", "-F", "#{pane_id}", "-n", windowName, "-c", ctx.Path, firstCmd)
+	cmd := exec.Command("tmux", "new-window", "-P", "-F", "#{pane_id}", "-n", windowName, "-c", ctx.Path)
 	output, err := cmd.Output()
 	if err != nil {
 		return fmt.Errorf("failed to create tmux window: %v", err)
@@ -58,6 +54,19 @@ func Setup(ctx template.Context) error {
 	currentPaneID := strings.TrimSpace(string(output))
 	if firstPane.Id != "" {
 		paneIDMap[firstPane.Id] = currentPaneID
+	}
+
+	// Send commands to first pane
+	for _, c := range firstPane.Commands {
+		if c == "" {
+			continue
+		}
+		// Replace placeholders in command
+		substitutedCmd := template.Replace(c, ctx)
+		sendCmd := exec.Command("tmux", "send-keys", "-t", currentPaneID, substitutedCmd, "Enter")
+		if err := sendCmd.Run(); err != nil {
+			fmt.Printf("Warning: failed to send command to first pane: %v\n", err)
+		}
 	}
 
 	// Create additional panes
@@ -88,12 +97,6 @@ func Setup(ctx template.Context) error {
 			}
 		}
 
-		paneCmd := strings.Join(p.Commands, "; ")
-		if paneCmd != "" {
-			paneCmd = fmt.Sprintf("%s; exec $SHELL", paneCmd)
-		}
-		args = append(args, paneCmd)
-
 		cmd := exec.Command("tmux", args...)
 		output, err := cmd.Output()
 		if err != nil {
@@ -104,6 +107,19 @@ func Setup(ctx template.Context) error {
 		currentPaneID = newPaneID
 		if p.Id != "" {
 			paneIDMap[p.Id] = newPaneID
+		}
+
+		// Send commands to the new pane
+		for _, c := range p.Commands {
+			if c == "" {
+				continue
+			}
+			// Replace placeholders in command
+			substitutedCmd := template.Replace(c, ctx)
+			sendCmd := exec.Command("tmux", "send-keys", "-t", newPaneID, substitutedCmd, "Enter")
+			if err := sendCmd.Run(); err != nil {
+				fmt.Printf("Warning: failed to send command to pane %d: %v\n", i, err)
+			}
 		}
 	}
 
