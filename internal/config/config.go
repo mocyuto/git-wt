@@ -103,6 +103,7 @@ func InitConfig() {
 				v.SetDefault("hooks.add", []string{})
 				v.SetDefault("hooks.rm", []string{})
 				v.SetDefault("ignore", []string{})
+				v.SetDefault("tmux.auto_close", true)
 				_ = v.SafeWriteConfigAs(globalPath)
 			}
 		}
@@ -169,8 +170,10 @@ func InitConfig() {
 				if localConfig.Tmux.Enabled {
 					AppConfig.Tmux.Enabled = true
 				}
-				if localConfig.Tmux.AutoClose {
-					AppConfig.Tmux.AutoClose = true
+				// AutoClose is now default true in global config.
+				// We only override if the local config explicitly has Tmux settings.
+				if len(localConfig.Tmux.Panes) > 0 || localConfig.Tmux.Enabled || localConfig.Tmux.WindowName != "" {
+					AppConfig.Tmux.AutoClose = localConfig.Tmux.AutoClose
 				}
 				if len(localConfig.Tmux.Panes) > 0 {
 					AppConfig.Tmux.Panes = localConfig.Tmux.Panes

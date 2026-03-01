@@ -44,6 +44,10 @@ func TestInitConfig(t *testing.T) {
 		if _, err := os.Stat(configPath); os.IsNotExist(err) {
 			t.Errorf("%s should have been created with defaults", configPath)
 		}
+
+		if !AppConfig.Tmux.AutoClose {
+			t.Errorf("Expected default Tmux.AutoClose to be true")
+		}
 	})
 
 	t.Run("Global config loading", func(t *testing.T) {
