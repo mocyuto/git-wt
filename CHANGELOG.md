@@ -5,6 +5,11 @@
 - feat: print merged configuration when --verbose is specified by @mocyuto in https://github.com/mocyuto/zgt/pull/59
 - feat: add tmux graceful shutdown (default true) and close command by @mocyuto in https://github.com/mocyuto/zgt/pull/56
 
+## [v0.11.0](https://github.com/mocyuto/zgt/compare/v0.10.1...v0.11.0) - 2026-03-01
+- feat: add FAQ and --path option to zgt add by @mocyuto in https://github.com/mocyuto/zgt/pull/57
+- feat: print merged configuration when --verbose is specified by @mocyuto in https://github.com/mocyuto/zgt/pull/59
+- feat: add tmux graceful shutdown (default true) and close command by @mocyuto in https://github.com/mocyuto/zgt/pull/56
+
 ## [v0.10.1](https://github.com/mocyuto/zgt/compare/v0.10.0...v0.10.1) - 2026-03-01
 - fix README by @mocyuto in https://github.com/mocyuto/zgt/pull/52
 - Change tmux command execution timing to post-shell startup by @mocyuto in https://github.com/mocyuto/zgt/pull/54
