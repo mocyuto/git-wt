@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/mocyuto/zgt/internal/config"
+	"github.com/mocyuto/zgt/internal/logger"
 	"github.com/mocyuto/zgt/internal/template"
 )
 
@@ -158,6 +159,7 @@ func CloseWindow(ctx template.Context, force bool) error {
 		return nil // Window already gone or not found
 	}
 
+	logger.Info("Closing tmux window for %s", ctx.Branch)
 	status, err := GetWindowStatus(windowID)
 	if err != nil {
 		return err

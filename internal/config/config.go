@@ -141,6 +141,9 @@ func InitConfig() {
 				ConfigError = logger.Errorf("reading local config: %v", err)
 			}
 
+			// Get raw map to check for presence of keys (booleans default to false on unmarshal)
+			raw := localV.AllSettings()
+
 			var localConfig Config
 			if err := localV.Unmarshal(&localConfig); err == nil {
 				// Merge hooks
@@ -171,8 +174,8 @@ func InitConfig() {
 					AppConfig.Tmux.Enabled = true
 				}
 				// AutoClose is now default true in global config.
-				// We only override if the local config explicitly has Tmux settings.
-				if len(localConfig.Tmux.Panes) > 0 || localConfig.Tmux.Enabled || localConfig.Tmux.WindowName != "" {
+				// We only override it if it's explicitly set in local config.
+				if hasKey(raw, "tmux", "auto_close") {
 					AppConfig.Tmux.AutoClose = localConfig.Tmux.AutoClose
 				}
 				if len(localConfig.Tmux.Panes) > 0 {
@@ -243,6 +246,26 @@ func loadEnvCasePreserved(path string) error {
 		}
 	}
 	return nil
+}
+
+// hasKey checks if a nested key exists in a map[string]interface{}
+func hasKey(m map[string]any, keys ...string) bool {
+	curr := m
+	for i, k := range keys {
+		val, ok := curr[k]
+		if !ok {
+			return false
+		}
+		if i == len(keys)-1 {
+			return true
+		}
+		next, ok := val.(map[string]any)
+		if !ok {
+			return false
+		}
+		curr = next
+	}
+	return false
 }
 
 // LoadPortsFromPath loads only the ports configuration from a zgt.config.yml/yaml in the given directory

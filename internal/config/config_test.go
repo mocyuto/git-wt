@@ -72,6 +72,11 @@ ignore: [".global-ignore"]
 	})
 
 	t.Run("Local config merging (git-wt.config.yaml)", func(t *testing.T) {
+		// Remove any existing local config first to ensure clean state
+		for _, name := range LocalConfigNames {
+			os.Remove(filepath.Join(tmpGit, name))
+		}
+
 		// Local config in tmpGit (current working directory) using alternative name
 		os.WriteFile(filepath.Join(tmpGit, "git-wt.config.yaml"), []byte(`
 hooks:
@@ -82,6 +87,7 @@ ports:
 env:
   LOCAL_ENV: "local-val"
 tmux:
+  enabled: true
   auto_close: true
 `), 0644)
 
@@ -211,6 +217,55 @@ env:
 
 		if ConfigError != nil {
 			t.Errorf("Expected InitConfig to NOT set ConfigError for empty YAML, got: %v", ConfigError)
+		}
+	})
+
+	t.Run("Local config without tmux.auto_close (defaults to true)", func(t *testing.T) {
+		// Remove any existing local config first
+		for _, name := range LocalConfigNames {
+			os.Remove(filepath.Join(tmpGit, name))
+		}
+
+		// Write a local config that has some settings but NOT tmux.auto_close
+		os.WriteFile(filepath.Join(tmpGit, "zgt.config.yml"), []byte(`
+hooks:
+  add: ["local-only-add"]
+`), 0644)
+
+		// Also ensure global config exists and has auto_close = true
+		configPath, _ := GetGlobalConfigPath()
+		configDir := filepath.Dir(configPath)
+		os.MkdirAll(configDir, 0755)
+		os.WriteFile(configPath, []byte(`
+tmux:
+  auto_close: true
+`), 0644)
+
+		AppConfig = Config{} // Reset
+		InitConfig()
+
+		if !AppConfig.Tmux.AutoClose {
+			t.Errorf("Expected Tmux.AutoClose to remain true when not specified in local config, but got false")
+		}
+	})
+
+	t.Run("Local config with explicit tmux.auto_close: false", func(t *testing.T) {
+		// Remove any existing local config first
+		for _, name := range LocalConfigNames {
+			os.Remove(filepath.Join(tmpGit, name))
+		}
+
+		// Write a local config that has tmux.auto_close: false
+		os.WriteFile(filepath.Join(tmpGit, "zgt.config.yml"), []byte(`
+tmux:
+  auto_close: false
+`), 0644)
+
+		AppConfig = Config{} // Reset
+		InitConfig()
+
+		if AppConfig.Tmux.AutoClose {
+			t.Errorf("Expected Tmux.AutoClose to be false when explicitly set in local config, but got true")
 		}
 	})
 }
