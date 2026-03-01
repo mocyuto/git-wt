@@ -63,7 +63,7 @@ type TmuxPane struct {
 
 type TmuxConfig struct {
 	Enabled    bool       `mapstructure:"enabled"`
-	AutoClose  bool       `mapstructure:"auto_close"`
+	KeepOpen   bool       `mapstructure:"keep_open"`
 	WindowName string     `mapstructure:"window_name"`
 	Panes      []TmuxPane `mapstructure:"panes"`
 }
@@ -103,7 +103,7 @@ func InitConfig() {
 				v.SetDefault("hooks.add", []string{})
 				v.SetDefault("hooks.rm", []string{})
 				v.SetDefault("ignore", []string{})
-				v.SetDefault("tmux.auto_close", true)
+				v.SetDefault("tmux.keep_open", false)
 				_ = v.SafeWriteConfigAs(globalPath)
 			}
 		}
@@ -173,10 +173,10 @@ func InitConfig() {
 				if localConfig.Tmux.Enabled {
 					AppConfig.Tmux.Enabled = true
 				}
-				// AutoClose is now default true in global config.
+				// KeepOpen is now default false in global config.
 				// We only override it if it's explicitly set in local config.
-				if hasKey(raw, "tmux", "auto_close") {
-					AppConfig.Tmux.AutoClose = localConfig.Tmux.AutoClose
+				if hasKey(raw, "tmux", "keep_open") {
+					AppConfig.Tmux.KeepOpen = localConfig.Tmux.KeepOpen
 				}
 				if len(localConfig.Tmux.Panes) > 0 {
 					AppConfig.Tmux.Panes = localConfig.Tmux.Panes

@@ -145,7 +145,7 @@ func ActivateWindow(windowID string) error {
 // CloseWindow gracefully closes the tmux window associated with the context.
 func CloseWindow(ctx template.Context, force bool) error {
 	cfg := config.AppConfig.Tmux
-	if !cfg.Enabled || (!cfg.AutoClose && !force) {
+	if !cfg.Enabled || (cfg.KeepOpen && !force) {
 		return nil
 	}
 

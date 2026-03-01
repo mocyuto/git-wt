@@ -204,7 +204,7 @@ ports:
 
 tmux:
   enabled: true
-  auto_close: true # Automatically and safely close the tmux window on 'rm' (default: true)
+  keep_open: true # Do not close the tmux window on 'rm' (default: false)
   panes:
     - id: main
       commands: ["yarn"]
@@ -317,16 +317,16 @@ tmux:
 
 #### Pane Properties
 
-| Property      | Description                                                                                   |
-| :------------ | :-------------------------------------------------------------------------------------------- |
-| `enabled`     | Whether to enable tmux integration (`true` / `false`).                                        |
-| `auto_close`  | Whether to automatically and safely close the window when running `zgt rm` (default: `true`). |
-| `window_name` | (Optional) Template for the tmux window name.                                                 |
-| `id`          | (Optional) Unique ID for the pane to be referenced as a `target`.                             |
-| `target`      | (Optional) ID of the pane to split. If omitted, splits the last created pane.                 |
-| `commands`    | List of commands to execute in the pane.                                                      |
-| `split`       | Split direction: `horizontal` (h) or `vertical` (v).                                          |
-| `size`        | Pane size (e.g., `20%` for percentage or `20` for lines/columns).                             |
+| Property      | Description                                                                   |
+| :------------ | :---------------------------------------------------------------------------- |
+| `enabled`     | Whether to enable tmux integration (`true` / `false`).                        |
+| `keep_open`   | Whether to NOT close the window when running `zgt rm` (default: `false`).     |
+| `window_name` | (Optional) Template for the tmux window name.                                 |
+| `id`          | (Optional) Unique ID for the pane to be referenced as a `target`.             |
+| `target`      | (Optional) ID of the pane to split. If omitted, splits the last created pane. |
+| `commands`    | List of commands to execute in the pane.                                      |
+| `split`       | Split direction: `horizontal` (h) or `vertical` (v).                          |
+| `size`        | Pane size (e.g., `20%` for percentage or `20` for lines/columns).             |
 
 If `enabled` is `true`, `zgt` will:
 
