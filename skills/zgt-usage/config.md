@@ -73,6 +73,7 @@ env:
 Tmux integration settings.
 
 - `enabled` (bool): Enable automatic tmux window/pane creation.
+- `keep_open` (bool): If true, do not close the tmux window on `zgt rm`. Default is `false` (closes by default).
 - `window_name` (string): Template for the tmux window name.
 - `panes` (list): List of pane configurations.
   - `id`: Unique identifier for the pane.

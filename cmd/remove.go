@@ -8,6 +8,7 @@ import (
 	"github.com/mocyuto/zgt/internal/hook"
 	"github.com/mocyuto/zgt/internal/logger"
 	"github.com/mocyuto/zgt/internal/state"
+	"github.com/mocyuto/zgt/internal/tmux"
 	"github.com/mocyuto/zgt/internal/zcontext"
 	"github.com/spf13/cobra"
 )
@@ -48,6 +49,12 @@ var removeCmd = &cobra.Command{
 			branch = b
 		}
 
+		// Gracefully close tmux window if configured
+		ctx := zcontext.New(path, branch)
+		if err := tmux.CloseWindow(ctx, false); err != nil {
+			logger.Warn("Failed to close tmux window: %v", err)
+		}
+
 		logger.Info("--- Removing worktree at %s ---", path)
 		if err := git.RemoveWorktree(path, forceDelete); err != nil {
 			return logger.Errorf("error removing worktree: %v", err)
@@ -62,7 +69,6 @@ var removeCmd = &cobra.Command{
 		}
 
 		// Run removal hooks
-		ctx := zcontext.New(path, branch)
 		hook.RunHooks("rm", ctx)
 
 		// Release port index

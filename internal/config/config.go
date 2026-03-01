@@ -63,6 +63,7 @@ type TmuxPane struct {
 
 type TmuxConfig struct {
 	Enabled    bool       `mapstructure:"enabled"`
+	KeepOpen   bool       `mapstructure:"keep_open"`
 	WindowName string     `mapstructure:"window_name"`
 	Panes      []TmuxPane `mapstructure:"panes"`
 }
@@ -102,6 +103,7 @@ func InitConfig() {
 				v.SetDefault("hooks.add", []string{})
 				v.SetDefault("hooks.rm", []string{})
 				v.SetDefault("ignore", []string{})
+				v.SetDefault("tmux.keep_open", false)
 				_ = v.SafeWriteConfigAs(globalPath)
 			}
 		}
@@ -139,6 +141,9 @@ func InitConfig() {
 				ConfigError = logger.Errorf("reading local config: %v", err)
 			}
 
+			// Get raw map to check for presence of keys (booleans default to false on unmarshal)
+			raw := localV.AllSettings()
+
 			var localConfig Config
 			if err := localV.Unmarshal(&localConfig); err == nil {
 				// Merge hooks
@@ -167,6 +172,11 @@ func InitConfig() {
 				// Merge tmux
 				if localConfig.Tmux.Enabled {
 					AppConfig.Tmux.Enabled = true
+				}
+				// KeepOpen is now default false in global config.
+				// We only override it if it's explicitly set in local config.
+				if hasKey(raw, "tmux", "keep_open") {
+					AppConfig.Tmux.KeepOpen = localConfig.Tmux.KeepOpen
 				}
 				if len(localConfig.Tmux.Panes) > 0 {
 					AppConfig.Tmux.Panes = localConfig.Tmux.Panes
@@ -236,6 +246,26 @@ func loadEnvCasePreserved(path string) error {
 		}
 	}
 	return nil
+}
+
+// hasKey checks if a nested key exists in a map[string]interface{}
+func hasKey(m map[string]any, keys ...string) bool {
+	curr := m
+	for i, k := range keys {
+		val, ok := curr[k]
+		if !ok {
+			return false
+		}
+		if i == len(keys)-1 {
+			return true
+		}
+		next, ok := val.(map[string]any)
+		if !ok {
+			return false
+		}
+		curr = next
+	}
+	return false
 }
 
 // LoadPortsFromPath loads only the ports configuration from a zgt.config.yml/yaml in the given directory

@@ -5,13 +5,16 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/mocyuto/zgt/internal/config"
+	"github.com/mocyuto/zgt/internal/logger"
 	"github.com/mocyuto/zgt/internal/template"
 )
 
 type PaneStatus struct {
 	ID        string
+	PID       string
 	Title     string
 	Command   string
 	Running   string
@@ -137,6 +140,77 @@ func ActivateWindow(windowID string) error {
 	}
 	cmd := exec.Command("tmux", "select-window", "-t", windowID)
 	return cmd.Run()
+}
+
+// CloseWindow gracefully closes the tmux window associated with the context.
+func CloseWindow(ctx template.Context, force bool) error {
+	cfg := config.AppConfig.Tmux
+	if !cfg.Enabled || (cfg.KeepOpen && !force) {
+		return nil
+	}
+
+	if !isTmuxAvailable() || !isTmuxRunning() {
+		return nil
+	}
+
+	windowName := GetWindowName(ctx)
+	windowID, found, err := GetWindowIDByName(windowName)
+	if err != nil || !found {
+		return nil // Window already gone or not found
+	}
+
+	logger.Info("Closing tmux window for %s", ctx.Branch)
+	status, err := GetWindowStatus(windowID)
+	if err != nil {
+		return err
+	}
+
+	// 1. Send SIGTERM to running processes in panes
+	hasRunning := false
+	for _, pane := range status.Panes {
+		if pane.IsRunning {
+			// Find child processes of the shell
+			childCmd := exec.Command("pgrep", "-P", pane.PID)
+			childOutput, err := childCmd.Output()
+			if err == nil {
+				childPIDs := strings.FieldsSeq(strings.TrimSpace(string(childOutput)))
+				for cpid := range childPIDs {
+					hasRunning = true
+					// Send SIGTERM
+					_ = exec.Command("kill", "-TERM", cpid).Run()
+				}
+			} else if pane.Command != "zsh" && pane.Command != "bash" && pane.Command != "sh" {
+				// If not a shell, the pane PID itself might be the process
+				hasRunning = true
+				_ = exec.Command("kill", "-TERM", pane.PID).Run()
+			}
+		}
+	}
+
+	// 2. Wait for processes to exit (max 5 seconds)
+	if hasRunning {
+		for i := 0; i < 10; i++ { // 500ms * 10 = 5s
+			time.Sleep(500 * time.Millisecond)
+			s, err := GetWindowStatus(windowID)
+			if err != nil {
+				break // Window might be closed already
+			}
+			stillRunning := false
+			for _, p := range s.Panes {
+				if p.IsRunning {
+					stillRunning = true
+					break
+				}
+			}
+			if !stillRunning {
+				break
+			}
+		}
+	}
+
+	// 3. Kill the window
+	killCmd := exec.Command("tmux", "kill-window", "-t", windowID)
+	return killCmd.Run()
 }
 
 // GetWindowIDByName returns the window ID if a window with the given name exists.
@@ -301,6 +375,7 @@ func GetWindowStatus(windowID string) (*WindowStatus, error) {
 
 		status.Panes = append(status.Panes, PaneStatus{
 			ID:        id,
+			PID:       pid,
 			Title:     title,
 			Command:   currentCmd,
 			Running:   runningProcess,

@@ -44,6 +44,10 @@ func TestInitConfig(t *testing.T) {
 		if _, err := os.Stat(configPath); os.IsNotExist(err) {
 			t.Errorf("%s should have been created with defaults", configPath)
 		}
+
+		if AppConfig.Tmux.KeepOpen {
+			t.Errorf("Expected default Tmux.KeepOpen to be false")
+		}
 	})
 
 	t.Run("Global config loading", func(t *testing.T) {
@@ -68,6 +72,11 @@ ignore: [".global-ignore"]
 	})
 
 	t.Run("Local config merging (git-wt.config.yaml)", func(t *testing.T) {
+		// Remove any existing local config first to ensure clean state
+		for _, name := range LocalConfigNames {
+			os.Remove(filepath.Join(tmpGit, name))
+		}
+
 		// Local config in tmpGit (current working directory) using alternative name
 		os.WriteFile(filepath.Join(tmpGit, "git-wt.config.yaml"), []byte(`
 hooks:
@@ -77,6 +86,9 @@ ports:
   api: 8080
 env:
   LOCAL_ENV: "local-val"
+tmux:
+  enabled: true
+  keep_open: false
 `), 0644)
 
 		// Still have previous global config in tmpHome
@@ -111,6 +123,11 @@ env:
 		// Env should be loaded (Viper lowercases by default)
 		if AppConfig.Env["LOCAL_ENV"] != "local-val" {
 			t.Errorf("Expected env LOCAL_ENV 'local-val', got %v", AppConfig.Env["LOCAL_ENV"])
+		}
+
+		// Tmux keep_open should be merged
+		if AppConfig.Tmux.KeepOpen {
+			t.Errorf("Expected Tmux.KeepOpen to be false, got %v", AppConfig.Tmux.KeepOpen)
 		}
 	})
 
@@ -200,6 +217,55 @@ env:
 
 		if ConfigError != nil {
 			t.Errorf("Expected InitConfig to NOT set ConfigError for empty YAML, got: %v", ConfigError)
+		}
+	})
+
+	t.Run("Local config without tmux.keep_open (defaults to false)", func(t *testing.T) {
+		// Remove any existing local config first
+		for _, name := range LocalConfigNames {
+			os.Remove(filepath.Join(tmpGit, name))
+		}
+
+		// Write a local config that has some settings but NOT tmux.auto_close
+		os.WriteFile(filepath.Join(tmpGit, "zgt.config.yml"), []byte(`
+hooks:
+  add: ["local-only-add"]
+`), 0644)
+
+		// Also ensure global config exists and has auto_close = true
+		configPath, _ := GetGlobalConfigPath()
+		configDir := filepath.Dir(configPath)
+		os.MkdirAll(configDir, 0755)
+		os.WriteFile(configPath, []byte(`
+tmux:
+  keep_open: false
+`), 0644)
+
+		AppConfig = Config{} // Reset
+		InitConfig()
+
+		if AppConfig.Tmux.KeepOpen {
+			t.Errorf("Expected Tmux.KeepOpen to remain false when not specified in local config, but got true")
+		}
+	})
+
+	t.Run("Local config with explicit tmux.keep_open: true", func(t *testing.T) {
+		// Remove any existing local config first
+		for _, name := range LocalConfigNames {
+			os.Remove(filepath.Join(tmpGit, name))
+		}
+
+		// Write a local config that has tmux.auto_close: false
+		os.WriteFile(filepath.Join(tmpGit, "zgt.config.yml"), []byte(`
+tmux:
+  keep_open: true
+`), 0644)
+
+		AppConfig = Config{} // Reset
+		InitConfig()
+
+		if !AppConfig.Tmux.KeepOpen {
+			t.Errorf("Expected Tmux.KeepOpen to be true when explicitly set in local config, but got false")
 		}
 	})
 }
