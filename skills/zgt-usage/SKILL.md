@@ -31,6 +31,7 @@ Use `zgt rm <branch>` to cleanup.
 
 - It deletes the worktree directory from your filesystem.
 - It deletes the associated local branch (controllable via `--keep-branch`).
+- It safely closes the associated tmux window (if `tmux.auto_close` is enabled).
 - It releases the assigned port index.
 
 ### 3. Synchronizing Ignored Files (`sync`)

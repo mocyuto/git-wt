@@ -77,6 +77,8 @@ ports:
   api: 8080
 env:
   LOCAL_ENV: "local-val"
+tmux:
+  auto_close: true
 `), 0644)
 
 		// Still have previous global config in tmpHome
@@ -111,6 +113,11 @@ env:
 		// Env should be loaded (Viper lowercases by default)
 		if AppConfig.Env["LOCAL_ENV"] != "local-val" {
 			t.Errorf("Expected env LOCAL_ENV 'local-val', got %v", AppConfig.Env["LOCAL_ENV"])
+		}
+
+		// Tmux auto_close should be merged
+		if !AppConfig.Tmux.AutoClose {
+			t.Errorf("Expected Tmux.AutoClose to be true, got %v", AppConfig.Tmux.AutoClose)
 		}
 	})
 

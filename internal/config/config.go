@@ -63,6 +63,7 @@ type TmuxPane struct {
 
 type TmuxConfig struct {
 	Enabled    bool       `mapstructure:"enabled"`
+	AutoClose  bool       `mapstructure:"auto_close"`
 	WindowName string     `mapstructure:"window_name"`
 	Panes      []TmuxPane `mapstructure:"panes"`
 }
@@ -167,6 +168,9 @@ func InitConfig() {
 				// Merge tmux
 				if localConfig.Tmux.Enabled {
 					AppConfig.Tmux.Enabled = true
+				}
+				if localConfig.Tmux.AutoClose {
+					AppConfig.Tmux.AutoClose = true
 				}
 				if len(localConfig.Tmux.Panes) > 0 {
 					AppConfig.Tmux.Panes = localConfig.Tmux.Panes

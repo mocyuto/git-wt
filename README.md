@@ -200,6 +200,7 @@ ports:
 
 tmux:
   enabled: true
+  auto_close: true # Automatically and safely close the tmux window on 'rm'
   panes:
     - id: main
       commands: ["yarn"]
@@ -314,6 +315,8 @@ tmux:
 
 | Property      | Description                                                                   |
 | :------------ | :---------------------------------------------------------------------------- |
+| `enabled`     | Whether to enable tmux integration (`true` / `false`).                        |
+| `auto_close`  | Whether to automatically and safely close the window when running `zgt rm`.   |
 | `window_name` | (Optional) Template for the tmux window name.                                 |
 | `id`          | (Optional) Unique ID for the pane to be referenced as a `target`.             |
 | `target`      | (Optional) ID of the pane to split. If omitted, splits the last created pane. |
