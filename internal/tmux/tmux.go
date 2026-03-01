@@ -57,17 +57,7 @@ func Setup(ctx template.Context) error {
 	}
 
 	// Send commands to first pane
-	for _, c := range firstPane.Commands {
-		if c == "" {
-			continue
-		}
-		// Replace placeholders in command
-		substitutedCmd := template.Replace(c, ctx)
-		sendCmd := exec.Command("tmux", "send-keys", "-t", currentPaneID, substitutedCmd, "Enter")
-		if err := sendCmd.Run(); err != nil {
-			fmt.Printf("Warning: failed to send command to first pane: %v\n", err)
-		}
-	}
+	sendKeys(currentPaneID, firstPane.Commands, ctx)
 
 	// Create additional panes
 	for i := 1; i < len(cfg.Panes); i++ {
@@ -110,20 +100,25 @@ func Setup(ctx template.Context) error {
 		}
 
 		// Send commands to the new pane
-		for _, c := range p.Commands {
-			if c == "" {
-				continue
-			}
-			// Replace placeholders in command
-			substitutedCmd := template.Replace(c, ctx)
-			sendCmd := exec.Command("tmux", "send-keys", "-t", newPaneID, substitutedCmd, "Enter")
-			if err := sendCmd.Run(); err != nil {
-				fmt.Printf("Warning: failed to send command to pane %d: %v\n", i, err)
-			}
-		}
+		sendKeys(newPaneID, p.Commands, ctx)
 	}
 
 	return nil
+}
+
+// sendKeys sends each command in commands to the specified tmux pane.
+func sendKeys(paneID string, commands []string, ctx template.Context) {
+	for _, c := range commands {
+		if c == "" {
+			continue
+		}
+		// Replace placeholders in command
+		substitutedCmd := template.Replace(c, ctx)
+		sendCmd := exec.Command("tmux", "send-keys", "-t", paneID, substitutedCmd, "Enter")
+		if err := sendCmd.Run(); err != nil {
+			fmt.Printf("Warning: failed to send command to pane %s: %v\n", paneID, err)
+		}
+	}
 }
 
 // GetWindowName returns the configured window name or a default one based on context.
