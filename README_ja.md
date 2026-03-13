@@ -178,7 +178,7 @@ zgt config edit --global
 # 利用可能な設定オプションの例
 add:
   from_default: true # 新しい worktree を常にデフォルトブランチ (例: main) から作成する
-  auto_pull: true # worktree 作成前にデフォルトブランチの更新を pull する
+  auto_pull: true # worktree 作成前にデフォルトブランチの更新を pull する（未コミットの変更は自動的に stash されます）
 
 ignore:
   - "*.tmp"

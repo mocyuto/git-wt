@@ -143,7 +143,7 @@ You can configure `zgt` globally (`~/.config/zgt/config.yaml`) or locally (`zgt.
 # Examples of available configuration options
 add:
   from_default: true # Always base new worktrees on the default branch (e.g., main)
-  auto_pull: true # Pull updates on the default branch before creating a new worktree
+  auto_pull: true # Pull updates on the default branch before creating a new worktree (automatically stashes uncommitted changes)
 
 ignore:
   - .env
