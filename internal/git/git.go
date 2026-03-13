@@ -63,7 +63,7 @@ func PullWithAutostash(dir, branch string) error {
 	if err != nil {
 		logger.Warn("failed to check for uncommitted files in %s: %v", dir, err)
 	} else if uncommitted {
-		logger.Info("Stashing uncommitted changes in %s before pull...", dir)
+		logger.Info("Stashing uncommitted changes (including untracked) in %s before pull...", dir)
 		if err := StashInDir(dir, "zgt: autostash before autopull"); err != nil {
 			logger.Warn("stash failed in %s: %v", dir, err)
 		} else {
@@ -222,6 +222,7 @@ func HasUncommittedFiles() (bool, error) {
 }
 
 func HasUncommittedFilesDir(dir string) (bool, error) {
+	// Check both tracked and untracked (for --include-untracked stash)
 	cmd := exec.Command("git", "status", "--porcelain")
 	cmd.Dir = dir
 	out, err := cmd.Output()
@@ -239,7 +240,8 @@ func Stash(message string) error {
 }
 
 func StashInDir(dir, message string) error {
-	cmd := exec.Command("git", "stash", "push", "-m", message)
+	// Use --include-untracked to ensure files like internal/git/stash_test.go are moved to stash
+	cmd := exec.Command("git", "stash", "push", "--include-untracked", "-m", message)
 	cmd.Dir = dir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
