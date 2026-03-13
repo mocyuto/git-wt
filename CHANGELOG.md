@@ -1,5 +1,9 @@
 # Changelog
 
+## [v0.11.1](https://github.com/mocyuto/zgt/compare/v0.11.0...v0.11.1) - 2026-03-13
+- feat: add autostash support for autopull in add command by @mocyuto in https://github.com/mocyuto/zgt/pull/61
+- fix: safely update base branch and refactor AutoPull logic by @mocyuto in https://github.com/mocyuto/zgt/pull/63
+
 ## [v0.11.0](https://github.com/mocyuto/zgt/compare/v0.10.1...v0.11.0) - 2026-03-01
 - feat: add FAQ and --path option to zgt add by @mocyuto in https://github.com/mocyuto/zgt/pull/57
 - feat: print merged configuration when --verbose is specified by @mocyuto in https://github.com/mocyuto/zgt/pull/59
