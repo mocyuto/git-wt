@@ -134,3 +134,25 @@ func GetWorktreeCompletions() ([]string, error) {
 	}
 	return completions, nil
 }
+
+func HasUncommittedFiles() (bool, error) {
+	out, err := exec.Command("git", "status", "--porcelain").Output()
+	if err != nil {
+		return false, err
+	}
+	return len(strings.TrimSpace(string(out))) > 0, nil
+}
+
+func Stash(message string) error {
+	cmd := exec.Command("git", "stash", "push", "-m", message)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
+
+func StashPop() error {
+	cmd := exec.Command("git", "stash", "pop")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
