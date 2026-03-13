@@ -68,31 +68,24 @@ Both forms will automatically create the branch if it does not already exist.`,
 			logger.Info("Using default branch '%s' as base", baseBranch)
 
 			if config.AppConfig.Add.AutoPull {
-				stashed := false
-				uncommitted, err := git.HasUncommittedFiles()
-				if err != nil {
-					logger.Warn("failed to check for uncommitted files: %v", err)
-				} else if uncommitted {
-					logger.Info("Stashing uncommitted changes before pull...")
-					if err := git.Stash("zgt: autostash before autopull"); err != nil {
-						logger.Warn("stash failed: %v", err)
-					} else {
-						stashed = true
-					}
+				// Determine which directory to update
+				updateDir := "."
+				wtPath, err := git.GetBranchWorktree(baseBranch)
+				if err == nil && wtPath != "" {
+					updateDir = wtPath
 				}
 
-				logger.Info("Updating branch '%s'...", baseBranch)
-				if err := git.Pull(baseBranch, baseBranch); err != nil {
-					logger.Warn("pull failed: %v", err)
+				if err := git.PullWithAutostash(updateDir, baseBranch); err != nil {
+					logger.Warn("Failed to update branch '%s': %v", baseBranch, err)
+					logger.Info("Falling back to fetch from remote...")
+					if err := git.Fetch(baseBranch); err != nil {
+						logger.Warn("Fetch failed: %v", err)
+					} else {
+						baseBranch = "origin/" + baseBranch
+						logger.Success("Using '%s' as base for the new worktree", baseBranch)
+					}
 				} else {
 					logger.Success("Successfully updated '%s'", baseBranch)
-				}
-
-				if stashed {
-					logger.Info("Restoring uncommitted changes...")
-					if err := git.StashPop(); err != nil {
-						logger.Warn("stash pop failed: %v", err)
-					}
 				}
 			}
 		}
