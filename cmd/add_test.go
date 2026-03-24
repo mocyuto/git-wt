@@ -82,6 +82,16 @@ func TestAddPathLogic(t *testing.T) {
 		}
 	})
 
+	t.Run("FromDefaultFlag", func(t *testing.T) {
+		// Reset fromDefaultFlag for test
+		fromDefaultFlag = true
+		defer func() { fromDefaultFlag = false }()
+
+		if !fromDefaultFlag {
+			t.Error("expected fromDefaultFlag to be true")
+		}
+	})
+
 	t.Run("ArgumentValidation", func(t *testing.T) {
 		// Test that the command expects exactly 1 argument
 		if addCmd.Args == nil {

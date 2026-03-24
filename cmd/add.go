@@ -16,8 +16,9 @@ import (
 )
 
 var (
-	baseFlag string
-	pathFlag string
+	baseFlag        string
+	fromDefaultFlag bool
+	pathFlag        string
 )
 
 var addCmd = &cobra.Command{
@@ -59,10 +60,11 @@ Both forms will automatically create the branch if it does not already exist.`,
 		}
 
 		var baseBranch string
+		useDefault := fromDefaultFlag || config.AppConfig.Add.FromDefault
 		if baseFlag != "" {
 			baseBranch = baseFlag
 			logger.Info("Using specified branch '%s' as base", baseBranch)
-		} else if config.AppConfig.Add.FromDefault {
+		} else if useDefault {
 			defaultBranch, err := git.GetDefaultBranch()
 			if err != nil {
 				return logger.Errorf("failed to get default branch: %v", err)
@@ -91,6 +93,8 @@ Both forms will automatically create the branch if it does not already exist.`,
 					logger.Success("Successfully updated '%s'", baseBranch)
 				}
 			}
+		} else {
+			logger.Info("Using current branch as base")
 		}
 
 		logger.Info("--- Creating worktree at %s ---", targetPath)
@@ -131,6 +135,7 @@ Both forms will automatically create the branch if it does not already exist.`,
 
 func init() {
 	addCmd.Flags().StringVarP(&baseFlag, "base", "b", "", "specify a base branch to create the worktree from")
+	addCmd.Flags().BoolVar(&fromDefaultFlag, "from-default", false, "use the default branch as base")
 	addCmd.Flags().StringVarP(&pathFlag, "path", "p", "", "custom target path for the worktree")
 	rootCmd.AddCommand(addCmd)
 }
