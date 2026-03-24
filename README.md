@@ -17,7 +17,7 @@ but files ignored by `.gitignore` (such as `.env` or local configs) are not incl
 - **Auto-Discovery**: Automatically identifies and copies "ignored files" specified in `.gitignore`.
 - **Structural Integrity**: Maintains directory structure during copy (e.g., config files inside `node_modules`).
 - **Flexible Interface**: Powered by the Cobra framework for robust flag handling.
-- **Path Automation**: Automatically generates worktree paths based on branch names (`{project}-{branch}`) adjacent to the repository root. Use `--path` for custom locations.
+- **Path Automation**: Automatically generates worktree paths based on branch names (`{project}-{branch}`) adjacent to the repository root. Use `--path` for custom locations and `--base` to specify a base branch.
 - **Lifecycle Management**: Support for listing (`list`/`ls`) and removing (`remove`/`rm`) worktrees.
 - **Port Management**: Automatically assigns unique port indexes to each worktree to prevent port collisions.
 - **Custom Hooks**: Execute multiple shell commands naturally after creating (`add`) or removing (`rm`) worktrees.
@@ -73,6 +73,9 @@ Running `git worktree add` usually leaves you with a fresh directory missing ess
 ```bash
 # Start a new feature in a fresh worktree (automated path)
 zgt add feature-login
+
+# Start a new feature from a specific base branch
+zgt add feature-login --base develop
 
 # Start a new feature in a custom directory
 zgt add feature-login --path ./experimental-worktree
