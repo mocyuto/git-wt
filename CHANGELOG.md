@@ -1,5 +1,8 @@
 # Changelog
 
+## [v0.12.0](https://github.com/mocyuto/zgt/compare/v0.11.1...v0.12.0) - 2026-03-24
+- feat: add --base and --from-default options to zgt add by @mocyuto in https://github.com/mocyuto/zgt/pull/64
+
 ## [v0.11.1](https://github.com/mocyuto/zgt/compare/v0.11.0...v0.11.1) - 2026-03-13
 - feat: add autostash support for autopull in add command by @mocyuto in https://github.com/mocyuto/zgt/pull/61
 - fix: safely update base branch and refactor AutoPull logic by @mocyuto in https://github.com/mocyuto/zgt/pull/63
