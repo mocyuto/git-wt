@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	"strings"
+
 	"github.com/gdamore/tcell/v2"
 	"github.com/mocyuto/zgt/internal/git"
 	"github.com/mocyuto/zgt/internal/gitroot"
@@ -12,7 +14,8 @@ import (
 )
 
 var (
-	syncAll bool
+	syncAll    bool
+	pathFilter string
 )
 
 var syncCmd = &cobra.Command{
@@ -41,8 +44,14 @@ var syncCmd = &cobra.Command{
 			return err
 		}
 
+		files = filterFiles(files, pathFilter)
+
 		if len(files) == 0 {
-			logger.Success("No ignored files found to sync.")
+			if pathFilter != "" {
+				logger.Success("No ignored files matching path '%s' found to sync.", pathFilter)
+			} else {
+				logger.Success("No ignored files found to sync.")
+			}
 			return nil
 		}
 
@@ -78,6 +87,7 @@ func init() {
 	syncCmd.Flags().BoolVarP(&syncAll, "all", "a", false, "Sync all ignored files without TUI selection")
 	// Also support --force as an alias for --all as requested
 	syncCmd.Flags().BoolVar(&syncAll, "force", false, "Alias for --all")
+	syncCmd.Flags().StringVarP(&pathFilter, "path", "p", "", "Filter ignored files by path")
 }
 
 func selectFilesCustomTUI(files []string) ([]string, error) {
@@ -197,4 +207,17 @@ func selectFilesCustomTUI(files []string) ([]string, error) {
 			s.Sync()
 		}
 	}
+}
+
+func filterFiles(files []string, filter string) []string {
+	if filter == "" {
+		return files
+	}
+	var filtered []string
+	for _, f := range files {
+		if strings.Contains(f, filter) {
+			filtered = append(filtered, f)
+		}
+	}
+	return filtered
 }
