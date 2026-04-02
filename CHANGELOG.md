@@ -1,5 +1,8 @@
 # Changelog
 
+## [v0.12.1](https://github.com/mocyuto/zgt/compare/v0.12.0...v0.12.1) - 2026-04-02
+- feat: add path filtering option to sync command by @mocyuto in https://github.com/mocyuto/zgt/pull/66
+
 ## [v0.12.0](https://github.com/mocyuto/zgt/compare/v0.11.1...v0.12.0) - 2026-03-24
 - feat: add --base and --from-default options to zgt add by @mocyuto in https://github.com/mocyuto/zgt/pull/64
 
