@@ -119,10 +119,14 @@ If you've made changes to ignored configuration files (like `.env`) within your 
 
 - **Interactive Mode**: Run `zgt sync` to open a TUI (powered by `rivo/tview`) where you can selectively choose which files to sync.
 - **Bulk Sync**: Use `-a` / `--all` (or `--force`) to sync all ignored files immediately.
+- **Path Filtering**: Use `-p` / `--path` to filter the list of files by a specific path or substring.
 
 ```bash
 # Selectively sync changes back to root
 zgt sync
+
+# Sync files matching a specific path
+zgt sync --path internal/config
 ```
 
 ### 5. Monitoring Assignments (`list` / `ports`)

@@ -41,6 +41,7 @@ Use `zgt rm <branch>` to cleanup.
 Use `zgt sync` to bring changes from a worktree back to the project root.
 
 - Use `zgt sync -a` for immediate sync of all files.
+- Use `zgt sync -p <string>` / `--path <string>` to filter files by path.
 - Without flags, it opens an interactive TUI.
 
 ### 4. Environment and Ports (`env` / `ports` / `tmux`)
