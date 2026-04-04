@@ -281,7 +281,6 @@ func ListWindows() ([]WindowStatus, error) {
 	return parseWindows(string(output))
 }
 
-
 // GetCurrentSessionName returns the name of the current tmux session if available.
 func GetCurrentSessionName() (string, error) {
 	if !isTmuxAvailable() || !isTmuxRunning() {

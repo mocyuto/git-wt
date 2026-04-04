@@ -34,7 +34,6 @@ type WorktreeState struct {
 	Ports map[string]int `json:"ports"` // map[portKey]portIndex
 }
 
-
 var AppState State
 
 func getStateFilePath() (string, error) {
