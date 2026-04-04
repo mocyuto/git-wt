@@ -9,25 +9,33 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var sessionNameFlag string
+
 var tmuxSaveCmd = &cobra.Command{
-	Use:   "save [session-name]",
+	Use:   "save [save-name]",
 	Short: "Save current tmux windows to state",
 	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		currentSession, _ := tmux.GetCurrentSessionName()
-		sessionName := currentSession
+		// Identify the source tmux session
+		sourceSession := sessionNameFlag
+		if sourceSession == "" {
+			var err error
+			sourceSession, err = tmux.GetCurrentSessionName()
+			if err != nil || sourceSession == "" {
+				return fmt.Errorf("could not determine current tmux session. please specify with --session or run inside tmux")
+			}
+		}
+
+		// Identify the save name (identifier in state)
+		saveName := sourceSession
 		if len(args) > 0 {
-			sessionName = args[0]
+			saveName = args[0]
 		}
 
-		if sessionName == "" {
-			return fmt.Errorf("could not determine session name. please specify name or run inside tmux")
-		}
-
-		// Use the specified session to list windows
-		windows, err := tmux.ListSessionWindows(sessionName)
+		// Use the source session to list windows
+		windows, err := tmux.ListSessionWindows(sourceSession)
 		if err != nil {
-			return fmt.Errorf("failed to list windows for session %s: %v", sessionName, err)
+			return fmt.Errorf("failed to list windows for session %s: %v", sourceSession, err)
 		}
 
 		saveState := state.TmuxSessionState{}
@@ -46,16 +54,17 @@ var tmuxSaveCmd = &cobra.Command{
 		if err := state.LoadState(); err != nil {
 			return err
 		}
-		state.AppState.TmuxSessions[sessionName] = saveState
+		state.AppState.TmuxSessions[saveName] = saveState
 		if err := state.SaveState(); err != nil {
 			return err
 		}
 
-		logger.Success("Saved tmux session '%s' with %d windows", sessionName, len(windows))
+		logger.Success("Saved tmux session '%s' as '%s' with %d windows", sourceSession, saveName, len(windows))
 		return nil
 	},
 }
 
 func init() {
+	tmuxSaveCmd.Flags().StringVarP(&sessionNameFlag, "session", "s", "", "source tmux session name to save")
 	tmuxCmd.AddCommand(tmuxSaveCmd)
 }

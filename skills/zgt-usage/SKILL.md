@@ -49,8 +49,8 @@ Use `zgt sync` to bring changes from a worktree back to the project root.
 - `zgt env`: Outputs export commands for environment variables (eval "$(zgt env)").
 - `zgt ports`: Shows port assignments.
 - `zgt tmux open <branch>`: Opens or activates the tmux window for a worktree.
-- `zgt tmux save [session-name]`: Saves current tmux windows to the state file.
-- `zgt tmux restore [session-name]`: Restores tmux windows from the state.
+- `zgt tmux save [save-name]`: Saves current tmux windows to the state file.
+- `zgt tmux restore [save-name]`: Restores tmux windows from the state.
 - `zgt tmux close <branch>`: Gracefully closes the tmux window for a worktree.
 
 ### 5. Global Flags
