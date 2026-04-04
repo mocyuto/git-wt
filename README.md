@@ -138,6 +138,8 @@ zgt sync --path internal/config
 
 - `tmux ls`: Shows tmux sessions, windows, and panes status (Running/Waiting) in a hierarchical tree structure.
 - `tmux open`: Opens or activates the tmux window for the specified worktree. If the window exists, it switches to it; otherwise, it creates it according to the configuration.
+- `tmux save [session-name]`: Saves current tmux windows to the state file. It records whether each window was opened via `zgt`.
+- `tmux restore [session-name]`: Restores tmux windows from the state. `zgt`-managed windows are reopened using their specific configurations.
 - `tmux close`: Gracefully closes the tmux window for the specified worktree (sends SIGTERM and waits).
 - `ports update`: Synchronizes port assignments for the current project with the latest configuration. It adds missing port assignments and removes those no longer present in the configuration.
 - `config`: Displays the final merged configuration (global + project + flags) in YAML format. Use `--check` to validate configuration syntax, or `--raw` to skip placeholder replacement.
