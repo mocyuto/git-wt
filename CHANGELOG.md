@@ -1,5 +1,8 @@
 # Changelog
 
+## [v0.13.1](https://github.com/mocyuto/zgt/compare/v0.13.0...v0.13.1) - 2026-04-04
+- feat: add interactive TUI for tmux open by @mocyuto in https://github.com/mocyuto/zgt/pull/72
+
 ## [v0.13.0](https://github.com/mocyuto/zgt/compare/v0.12.1...v0.13.0) - 2026-04-04
 - feat: add tmux window save and restore commands by @mocyuto in https://github.com/mocyuto/zgt/pull/69
 
