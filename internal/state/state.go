@@ -23,8 +23,7 @@ func NormalizePath(path string) string {
 }
 
 type State struct {
-	Projects     map[string]ProjectState     `json:"projects"`      // map[projectName]ProjectState
-	TmuxSessions map[string]TmuxSessionState `json:"tmux_sessions"` // map[sessionName]TmuxSessionState
+	Projects map[string]ProjectState `json:"projects"` // map[projectName]ProjectState
 }
 
 type ProjectState struct {
@@ -33,17 +32,6 @@ type ProjectState struct {
 
 type WorktreeState struct {
 	Ports map[string]int `json:"ports"` // map[portKey]portIndex
-}
-
-type TmuxSessionState struct {
-	Windows []TmuxWindowSaveState `json:"windows"`
-}
-
-type TmuxWindowSaveState struct {
-	Name        string `json:"name"`
-	CWD         string `json:"cwd"`
-	IsZgt       bool   `json:"is_zgt"`
-	ZgtWorktree string `json:"zgt_worktree,omitempty"`
 }
 
 var AppState State
@@ -64,7 +52,6 @@ func LoadState() error {
 
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		AppState.Projects = make(map[string]ProjectState)
-		AppState.TmuxSessions = make(map[string]TmuxSessionState)
 		return nil
 	}
 
@@ -81,9 +68,6 @@ func LoadState() error {
 	}
 	if AppState.Projects == nil {
 		AppState.Projects = make(map[string]ProjectState)
-	}
-	if AppState.TmuxSessions == nil {
-		AppState.TmuxSessions = make(map[string]TmuxSessionState)
 	}
 	return nil
 }

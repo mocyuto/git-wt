@@ -150,14 +150,6 @@ func TestSaveLoadState(t *testing.T) {
 			},
 		},
 	}
-	AppState.TmuxSessions = map[string]TmuxSessionState{
-		"ses1": {
-			Windows: []TmuxWindowSaveState{
-				{Name: "win1", CWD: "/path/to/win1", IsZgt: true, ZgtWorktree: "feat1"},
-				{Name: "win2", CWD: "/path/to/win2", IsZgt: false},
-			},
-		},
-	}
 
 	if err := SaveState(); err != nil {
 		t.Fatalf("SaveState failed: %v", err)
@@ -165,23 +157,11 @@ func TestSaveLoadState(t *testing.T) {
 
 	// Clear and load
 	AppState.Projects = nil
-	AppState.TmuxSessions = nil
 	if err := LoadState(); err != nil {
 		t.Fatalf("LoadState failed: %v", err)
 	}
 
 	if AppState.Projects["pj1"].Worktrees["/abs/path/1"].Ports["http"] != 10 {
 		t.Errorf("Loaded project state mismatch: %v", AppState.Projects)
-	}
-
-	ses, ok := AppState.TmuxSessions["ses1"]
-	if !ok || len(ses.Windows) != 2 {
-		t.Errorf("Loaded tmux sessions mismatch: %v", AppState.TmuxSessions)
-	}
-	if ses.Windows[0].Name != "win1" || !ses.Windows[0].IsZgt || ses.Windows[0].ZgtWorktree != "feat1" {
-		t.Errorf("Loaded window 0 mismatch: %v", ses.Windows[0])
-	}
-	if ses.Windows[1].Name != "win2" || ses.Windows[1].IsZgt {
-		t.Errorf("Loaded window 1 mismatch: %v", ses.Windows[1])
 	}
 }

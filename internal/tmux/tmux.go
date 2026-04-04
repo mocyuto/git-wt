@@ -281,28 +281,6 @@ func ListWindows() ([]WindowStatus, error) {
 	return parseWindows(string(output))
 }
 
-// ListSessionWindows returns a list of all tmux windows in the specified (or current) session.
-func ListSessionWindows(sessionName string) ([]WindowStatus, error) {
-	if !isTmuxAvailable() || !isTmuxRunning() {
-		return nil, nil
-	}
-
-	args := []string{"list-windows", "-F", "#{session_name} #{window_id} #{window_name} #{pane_current_path}"}
-	if sessionName != "" {
-		args = append(args, "-t", sessionName)
-	}
-
-	var stderr bytes.Buffer
-	cmd := exec.Command("tmux", args...)
-	cmd.Stderr = &stderr
-	output, err := cmd.Output()
-	if err != nil {
-		return nil, fmt.Errorf("%v: %s", err, strings.TrimSpace(stderr.String()))
-	}
-
-	return parseWindows(string(output))
-}
-
 // GetCurrentSessionName returns the name of the current tmux session if available.
 func GetCurrentSessionName() (string, error) {
 	if !isTmuxAvailable() || !isTmuxRunning() {
