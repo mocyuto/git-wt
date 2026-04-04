@@ -137,7 +137,7 @@ zgt sync --path internal/config
 ### 6. Other Commands
 
 - `tmux ls`: Shows tmux sessions, windows, and panes status (Running/Waiting) in a hierarchical tree structure.
-- `tmux open`: Opens or activates the tmux window for the specified worktree. If the window exists, it switches to it; otherwise, it creates it according to the configuration.
+- `tmux open`: Opens or activates the tmux window for the specified worktree. If the window exists, it switches to it; otherwise, it creates it according to the configuration. If no worktree name is provided, an interactive TUI is displayed to select one or more worktrees.
 - `tmux close`: Gracefully closes the tmux window for the specified worktree (sends SIGTERM and waits).
 - `ports update`: Synchronizes port assignments for the current project with the latest configuration. It adds missing port assignments and removes those no longer present in the configuration.
 - `config`: Displays the final merged configuration (global + project + flags) in YAML format. Use `--check` to validate configuration syntax, or `--raw` to skip placeholder replacement.
