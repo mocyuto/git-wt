@@ -1,6 +1,7 @@
 package tmux
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
@@ -25,6 +26,7 @@ type WindowStatus struct {
 	ID          string
 	Name        string
 	SessionName string
+	CWD         string
 	Panes       []PaneStatus
 }
 
@@ -61,6 +63,13 @@ func Setup(ctx template.Context) error {
 
 	// Send commands to first pane
 	sendKeys(currentPaneID, firstPane.Commands, ctx)
+
+	// Set zgt window options
+	windowID, err := GetWindowProperty(currentPaneID, "#{window_id}")
+	if err == nil {
+		_ = exec.Command("tmux", "set-option", "-w", "-t", windowID, "@zgt-managed", "1").Run()
+		_ = exec.Command("tmux", "set-option", "-w", "-t", windowID, "@zgt-worktree", ctx.Branch).Run()
+	}
 
 	// Create additional panes
 	for i := 1; i < len(cfg.Panes); i++ {
@@ -227,6 +236,21 @@ func GetWindowIDByName(name string) (string, bool, error) {
 	return "", false, nil
 }
 
+// GetWindowProperty returns a formatted string for a given window/pane target.
+func GetWindowProperty(target, format string) (string, error) {
+	if !isTmuxAvailable() || !isTmuxRunning() {
+		return "", fmt.Errorf("tmux not available")
+	}
+	var stderr bytes.Buffer
+	cmd := exec.Command("tmux", "display-message", "-t", target, "-p", format)
+	cmd.Stderr = &stderr
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("%v: %s", err, strings.TrimSpace(stderr.String()))
+	}
+	return strings.TrimSpace(string(output)), nil
+}
+
 func isTmuxAvailable() bool {
 	_, err := exec.LookPath("tmux")
 	return err == nil
@@ -248,7 +272,7 @@ func ListWindows() ([]WindowStatus, error) {
 		return nil, nil
 	}
 
-	cmd := exec.Command("tmux", "list-windows", "-a", "-F", "#{session_name} #{window_id} #{window_name}")
+	cmd := exec.Command("tmux", "list-windows", "-a", "-F", "#{session_name} #{window_id} #{window_name} #{pane_current_path}")
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, err
@@ -257,17 +281,23 @@ func ListWindows() ([]WindowStatus, error) {
 	return parseWindows(string(output))
 }
 
-// ListSessionWindows returns a list of all tmux windows in the current session.
-func ListSessionWindows() ([]WindowStatus, error) {
+// ListSessionWindows returns a list of all tmux windows in the specified (or current) session.
+func ListSessionWindows(sessionName string) ([]WindowStatus, error) {
 	if !isTmuxAvailable() || !isTmuxRunning() {
 		return nil, nil
 	}
 
-	// Use current session
-	cmd := exec.Command("tmux", "list-windows", "-F", "#{session_name} #{window_id} #{window_name}")
+	args := []string{"list-windows", "-F", "#{session_name} #{window_id} #{window_name} #{pane_current_path}"}
+	if sessionName != "" {
+		args = append(args, "-t", sessionName)
+	}
+
+	var stderr bytes.Buffer
+	cmd := exec.Command("tmux", args...)
+	cmd.Stderr = &stderr
 	output, err := cmd.Output()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%v: %s", err, strings.TrimSpace(stderr.String()))
 	}
 
 	return parseWindows(string(output))
@@ -294,14 +324,15 @@ func parseWindows(output string) ([]WindowStatus, error) {
 		if line == "" {
 			continue
 		}
-		parts := strings.SplitN(line, " ", 3)
-		if len(parts) < 3 {
+		parts := strings.SplitN(line, " ", 4)
+		if len(parts) < 4 {
 			continue
 		}
 		windows = append(windows, WindowStatus{
 			SessionName: parts[0],
 			ID:          parts[1],
 			Name:        parts[2],
+			CWD:         parts[3],
 		})
 	}
 	return windows, nil
