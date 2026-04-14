@@ -16,46 +16,65 @@ func TestFilterFiles(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		filter   string
+		include  string
+		exclude  string
 		expected []string
 	}{
 		{
 			name:     "No filter",
-			filter:   "",
+			include:  "",
+			exclude:  "",
 			expected: files,
 		},
 		{
-			name:     "Filter by substring in the middle",
-			filter:   "config",
+			name:     "Include only",
+			include:  "config",
+			exclude:  "",
 			expected: []string{"config/settings.yaml"},
 		},
 		{
+			name:     "Exclude only (single)",
+			include:  "",
+			exclude:  "config",
+			expected: []string{".env", "internal/db/schema.sql", "logs/app.log", "secret.txt"},
+		},
+		{
+			name:     "Exclude only (multiple with comma)",
+			include:  "",
+			exclude:  "config, logs",
+			expected: []string{".env", "internal/db/schema.sql", "secret.txt"},
+		},
+		{
+			name:     "Include and Exclude combined",
+			include:  "s",
+			exclude:  "log, config",
+			expected: []string{"internal/db/schema.sql", "secret.txt"},
+		},
+		{
 			name:     "Filter by extension",
-			filter:   ".env",
+			include:  ".env",
+			exclude:  "",
 			expected: []string{".env"},
 		},
 		{
-			name:     "Filter by multiple matching files",
-			filter:   "s",
-			expected: []string{"config/settings.yaml", "internal/db/schema.sql", "logs/app.log", "secret.txt"},
-		},
-		{
-			name:     "No match",
-			filter:   "nonexistent",
+			name:     "No match by include",
+			include:  "nonexistent",
+			exclude:  "",
 			expected: nil,
 		},
 		{
 			name:     "Match by directory name",
-			filter:   "internal/",
+			include:  "internal/",
+			exclude:  "",
 			expected: []string{"internal/db/schema.sql"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := filterFiles(files, tt.filter)
+			got := filterFiles(files, tt.include, tt.exclude)
 			if !reflect.DeepEqual(got, tt.expected) {
-				t.Errorf("filterFiles() = %v, want %v", got, tt.expected)
+				t.Errorf("%s: filterFiles() = %v, want %v", tt.name, got, tt.expected)
 			}
 		})
 	}
@@ -78,5 +97,14 @@ func TestSyncCmdFlags(t *testing.T) {
 	}
 	if allFlag.Shorthand != "a" {
 		t.Errorf("expected shorthand 'a', got '%s'", allFlag.Shorthand)
+	}
+
+	// Test ignore flag
+	ignoreFlag := syncCmd.Flags().Lookup("ignore")
+	if ignoreFlag == nil {
+		t.Fatal("ignore flag not found")
+	}
+	if ignoreFlag.Shorthand != "i" {
+		t.Errorf("expected shorthand 'i', got '%s'", ignoreFlag.Shorthand)
 	}
 }

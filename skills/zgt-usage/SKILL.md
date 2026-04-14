@@ -36,12 +36,10 @@ Use `zgt rm <branch>` to cleanup.
 - It safely closes the associated tmux window (if `tmux.keep_open` is false).
 - It releases the assigned port index.
 
-### 3. Synchronizing Ignored Files (`sync`)
-
-Use `zgt sync` to bring changes from a worktree back to the project root.
-
-- Use `zgt sync -a` for immediate sync of all files.
-- Use `zgt sync -p <string>` / `--path <string>` to filter files by path.
+- Use `zgt sync` to bring changes from a worktree back to the project root.
+- Use `zgt sync -a` / `--all` for immediate sync of all files.
+- Use `zgt sync -p <string>` / `--path <string>` to filter files to include.
+- Use `zgt sync -i <string>` / `--ignore <string>` to filter files to exclude (comma-separated).
 - Without flags, it opens an interactive TUI.
 
 ### 4. Environment and Ports (`env` / `ports` / `tmux`)
