@@ -14,8 +14,9 @@ import (
 )
 
 var (
-	syncAll    bool
-	pathFilter string
+	syncAll      bool
+	pathFilter   string
+	ignoreFilter string
 )
 
 var syncCmd = &cobra.Command{
@@ -44,7 +45,7 @@ var syncCmd = &cobra.Command{
 			return err
 		}
 
-		files = filterFiles(files, pathFilter)
+		files = filterFiles(files, pathFilter, ignoreFilter)
 
 		if len(files) == 0 {
 			if pathFilter != "" {
@@ -88,6 +89,7 @@ func init() {
 	// Also support --force as an alias for --all as requested
 	syncCmd.Flags().BoolVar(&syncAll, "force", false, "Alias for --all")
 	syncCmd.Flags().StringVarP(&pathFilter, "path", "p", "", "Filter ignored files by path")
+	syncCmd.Flags().StringVarP(&ignoreFilter, "ignore", "i", "", "Exclude ignored files by path (comma-separated)")
 }
 
 func selectFilesCustomTUI(files []string) ([]string, error) {
@@ -209,15 +211,38 @@ func selectFilesCustomTUI(files []string) ([]string, error) {
 	}
 }
 
-func filterFiles(files []string, filter string) []string {
-	if filter == "" {
-		return files
-	}
+func filterFiles(files []string, include, exclude string) []string {
 	var filtered []string
-	for _, f := range files {
-		if strings.Contains(f, filter) {
-			filtered = append(filtered, f)
+
+	excludePatterns := []string{}
+	if exclude != "" {
+		for p := range strings.SplitSeq(exclude, ",") {
+			p = strings.TrimSpace(p)
+			if p != "" {
+				excludePatterns = append(excludePatterns, p)
+			}
 		}
+	}
+
+	for _, f := range files {
+		// Include filter (substring match)
+		if include != "" && !strings.Contains(f, include) {
+			continue
+		}
+
+		// Exclude filter (substring match for any pattern)
+		ignored := false
+		for _, p := range excludePatterns {
+			if strings.Contains(f, p) {
+				ignored = true
+				break
+			}
+		}
+		if ignored {
+			continue
+		}
+
+		filtered = append(filtered, f)
 	}
 	return filtered
 }
