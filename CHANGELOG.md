@@ -1,5 +1,8 @@
 # Changelog
 
+## [v0.13.2](https://github.com/mocyuto/zgt/compare/v0.13.1...v0.13.2) - 2026-04-14
+- Add path exclusion filter to sync command by @mocyuto in https://github.com/mocyuto/zgt/pull/74
+
 ## [v0.13.1](https://github.com/mocyuto/zgt/compare/v0.13.0...v0.13.1) - 2026-04-04
 - feat: add interactive TUI for tmux open by @mocyuto in https://github.com/mocyuto/zgt/pull/72
 
