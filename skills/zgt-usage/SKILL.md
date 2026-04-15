@@ -40,6 +40,7 @@ Use `zgt rm <branch>` to cleanup.
 - Use `zgt sync -a` / `--all` for immediate sync of all files.
 - Use `zgt sync -p <string>` / `--path <string>` to filter files to include.
 - Use `zgt sync -i <string>` / `--ignore <string>` to filter files to exclude (comma-separated).
+- If `zgt sync` is run from a subdirectory, synced files preserve that relative path under the main project root.
 - Without flags, it opens an interactive TUI.
 
 ### 4. Environment and Ports (`env` / `ports` / `tmux`)

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"path/filepath"
 	"reflect"
 	"testing"
 )
@@ -107,4 +108,33 @@ func TestSyncCmdFlags(t *testing.T) {
 	if ignoreFlag.Shorthand != "i" {
 		t.Errorf("expected shorthand 'i', got '%s'", ignoreFlag.Shorthand)
 	}
+}
+
+func TestNormalizeSyncPaths(t *testing.T) {
+	t.Run("run from worktree root", func(t *testing.T) {
+		files, err := normalizeSyncPaths("/repo", "/repo", []string{".env", "config/local.yml"})
+		if err != nil {
+			t.Fatalf("normalizeSyncPaths returned error: %v", err)
+		}
+
+		expected := []string{".env", "config/local.yml"}
+		if !reflect.DeepEqual(files, expected) {
+			t.Fatalf("normalizeSyncPaths() = %v, want %v", files, expected)
+		}
+	})
+
+	t.Run("run from subdirectory", func(t *testing.T) {
+		files, err := normalizeSyncPaths("/repo", filepath.Join("/repo", "src"), []string{".env", "nested/local.yml"})
+		if err != nil {
+			t.Fatalf("normalizeSyncPaths returned error: %v", err)
+		}
+
+		expected := []string{
+			filepath.Join("src", ".env"),
+			filepath.Join("src", "nested", "local.yml"),
+		}
+		if !reflect.DeepEqual(files, expected) {
+			t.Fatalf("normalizeSyncPaths() = %v, want %v", files, expected)
+		}
+	})
 }
