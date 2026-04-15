@@ -48,6 +48,9 @@ func TestInitConfig(t *testing.T) {
 		if AppConfig.Tmux.KeepOpen {
 			t.Errorf("Expected default Tmux.KeepOpen to be false")
 		}
+		if AppConfig.GitHooks.Path != ".githooks" {
+			t.Errorf("Expected default GitHooks.Path to be .githooks, got %q", AppConfig.GitHooks.Path)
+		}
 	})
 
 	t.Run("Global config loading", func(t *testing.T) {
@@ -58,6 +61,8 @@ func TestInitConfig(t *testing.T) {
 hooks:
   add: ["global-add"]
 ignore: [".global-ignore"]
+git_hooks:
+  enabled: true
 `), 0644)
 
 		AppConfig = Config{} // Reset
@@ -68,6 +73,9 @@ ignore: [".global-ignore"]
 		}
 		if len(AppConfig.Ignore) != 1 || AppConfig.Ignore[0] != ".global-ignore" {
 			t.Errorf("Expected global ignore '.global-ignore', got %v", AppConfig.Ignore)
+		}
+		if !AppConfig.GitHooks.Enabled {
+			t.Errorf("Expected global git hooks to be enabled")
 		}
 	})
 
@@ -86,6 +94,9 @@ ports:
   api: 8080
 env:
   LOCAL_ENV: "local-val"
+git_hooks:
+  enabled: false
+  path: .custom-hooks
 tmux:
   enabled: true
   keep_open: false
@@ -124,6 +135,12 @@ tmux:
 		if AppConfig.Env["LOCAL_ENV"] != "local-val" {
 			t.Errorf("Expected env LOCAL_ENV 'local-val', got %v", AppConfig.Env["LOCAL_ENV"])
 		}
+		if AppConfig.GitHooks.Enabled {
+			t.Errorf("Expected local git hooks enabled override to be false")
+		}
+		if AppConfig.GitHooks.Path != ".custom-hooks" {
+			t.Errorf("Expected local git hooks path '.custom-hooks', got %q", AppConfig.GitHooks.Path)
+		}
 
 		// Tmux keep_open should be merged
 		if AppConfig.Tmux.KeepOpen {
@@ -136,6 +153,8 @@ tmux:
 		os.WriteFile(explicitPath, []byte(`
 ports:
   web: 3000
+git_hooks:
+  enabled: true
 `), 0644)
 
 		AppConfig = Config{} // Reset
@@ -146,6 +165,12 @@ ports:
 
 		if AppConfig.Ports["web"] != 3000 {
 			t.Errorf("Expected explicit port 3000, got %v", AppConfig.Ports["web"])
+		}
+		if !AppConfig.GitHooks.Enabled {
+			t.Errorf("Expected explicit git hooks to be enabled")
+		}
+		if AppConfig.GitHooks.Path != ".githooks" {
+			t.Errorf("Expected explicit config to inherit default git hooks path, got %q", AppConfig.GitHooks.Path)
 		}
 	})
 

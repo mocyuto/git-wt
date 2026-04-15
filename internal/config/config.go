@@ -68,6 +68,11 @@ type TmuxConfig struct {
 	Panes      []TmuxPane `mapstructure:"panes"`
 }
 
+type GitHooksConfig struct {
+	Enabled bool   `mapstructure:"enabled" yaml:"enabled"`
+	Path    string `mapstructure:"path" yaml:"path"`
+}
+
 type Config struct {
 	Hooks struct {
 		Add []string `mapstructure:"add"`
@@ -77,10 +82,11 @@ type Config struct {
 		FromDefault bool `mapstructure:"from_default"`
 		AutoPull    bool `mapstructure:"auto_pull"`
 	} `mapstructure:"add"`
-	Ignore []string          `mapstructure:"ignore"`
-	Ports  map[string]int    `mapstructure:"ports"`
-	Env    map[string]string `mapstructure:"env"`
-	Tmux   TmuxConfig        `mapstructure:"tmux"`
+	Ignore   []string          `mapstructure:"ignore"`
+	Ports    map[string]int    `mapstructure:"ports"`
+	Env      map[string]string `mapstructure:"env"`
+	Tmux     TmuxConfig        `mapstructure:"tmux"`
+	GitHooks GitHooksConfig    `mapstructure:"git_hooks" yaml:"git_hooks"`
 }
 
 var AppConfig Config
@@ -103,6 +109,8 @@ func InitConfig() {
 				v.SetDefault("hooks.add", []string{})
 				v.SetDefault("hooks.rm", []string{})
 				v.SetDefault("ignore", []string{})
+				v.SetDefault("git_hooks.enabled", false)
+				v.SetDefault("git_hooks.path", ".githooks")
 				v.SetDefault("tmux.keep_open", false)
 				_ = v.SafeWriteConfigAs(globalPath)
 			}
@@ -119,6 +127,7 @@ func InitConfig() {
 	if err := v.Unmarshal(&AppConfig); err != nil && ConfigError == nil {
 		ConfigError = logger.Errorf("unmarshaling global config: %v", err)
 	}
+	applyDefaults(&AppConfig)
 
 	// Fix case for global env if loaded
 	if globalPath != "" {
@@ -169,6 +178,14 @@ func InitConfig() {
 				}
 				maps.Copy(AppConfig.Env, localConfig.Env)
 
+				// Merge git hooks
+				if hasKey(raw, "git_hooks", "enabled") {
+					AppConfig.GitHooks.Enabled = localConfig.GitHooks.Enabled
+				}
+				if localConfig.GitHooks.Path != "" {
+					AppConfig.GitHooks.Path = localConfig.GitHooks.Path
+				}
+
 				// Merge tmux
 				if localConfig.Tmux.Enabled {
 					AppConfig.Tmux.Enabled = true
@@ -186,6 +203,7 @@ func InitConfig() {
 				if err := loadEnvCasePreserved(localPath); err != nil {
 					logger.Warn("failed to restore environment variable case in local config: %v", err)
 				}
+				applyDefaults(&AppConfig)
 			} else if ConfigError == nil {
 				ConfigError = logger.Errorf("unmarshaling local config: %v", err)
 			}
@@ -200,15 +218,24 @@ func InitConfig() {
 			ConfigError = logger.Errorf("reading explicit config: %v", err)
 		} else {
 			// Full override if specific config is provided
-			if err := explicitV.Unmarshal(&AppConfig); err == nil {
+			var explicitConfig Config
+			if err := explicitV.Unmarshal(&explicitConfig); err == nil {
+				AppConfig = explicitConfig
 				// Fix case for explicit env
 				if err := loadEnvCasePreserved(CfgFile); err != nil {
 					logger.Warn("failed to restore environment variable case in explicit config: %v", err)
 				}
+				applyDefaults(&AppConfig)
 			} else if ConfigError == nil {
 				ConfigError = logger.Errorf("unmarshaling explicit config: %v", err)
 			}
 		}
+	}
+}
+
+func applyDefaults(cfg *Config) {
+	if cfg.GitHooks.Path == "" {
+		cfg.GitHooks.Path = ".githooks"
 	}
 }
 

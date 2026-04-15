@@ -213,6 +213,10 @@ hooks:
   add:
     - "npm install"
 
+git_hooks:
+  enabled: true
+  path: .githooks
+
 ports:
   api: 8080
   web: 3000
@@ -270,6 +274,20 @@ hooks:
   rm:
     - "git pull origin main:main"
 ```
+
+### Git Hooks Registration
+
+You can automatically register a shared Git hooks directory for each newly created worktree.
+
+```yaml
+git_hooks:
+  enabled: true
+  path: .githooks
+```
+
+- `path` supports absolute paths.
+- Relative paths are resolved from the main project root.
+- If a worktree already has `core.hooksPath` configured, `zgt add` leaves it unchanged and prints a warning.
 
 ### Custom Hooks
 

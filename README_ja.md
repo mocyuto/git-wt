@@ -204,6 +204,10 @@ hooks:
   add:
     - "npm install"
 
+git_hooks:
+  enabled: true
+  path: .githooks
+
 ports:
   api: 8080
   web: 3000
@@ -261,6 +265,20 @@ hooks:
   rm:
     - "git pull origin main:main"
 ```
+
+### Git hooks の自動登録
+
+新しく作成した worktree ごとに、共有の Git hooks ディレクトリを自動登録できます。
+
+```yaml
+git_hooks:
+  enabled: true
+  path: .githooks
+```
+
+- `path` には絶対パスも指定できます。
+- 相対パスはメイン project root 基準で解決されます。
+- worktree 側に既に `core.hooksPath` が設定されている場合、`zgt add` は上書きせず警告だけ出します。
 
 ### カスタムフック
 

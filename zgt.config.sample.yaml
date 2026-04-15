@@ -2,6 +2,9 @@ ports:
   api: 3000
 env:
   COMPOSE_PROJECT_NAME: "{{.Repo}}-{{.Branch}}"
+git_hooks:
+  enabled: false
+  path: .githooks
 hooks:
   add:
     - "tmux new-window -d -n [{{.Repo}}]{{.Branch}} -c {{.Path}} 'claude; exec $SHELL'"
