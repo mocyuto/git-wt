@@ -41,14 +41,14 @@ Both forms will automatically create the branch if it does not already exist.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		branch := args[0]
 		var targetPath string
+		mainRoot, err := gitroot.GetMainProjectRoot()
+		if err != nil {
+			return logger.Errorf("failed to get main project root: %v", err)
+		}
 
 		if pathFlag != "" {
 			targetPath = pathFlag
 		} else {
-			mainRoot, err := gitroot.GetMainProjectRoot()
-			if err != nil {
-				return logger.Errorf("failed to get main project root: %v", err)
-			}
 			projectName := filepath.Base(mainRoot)
 			targetPath = filepath.Join(filepath.Dir(mainRoot), fmt.Sprintf("%s-%s", projectName, branch))
 			logger.Info("Automated path: %s", targetPath)
@@ -107,14 +107,31 @@ Both forms will automatically create the branch if it does not already exist.`,
 			return logger.Errorf("error copying files: %v", err)
 		}
 
+		if config.AppConfig.GitHooks.Enabled {
+			hooksPath, err := git.ResolveHooksPath(mainRoot, config.AppConfig.GitHooks.Path)
+			if err != nil {
+				return logger.Errorf("error resolving git hooks path: %v", err)
+			}
+
+			logger.Info("--- Registering git hooks at %s ---", hooksPath)
+			registered, existingPath, err := git.RegisterHooksPath(targetPath, hooksPath)
+			if err != nil {
+				return logger.Errorf("error registering git hooks: %v", err)
+			}
+			if registered {
+				logger.Success("Registered git hooks for worktree")
+			} else {
+				logger.Warn("git hooks already configured for worktree (%s); skipping", existingPath)
+			}
+		}
+
 		logger.Success("--- Done! ---")
 		logger.Success("New worktree is ready at: %s", targetPath)
 
 		// Assign port index
 		absPath := state.NormalizePath(targetPath)
 		_ = state.LoadState() // Assign ports
-		gitRoot, _ := gitroot.GetMainProjectRoot()
-		projectName := filepath.Base(gitRoot)
+		projectName := filepath.Base(mainRoot)
 		for name, basePort := range config.AppConfig.Ports {
 			state.AssignPortIndex(projectName, absPath, name, basePort)
 		}

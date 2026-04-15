@@ -49,6 +49,13 @@ Custom shell commands to execute during worktree lifecycle.
 - `add`: Commands run after `zgt add`.
 - `rm`: Commands run after `zgt rm`.
 
+### `git_hooks`
+
+Automatically configure Git hooks for newly created worktrees.
+
+- `enabled` (bool): If true, `zgt add` sets `core.hooksPath` in the new worktree.
+- `path` (string): Path to the shared hooks directory. Relative paths are resolved from the main project root. Default is `.githooks`.
+
 ### `ports`
 
 Base port assignments for the project. `zgt` uses these to calculate unique ports for each worktree based on its index.

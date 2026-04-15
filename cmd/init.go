@@ -33,6 +33,9 @@ var initCmd = &cobra.Command{
   api: 3000
 env:
   COMPOSE_PROJECT_NAME: "{{.Repo}}-{{.Branch}}"
+git_hooks:
+  enabled: false
+  path: .githooks
 tmux:
   enabled: true
   panes:
