@@ -121,6 +121,7 @@ If you've made changes to ignored configuration files (like `.env`) within your 
 - **Bulk Sync**: Use `-a` / `--all` (or `--force`) to sync all ignored files immediately.
 - **Path Filtering**: Use `-p` / `--path` to filter the list of files by a specific path or substring.
 - **Exclude Filtering**: Use `-i` / `--ignore` to exclude files by path or substring (comma-separated).
+- **Subdirectory-safe Paths**: When you run `zgt sync` from inside a subdirectory, synced files keep that relative path. For example, running from `src` and syncing `.env` updates `src/.env` in the main project root.
 
 ```bash
 # Selectively sync changes back to root

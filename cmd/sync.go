@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"strings"
 
@@ -33,6 +34,11 @@ var syncCmd = &cobra.Command{
 		mainRoot, err := gitroot.GetMainProjectRootFromPath(cwd)
 		if err != nil {
 			return fmt.Errorf("failed to identify main project root: %v", err)
+		}
+
+		worktreeRoot, err := gitroot.GetGitRootFromPath(cwd)
+		if err != nil {
+			return fmt.Errorf("failed to identify current worktree root: %v", err)
 		}
 
 		if cwd == mainRoot {
@@ -72,8 +78,13 @@ var syncCmd = &cobra.Command{
 			return nil
 		}
 
+		selectedFiles, err = normalizeSyncPaths(worktreeRoot, cwd, selectedFiles)
+		if err != nil {
+			return err
+		}
+
 		// 4. Sync files
-		err = git.SyncFiles(cwd, mainRoot, selectedFiles)
+		err = git.SyncFiles(worktreeRoot, mainRoot, selectedFiles)
 		if err != nil {
 			return err
 		}
@@ -81,6 +92,23 @@ var syncCmd = &cobra.Command{
 		logger.Success("Successfully synced %d files to %s", len(selectedFiles), mainRoot)
 		return nil
 	},
+}
+
+func normalizeSyncPaths(worktreeRoot, cwd string, files []string) ([]string, error) {
+	cwdRel, err := filepath.Rel(worktreeRoot, cwd)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve current directory relative to worktree root: %v", err)
+	}
+
+	if cwdRel == "." {
+		return files, nil
+	}
+
+	normalized := make([]string, 0, len(files))
+	for _, file := range files {
+		normalized = append(normalized, filepath.Join(cwdRel, file))
+	}
+	return normalized, nil
 }
 
 func init() {

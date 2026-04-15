@@ -8,7 +8,17 @@ import (
 
 // GetGitRoot returns the absolute path to the root of the current git repository.
 func GetGitRoot() (string, error) {
-	out, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
+	return GetGitRootFromPath("")
+}
+
+// GetGitRootFromPath returns the absolute path to the root of the git repository
+// that contains the given directory.
+func GetGitRootFromPath(dir string) (string, error) {
+	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
+	if dir != "" {
+		cmd.Dir = dir
+	}
+	out, err := cmd.Output()
 	if err != nil {
 		return "", err
 	}
