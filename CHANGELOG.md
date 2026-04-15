@@ -3,6 +3,11 @@
 ## [v0.14.0](https://github.com/mocyuto/zgt/compare/v0.13.2...v0.14.0) - 2026-04-15
 - fix: preserve sync paths when run from subdirectories by @mocyuto in https://github.com/mocyuto/zgt/pull/76
 - Add git hooks auto-registration for new worktrees by @mocyuto in https://github.com/mocyuto/zgt/pull/78
+- Release for v0.14.0 by @mocyuto-app[bot] in https://github.com/mocyuto/zgt/pull/77
+
+## [v0.14.0](https://github.com/mocyuto/zgt/compare/v0.13.2...v0.14.0) - 2026-04-15
+- fix: preserve sync paths when run from subdirectories by @mocyuto in https://github.com/mocyuto/zgt/pull/76
+- Add git hooks auto-registration for new worktrees by @mocyuto in https://github.com/mocyuto/zgt/pull/78
 
 ## [v0.13.2](https://github.com/mocyuto/zgt/compare/v0.13.1...v0.13.2) - 2026-04-14
 - Add path exclusion filter to sync command by @mocyuto in https://github.com/mocyuto/zgt/pull/74
