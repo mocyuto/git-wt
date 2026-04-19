@@ -43,7 +43,9 @@ func RegisterHooksPath(worktreePath, hooksPath string) (bool, string, error) {
 		return false, "", fmt.Errorf("git hooks path is not a directory: %s", resolvedHooks)
 	}
 
-	current, err := getConfigValue(resolvedWorktree, "core.hooksPath")
+	// Check if explicitly set in worktree config.
+	// Inherited values from the main repository or global config should be overridden.
+	current, err := getWorktreeConfigValue(resolvedWorktree, "core.hooksPath")
 	if err != nil {
 		return false, "", err
 	}
@@ -59,6 +61,28 @@ func RegisterHooksPath(worktreePath, hooksPath string) (bool, string, error) {
 	}
 
 	return true, "", nil
+}
+
+func getWorktreeConfigValue(dir, key string) (string, error) {
+	// First, check if worktree config is enabled
+	enabled, err := getConfigValue(dir, "extensions.worktreeConfig")
+	if err != nil || enabled != "true" {
+		return "", nil // Not enabled means no worktree-specific config exists yet
+	}
+
+	cmd := exec.Command("git", "config", "--get", "--worktree", key)
+	cmd.Dir = dir
+
+	out, err := cmd.Output()
+	if err != nil {
+		var exitErr *exec.ExitError
+		if strings.TrimSpace(string(out)) == "" && errors.As(err, &exitErr) && exitErr.ExitCode() == 1 {
+			return "", nil
+		}
+		return "", err
+	}
+
+	return strings.TrimSpace(string(out)), nil
 }
 
 func getConfigValue(dir, key string) (string, error) {

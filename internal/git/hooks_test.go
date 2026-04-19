@@ -89,6 +89,47 @@ func TestRegisterHooksPath(t *testing.T) {
 			t.Fatalf("existingPath = %q, want empty", existingPath)
 		}
 	})
+
+	t.Run("overrides inherited configuration from main repository", func(t *testing.T) {
+		repoRoot, worktreePath, hooksPath := setupWorktreeRepo(t)
+
+		// Set an "inherited" hooks path in the main repository's config
+		inheritedPath := filepath.Join(repoRoot, ".inherited-hooks")
+		if err := os.MkdirAll(inheritedPath, 0755); err != nil {
+			t.Fatalf("failed to create inherited hooks dir: %v", err)
+		}
+		runGit(t, repoRoot, "config", "core.hooksPath", inheritedPath)
+
+		// Verification: Confirm that 'git config --get core.hooksPath' in the worktree
+		// returns the inherited value before registration.
+		gotInherited := gitOutput(t, worktreePath, "config", "--get", "core.hooksPath")
+		if gotInherited != inheritedPath {
+			t.Fatalf("setup error: expected inherited path %s, got %s", inheritedPath, gotInherited)
+		}
+
+		// Register hooks for the worktree. This should NOT be skipped because
+		// the value is only inherited, not set in worktree-specific config.
+		registered, existingPath, err := RegisterHooksPath(worktreePath, hooksPath)
+		if err != nil {
+			t.Fatalf("RegisterHooksPath returned error: %v", err)
+		}
+		if !registered {
+			t.Fatalf("expected registration to succeed (overriding inherited config), but it was skipped (existingPath=%q)", existingPath)
+		}
+
+		// Verify that the worktree now uses its specific hooks path
+		gotFinal := gitOutput(t, worktreePath, "config", "--get", "core.hooksPath")
+		wantFinal, _ := filepath.Abs(hooksPath)
+		if gotFinal != wantFinal {
+			t.Fatalf("core.hooksPath = %s, want %s", gotFinal, wantFinal)
+		}
+
+		// Double check that it's set in the worktree-specific config
+		gotWorktree := gitOutput(t, worktreePath, "config", "--get", "--worktree", "core.hooksPath")
+		if gotWorktree != wantFinal {
+			t.Fatalf("core.hooksPath (worktree config) = %s, want %s", gotWorktree, wantFinal)
+		}
+	})
 }
 
 func setupWorktreeRepo(t *testing.T) (string, string, string) {
