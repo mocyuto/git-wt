@@ -54,7 +54,8 @@ Custom shell commands to execute during worktree lifecycle.
 Automatically configure Git hooks for newly created worktrees.
 
 - `enabled` (bool): If true, `zgt add` sets `core.hooksPath` in the new worktree.
-- `path` (string): Path to the shared hooks directory. Relative paths are resolved from the main project root. Default is `.githooks`.
+- `path` (string): Path to the hooks directory. Default is `.githooks`.
+- `shared` (bool): If true (default), relative paths are resolved from the main project root and shared. If false, the hooks directory is copied to the new worktree.
 
 ### `ports`
 

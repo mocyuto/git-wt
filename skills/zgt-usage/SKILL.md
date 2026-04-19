@@ -24,6 +24,7 @@ Use `zgt add <branch>` to create a new worktree.
 - Use `--base <branch>` (or `-b`) to specify a base branch to create the worktree from.
 - Use `--from-default` to force using the default branch as base.
 - It copies ignored files specified in `.gitignore` or `zgt.config.yml`.
+- It registers Git hooks if `git_hooks` is enabled (shares or copies based on `shared` setting).
 - It executes `hooks.add` (e.g., `npm install`).
 - **Existing Branch**: If the branch already exists, it uses it. Note that a branch cannot be checked out in multiple worktrees at once.
 

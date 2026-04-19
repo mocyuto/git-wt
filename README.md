@@ -288,8 +288,8 @@ git_hooks:
 
 - `path` supports absolute paths.
 - `shared` (boolean):
-  - `true` (default): Relative paths are resolved from the main project root. All worktrees share the same hooks.
-  - `false`: Relative paths are resolved from within each worktree. Each worktree uses its own version of hooks.
+  - `true` (default): Relative paths are resolved from the main project root. All worktrees share the same hooks directory.
+  - `false`: The hooks directory is copied from the source repository to the new worktree. Each worktree uses its own independent copy of the hooks.
 - If a worktree already has `core.hooksPath` configured, `zgt add` leaves it unchanged and prints a warning.
 
 ### Custom Hooks
