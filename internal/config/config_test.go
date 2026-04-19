@@ -79,6 +79,34 @@ git_hooks:
 		}
 	})
 
+	t.Run("githooks alias loading", func(t *testing.T) {
+		configPath, _ := GetGlobalConfigPath()
+		configDir := filepath.Dir(configPath)
+		os.MkdirAll(configDir, 0755)
+		os.WriteFile(configPath, []byte(`
+hooks:
+  add: ["global-add"]
+ignore: [".global-ignore"]
+githooks:
+  enabled: true
+  path: .alias-hooks
+`), 0644)
+
+		for _, name := range LocalConfigNames {
+			os.Remove(filepath.Join(tmpGit, name))
+		}
+
+		AppConfig = Config{}
+		InitConfig()
+
+		if !AppConfig.GitHooks.Enabled {
+			t.Errorf("Expected githooks alias to enable git hooks")
+		}
+		if AppConfig.GitHooks.Path != ".alias-hooks" {
+			t.Errorf("Expected legacy githooks path '.alias-hooks', got %q", AppConfig.GitHooks.Path)
+		}
+	})
+
 	t.Run("Local config merging (git-wt.config.yaml)", func(t *testing.T) {
 		// Remove any existing local config first to ensure clean state
 		for _, name := range LocalConfigNames {
@@ -148,6 +176,37 @@ tmux:
 		}
 	})
 
+	t.Run("Local githooks alias overrides global git_hooks", func(t *testing.T) {
+		configPath, _ := GetGlobalConfigPath()
+		configDir := filepath.Dir(configPath)
+		os.MkdirAll(configDir, 0755)
+		os.WriteFile(configPath, []byte(`
+git_hooks:
+  enabled: true
+  path: .global-hooks
+`), 0644)
+
+		for _, name := range LocalConfigNames {
+			os.Remove(filepath.Join(tmpGit, name))
+		}
+
+		os.WriteFile(filepath.Join(tmpGit, "zgt.config.yaml"), []byte(`
+githooks:
+  enabled: false
+  path: .local-alias-hooks
+`), 0644)
+
+		AppConfig = Config{}
+		InitConfig()
+
+		if AppConfig.GitHooks.Enabled {
+			t.Errorf("Expected local githooks alias to disable git hooks")
+		}
+		if AppConfig.GitHooks.Path != ".local-alias-hooks" {
+			t.Errorf("Expected local legacy githooks path '.local-alias-hooks', got %q", AppConfig.GitHooks.Path)
+		}
+	})
+
 	t.Run("Explicit config override", func(t *testing.T) {
 		explicitPath := filepath.Join(tmpGit, "explicit.yaml")
 		os.WriteFile(explicitPath, []byte(`
@@ -195,6 +254,29 @@ env:
 		}
 		if _, ok := AppConfig.Env["compose_project_name"]; ok {
 			t.Errorf("Did not expect lowercased duplicate 'compose_project_name' to be present. Keys: %v", getKeys(AppConfig.Env))
+		}
+	})
+
+	t.Run("GitHooks Shared setting loading", func(t *testing.T) {
+		// Remove any existing local config first
+		for _, name := range LocalConfigNames {
+			os.Remove(filepath.Join(tmpGit, name))
+		}
+
+		os.WriteFile(filepath.Join(tmpGit, "zgt.config.yaml"), []byte(`
+git_hooks:
+  enabled: true
+  shared: false
+`), 0644)
+
+		AppConfig = Config{}
+		InitConfig()
+
+		if !AppConfig.GitHooks.Enabled {
+			t.Errorf("Expected git hooks to be enabled")
+		}
+		if AppConfig.GitHooks.Shared {
+			t.Errorf("Expected git hooks shared to be false, got true")
 		}
 	})
 

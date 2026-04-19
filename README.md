@@ -277,16 +277,19 @@ hooks:
 
 ### Git Hooks Registration
 
-You can automatically register a shared Git hooks directory for each newly created worktree.
+You can automatically register a Git hooks directory for each newly created worktree.
 
 ```yaml
 git_hooks:
   enabled: true
   path: .githooks
+  shared: true
 ```
 
 - `path` supports absolute paths.
-- Relative paths are resolved from the main project root.
+- `shared` (boolean):
+  - `true` (default): Relative paths are resolved from the main project root. All worktrees share the same hooks.
+  - `false`: Relative paths are resolved from within each worktree. Each worktree uses its own version of hooks.
 - If a worktree already has `core.hooksPath` configured, `zgt add` leaves it unchanged and prints a warning.
 
 ### Custom Hooks
