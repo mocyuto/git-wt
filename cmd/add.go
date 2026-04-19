@@ -108,7 +108,16 @@ Both forms will automatically create the branch if it does not already exist.`,
 		}
 
 		if config.AppConfig.GitHooks.Enabled {
-			hooksPath, err := git.ResolveHooksPath(mainRoot, config.AppConfig.GitHooks.Path)
+			baseRoot := mainRoot
+			if !config.AppConfig.GitHooks.Shared {
+				absTarget, err := filepath.Abs(targetPath)
+				if err != nil {
+					return logger.Errorf("failed to get absolute path for target: %v", err)
+				}
+				baseRoot = absTarget
+			}
+
+			hooksPath, err := git.ResolveHooksPath(baseRoot, config.AppConfig.GitHooks.Path)
 			if err != nil {
 				return logger.Errorf("error resolving git hooks path: %v", err)
 			}

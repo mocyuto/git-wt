@@ -268,16 +268,19 @@ hooks:
 
 ### Git hooks の自動登録
 
-新しく作成した worktree ごとに、共有の Git hooks ディレクトリを自動登録できます。
+新しく作成した worktree ごとに、Git hooks ディレクトリを自動登録できます。
 
 ```yaml
 git_hooks:
   enabled: true
   path: .githooks
+  shared: true
 ```
 
 - `path` には絶対パスも指定できます。
-- 相対パスはメイン project root 基準で解決されます。
+- `shared` (boolean):
+  - `true` (デフォルト): 相対パスはメインプロジェクトのルート基準で解決されます。すべての worktree で同じ hooks を共有します。
+  - `false`: 相対パスは各 worktree 内で解決されます。worktree ごとに異なるバージョンの hooks を使用できます。
 - worktree 側に既に `core.hooksPath` が設定されている場合、`zgt add` は上書きせず警告だけ出します。
 
 ### カスタムフック

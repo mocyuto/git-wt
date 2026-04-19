@@ -71,6 +71,7 @@ type TmuxConfig struct {
 type GitHooksConfig struct {
 	Enabled bool   `mapstructure:"enabled" yaml:"enabled"`
 	Path    string `mapstructure:"path" yaml:"path"`
+	Shared  bool   `mapstructure:"shared" yaml:"shared"`
 }
 
 type Config struct {
@@ -87,6 +88,7 @@ type Config struct {
 	Env      map[string]string `mapstructure:"env"`
 	Tmux     TmuxConfig        `mapstructure:"tmux"`
 	GitHooks GitHooksConfig    `mapstructure:"git_hooks" yaml:"git_hooks"`
+	Githooks GitHooksConfig    `mapstructure:"githooks" yaml:"githooks"`
 }
 
 var AppConfig Config
@@ -111,6 +113,7 @@ func InitConfig() {
 				v.SetDefault("ignore", []string{})
 				v.SetDefault("git_hooks.enabled", false)
 				v.SetDefault("git_hooks.path", ".githooks")
+				v.SetDefault("git_hooks.shared", true)
 				v.SetDefault("tmux.keep_open", false)
 				_ = v.SafeWriteConfigAs(globalPath)
 			}
@@ -123,10 +126,13 @@ func InitConfig() {
 		}
 	}
 
+	rawGlobal := v.AllSettings()
+
 	// Unmarshal global config into AppConfig
 	if err := v.Unmarshal(&AppConfig); err != nil && ConfigError == nil {
 		ConfigError = logger.Errorf("unmarshaling global config: %v", err)
 	}
+	applyLegacyAliases(rawGlobal, &AppConfig)
 	applyDefaults(&AppConfig)
 
 	// Fix case for global env if loaded
@@ -185,6 +191,16 @@ func InitConfig() {
 				if localConfig.GitHooks.Path != "" {
 					AppConfig.GitHooks.Path = localConfig.GitHooks.Path
 				}
+				if hasKey(raw, "git_hooks", "shared") {
+					AppConfig.GitHooks.Shared = localConfig.GitHooks.Shared
+				}
+				applyLegacyAliases(raw, &localConfig)
+				if !hasKey(raw, "git_hooks") && hasKey(raw, "githooks", "enabled") {
+					AppConfig.GitHooks.Enabled = localConfig.GitHooks.Enabled
+				}
+				if !hasKey(raw, "git_hooks") && localConfig.GitHooks.Path != "" {
+					AppConfig.GitHooks.Path = localConfig.GitHooks.Path
+				}
 
 				// Merge tmux
 				if localConfig.Tmux.Enabled {
@@ -220,6 +236,7 @@ func InitConfig() {
 			// Full override if specific config is provided
 			var explicitConfig Config
 			if err := explicitV.Unmarshal(&explicitConfig); err == nil {
+				applyLegacyAliases(explicitV.AllSettings(), &explicitConfig)
 				AppConfig = explicitConfig
 				// Fix case for explicit env
 				if err := loadEnvCasePreserved(CfgFile); err != nil {
@@ -237,6 +254,15 @@ func applyDefaults(cfg *Config) {
 	if cfg.GitHooks.Path == "" {
 		cfg.GitHooks.Path = ".githooks"
 	}
+	// Note: We don't force Shared=true here because it might have been set to false by unmarshal
+}
+
+func applyLegacyAliases(raw map[string]any, cfg *Config) {
+	if hasKey(raw, "git_hooks") || !hasKey(raw, "githooks") {
+		return
+	}
+
+	cfg.GitHooks = cfg.Githooks
 }
 
 // loadEnvCasePreserved re-reads the config file using yaml.v3 to preserve case in env map

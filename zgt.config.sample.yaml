@@ -5,6 +5,9 @@ env:
 git_hooks:
   enabled: false
   path: .githooks
+  # shared: true (default) - Use hooks from main repository root
+  # shared: false           - Use hooks from within each worktree
+  shared: true
 hooks:
   add:
     - "tmux new-window -d -n [{{.Repo}}]{{.Branch}} -c {{.Path}} 'claude; exec $SHELL'"
