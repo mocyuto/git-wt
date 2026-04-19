@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/mocyuto/zgt/internal/config"
@@ -108,18 +109,39 @@ Both forms will automatically create the branch if it does not already exist.`,
 		}
 
 		if config.AppConfig.GitHooks.Enabled {
-			baseRoot := mainRoot
-			if !config.AppConfig.GitHooks.Shared {
+			hooksPath := ""
+			var err error
+
+			if config.AppConfig.GitHooks.Shared {
+				// Shared: Resolve from main root and use absolute path
+				hooksPath, err = git.ResolveHooksPath(mainRoot, config.AppConfig.GitHooks.Path)
+				if err != nil {
+					return logger.Errorf("error resolving git hooks path: %v", err)
+				}
+			} else {
+				// Not shared: Copy from source to target
+				srcHooks, err := git.ResolveHooksPath(sourceRoot, config.AppConfig.GitHooks.Path)
+				if err != nil {
+					return logger.Errorf("error resolving source git hooks path: %v", err)
+				}
+
 				absTarget, err := filepath.Abs(targetPath)
 				if err != nil {
 					return logger.Errorf("failed to get absolute path for target: %v", err)
 				}
-				baseRoot = absTarget
-			}
+				dstHooks, err := git.ResolveHooksPath(absTarget, config.AppConfig.GitHooks.Path)
+				if err != nil {
+					return logger.Errorf("error resolving target git hooks path: %v", err)
+				}
 
-			hooksPath, err := git.ResolveHooksPath(baseRoot, config.AppConfig.GitHooks.Path)
-			if err != nil {
-				return logger.Errorf("error resolving git hooks path: %v", err)
+				// Copy if source exists
+				if info, err := os.Stat(srcHooks); err == nil && info.IsDir() {
+					logger.Info("--- Copying git hooks from %s to %s ---", srcHooks, dstHooks)
+					if err := git.CopyHooksDir(srcHooks, dstHooks); err != nil {
+						return logger.Errorf("error copying git hooks: %v", err)
+					}
+				}
+				hooksPath = dstHooks
 			}
 
 			logger.Info("--- Registering git hooks at %s ---", hooksPath)
