@@ -79,7 +79,7 @@ git_hooks:
 		}
 	})
 
-	t.Run("Legacy githooks alias loading", func(t *testing.T) {
+	t.Run("githooks alias loading", func(t *testing.T) {
 		configPath, _ := GetGlobalConfigPath()
 		configDir := filepath.Dir(configPath)
 		os.MkdirAll(configDir, 0755)
@@ -89,7 +89,7 @@ hooks:
 ignore: [".global-ignore"]
 githooks:
   enabled: true
-  path: .legacy-hooks
+  path: .alias-hooks
 `), 0644)
 
 		for _, name := range LocalConfigNames {
@@ -100,10 +100,10 @@ githooks:
 		InitConfig()
 
 		if !AppConfig.GitHooks.Enabled {
-			t.Errorf("Expected legacy githooks alias to enable git hooks")
+			t.Errorf("Expected githooks alias to enable git hooks")
 		}
-		if AppConfig.GitHooks.Path != ".legacy-hooks" {
-			t.Errorf("Expected legacy githooks path '.legacy-hooks', got %q", AppConfig.GitHooks.Path)
+		if AppConfig.GitHooks.Path != ".alias-hooks" {
+			t.Errorf("Expected legacy githooks path '.alias-hooks', got %q", AppConfig.GitHooks.Path)
 		}
 	})
 
@@ -176,7 +176,7 @@ tmux:
 		}
 	})
 
-	t.Run("Local legacy githooks alias overrides global git_hooks", func(t *testing.T) {
+	t.Run("Local githooks alias overrides global git_hooks", func(t *testing.T) {
 		configPath, _ := GetGlobalConfigPath()
 		configDir := filepath.Dir(configPath)
 		os.MkdirAll(configDir, 0755)
@@ -193,17 +193,17 @@ git_hooks:
 		os.WriteFile(filepath.Join(tmpGit, "zgt.config.yaml"), []byte(`
 githooks:
   enabled: false
-  path: .local-legacy-hooks
+  path: .local-alias-hooks
 `), 0644)
 
 		AppConfig = Config{}
 		InitConfig()
 
 		if AppConfig.GitHooks.Enabled {
-			t.Errorf("Expected local legacy githooks alias to disable git hooks")
+			t.Errorf("Expected local githooks alias to disable git hooks")
 		}
-		if AppConfig.GitHooks.Path != ".local-legacy-hooks" {
-			t.Errorf("Expected local legacy githooks path '.local-legacy-hooks', got %q", AppConfig.GitHooks.Path)
+		if AppConfig.GitHooks.Path != ".local-alias-hooks" {
+			t.Errorf("Expected local legacy githooks path '.local-alias-hooks', got %q", AppConfig.GitHooks.Path)
 		}
 	})
 

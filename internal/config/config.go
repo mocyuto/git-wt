@@ -132,7 +132,7 @@ func InitConfig() {
 	if err := v.Unmarshal(&AppConfig); err != nil && ConfigError == nil {
 		ConfigError = logger.Errorf("unmarshaling global config: %v", err)
 	}
-	applyLegacyAliases(rawGlobal, &AppConfig)
+	applyAliases(rawGlobal, &AppConfig)
 	applyDefaults(&AppConfig)
 
 	// Fix case for global env if loaded
@@ -194,7 +194,7 @@ func InitConfig() {
 				if hasKey(raw, "git_hooks", "shared") {
 					AppConfig.GitHooks.Shared = localConfig.GitHooks.Shared
 				}
-				applyLegacyAliases(raw, &localConfig)
+				applyAliases(raw, &localConfig)
 				if !hasKey(raw, "git_hooks") && hasKey(raw, "githooks", "enabled") {
 					AppConfig.GitHooks.Enabled = localConfig.GitHooks.Enabled
 				}
@@ -236,7 +236,7 @@ func InitConfig() {
 			// Full override if specific config is provided
 			var explicitConfig Config
 			if err := explicitV.Unmarshal(&explicitConfig); err == nil {
-				applyLegacyAliases(explicitV.AllSettings(), &explicitConfig)
+				applyAliases(explicitV.AllSettings(), &explicitConfig)
 				AppConfig = explicitConfig
 				// Fix case for explicit env
 				if err := loadEnvCasePreserved(CfgFile); err != nil {
@@ -257,7 +257,7 @@ func applyDefaults(cfg *Config) {
 	// Note: We don't force Shared=true here because it might have been set to false by unmarshal
 }
 
-func applyLegacyAliases(raw map[string]any, cfg *Config) {
+func applyAliases(raw map[string]any, cfg *Config) {
 	if hasKey(raw, "git_hooks") || !hasKey(raw, "githooks") {
 		return
 	}
