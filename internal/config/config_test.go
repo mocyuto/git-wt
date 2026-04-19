@@ -221,6 +221,31 @@ git_hooks:
 		}
 	})
 
+	t.Run("GitHooks Shared defaults to true when omitted", func(t *testing.T) {
+		// Set up global config that omits 'shared'
+		configPath, _ := GetGlobalConfigPath()
+		configDir := filepath.Dir(configPath)
+		os.MkdirAll(configDir, 0755)
+		os.WriteFile(configPath, []byte(`
+git_hooks:
+  enabled: true
+`), 0644)
+
+		for _, name := range LocalConfigNames {
+			os.Remove(filepath.Join(tmpGit, name))
+		}
+
+		AppConfig = Config{}
+		InitConfig()
+
+		if !AppConfig.GitHooks.Enabled {
+			t.Errorf("Expected git hooks to be enabled")
+		}
+		if !AppConfig.GitHooks.Shared {
+			t.Errorf("Expected git hooks shared to default to true, got false")
+		}
+	})
+
 	t.Run("YAML syntax error detection - specific patterns", func(t *testing.T) {
 		patterns := []struct {
 			name    string

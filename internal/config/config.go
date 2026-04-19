@@ -95,6 +95,7 @@ var AppConfig Config
 func InitConfig() {
 	// Initialize default viper for global/local loading
 	v := viper.New()
+	setViperDefaults(v)
 
 	// 1. Load global config
 	globalPath, err := GetGlobalConfigPath()
@@ -107,13 +108,6 @@ func InitConfig() {
 		// Create default global config if it doesn't exist
 		if _, err := os.Stat(globalPath); os.IsNotExist(err) {
 			if err := os.MkdirAll(configDir, 0755); err == nil {
-				v.SetDefault("hooks.add", []string{})
-				v.SetDefault("hooks.rm", []string{})
-				v.SetDefault("ignore", []string{})
-				v.SetDefault("git_hooks.enabled", false)
-				v.SetDefault("git_hooks.path", ".githooks")
-				v.SetDefault("git_hooks.shared", true)
-				v.SetDefault("tmux.keep_open", false)
 				_ = v.SafeWriteConfigAs(globalPath)
 			}
 		}
@@ -218,6 +212,7 @@ func InitConfig() {
 	// 3. Override with --config if provided
 	if CfgFile != "" {
 		explicitV := viper.New()
+		setViperDefaults(explicitV)
 		explicitV.SetConfigFile(CfgFile)
 		if err := explicitV.ReadInConfig(); err != nil {
 			ConfigError = logger.Errorf("reading explicit config: %v", err)
@@ -236,6 +231,16 @@ func InitConfig() {
 			}
 		}
 	}
+}
+
+func setViperDefaults(v *viper.Viper) {
+	v.SetDefault("hooks.add", []string{})
+	v.SetDefault("hooks.rm", []string{})
+	v.SetDefault("ignore", []string{})
+	v.SetDefault("git_hooks.enabled", false)
+	v.SetDefault("git_hooks.path", ".githooks")
+	v.SetDefault("git_hooks.shared", true)
+	v.SetDefault("tmux.keep_open", false)
 }
 
 func applyDefaults(cfg *Config) {
