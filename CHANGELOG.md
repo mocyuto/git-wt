@@ -1,5 +1,10 @@
 # Changelog
 
+## [v0.14.1](https://github.com/mocyuto/zgt/compare/v0.14.0...v0.14.1) - 2026-04-19
+- Add shared option and alias support for Git hooks configuration by @mocyuto in https://github.com/mocyuto/zgt/pull/80
+- Support independent Git hooks per worktree and improve configuration flexibility by @mocyuto in https://github.com/mocyuto/zgt/pull/82
+- refactor: remove githooks alias and fix shared default by @mocyuto in https://github.com/mocyuto/zgt/pull/83
+
 ## [v0.14.0](https://github.com/mocyuto/zgt/compare/v0.13.2...v0.14.0) - 2026-04-15
 - fix: preserve sync paths when run from subdirectories by @mocyuto in https://github.com/mocyuto/zgt/pull/76
 - Add git hooks auto-registration for new worktrees by @mocyuto in https://github.com/mocyuto/zgt/pull/78
