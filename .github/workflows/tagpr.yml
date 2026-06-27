@@ -12,6 +12,12 @@ permissions:
   contents: write
   pull-requests: write
 
+# Serialize tagpr runs so that push and labeled-triggered runs cannot
+# race each other and create duplicate release PRs.
+concurrency:
+  group: tagpr
+  cancel-in-progress: false
+
 jobs:
   tagpr:
     runs-on: ubuntu-latest
@@ -27,6 +33,44 @@ jobs:
           fetch-depth: 0
           ref: main
           token: ${{ steps.app-token.outputs.token }}
+      # Guard against duplicate release PRs caused by GitHub's commit->PR
+      # index lag after a tagpr self-merge push (tagpr issue #330).
+      # Detection uses the HEAD commit message, which reliably contains the
+      # tagpr head branch name "tagpr-from-..." for "Create a merge commit"
+      # merges (no API/index lag). Only tagpr self-merge pushes wait for the
+      # commit->PR index; other pushes proceed immediately.
+      - name: Wait for PR index on tagpr self-merge
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -u -o pipefail
+          sha=${GITHUB_SHA:?GITHUB_SHA is required}
+          # Detect tagpr self-merge via the merge commit message. With the
+          # "Create a merge commit" strategy, the default commit message is
+          # "Merge pull request #N from <owner>/tagpr-from-<version>".
+          if ! git log -1 --pretty=%B "$sha" | grep -q 'tagpr-from-'; then
+            echo "Not a tagpr self-merge push. Proceed without waiting."
+            exit 0
+          fi
+          echo "tagpr self-merge detected. Waiting for commit->PR index..."
+          # Poll the same endpoint tagpr uses internally for isTagPR until
+          # the commit->PR association propagates and a tagpr-labeled PR is
+          # returned. tagpr itself only retries ~6s (3x2s), so we wait longer
+          # to cover GitHub's worst-case index lag.
+          for i in $(seq 1 30); do
+            indexed=$(gh api "repos/$GITHUB_REPOSITORY/commits/$sha/pulls" \
+                      --jq 'any((.labels // [])[].name == "tagpr")' 2>/dev/null \
+                      || echo false)
+            if [ "$indexed" = "true" ]; then
+              echo "Indexed after ${i} attempt(s)."
+              exit 0
+            fi
+            echo "attempt $i: not indexed yet; sleeping 2s"
+            sleep 2
+          done
+          echo "::error::commit->PR index not propagated after ~60s; failing to avoid a duplicate release PR. Re-run the workflow once GitHub recovers."
+          exit 1
       - uses: Songmu/tagpr@v1
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}

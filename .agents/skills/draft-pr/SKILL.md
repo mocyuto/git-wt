@@ -1,6 +1,13 @@
 ---
-description: Create o Update a draft pull request targeting the main branch
+name: draft-pr
+description: Create or update a draft pull request targeting the main branch from the current branch.
 ---
+
+# Draft PR Skill
+
+This skill provides instructions for AI agents on how to create or update a draft pull request targeting the `main` branch from the current branch.
+
+## Workflow
 
 1. Stage and commit any uncommitted changes.
 2. Push the current branch to the remote repository.
@@ -12,7 +19,7 @@ description: Create o Update a draft pull request targeting the main branch
    - **Body**: A detailed overview outlining the PR's purpose, key changes, and affected scope.
    - **Status**: Draft (when creating new).
 
-Command to run:
+## Commands
 
 - `git add . && (git diff-index --quiet HEAD || git commit -m "update")`
 - `git push -u origin $(git branch --show-current)`
@@ -20,4 +27,4 @@ Command to run:
 - If PR exists: `gh pr edit --title "<GENERATED_TITLE>" --body "<GENERATED_BODY>"`
 - If PR does not exist: `gh pr create --draft --base main --title "<GENERATED_TITLE>" --body "<GENERATED_BODY>"`
 
-_(Note: The AI agent should replace `<GENERATED_TITLE>` and `<GENERATED_BODY>` with appropriately generated Japanese text based on a thorough analysis of the total diff.)_
+_(Note: The AI agent should replace `<GENERATED_TITLE>` and `<GENERATED_BODY>` with appropriately generated English text based on a thorough analysis of the total diff.)_
