@@ -10,5 +10,8 @@
     "bash": {
       "git commit *": "ask",
     },
+    "external_directory": {
+      "*": "allow",
+    },
   },
 }
