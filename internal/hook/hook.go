@@ -5,20 +5,19 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/mocyuto/zgt/internal/config"
+	"github.com/mocyuto/zgt/internal/state"
 	"github.com/mocyuto/zgt/internal/template"
 )
 
-// RunHooks executes hooks for a given action (e.g., "add", "rm")
+// RunHooks executes hooks for a given action (e.g., "add", "rm").
+// The profile (stored in ctx.Profile) selects profile-specific hook overrides
+// from the config. Top-level hooks are always run first; profile-specific
+// hooks are appended afterwards.
 func RunHooks(action string, ctx template.Context) {
-	var commands []string
-	switch action {
-	case "add":
-		commands = config.AppConfig.Hooks.Add
-	case "rm":
-		commands = config.AppConfig.Hooks.RM
-	}
+	commands := config.ProfileHooks(action, ctx.Profile)
 
 	if len(commands) == 0 {
 		return
@@ -48,14 +47,32 @@ func executeCommand(cmdStr string, absPath string, ctx template.Context) {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	// Merge system env with config env
+	// Merge system env with config env (profile-aware).
 	env := os.Environ()
-	if config.AppConfig.Env != nil {
-		replacedEnv := template.ReplaceMap(config.AppConfig.Env, ctx)
+	profileEnv := config.ProfileEnv(ctx.Profile)
+	if len(profileEnv) > 0 {
+		replacedEnv := template.ReplaceMap(profileEnv, ctx)
 		for k, v := range replacedEnv {
 			env = append(env, fmt.Sprintf("%s=%s", k, v))
 		}
 	}
+
+	// Inject per-worktree port vars (NAME_PORT=basePort+idx) so compose-style
+	// hooks that interpolate ${API_PORT} / ${ENVOY_PORT} pick up the worktree's
+	// assigned port without needing a prior `eval "$(zgt env)"`.
+	if len(config.AppConfig.Ports) > 0 {
+		if ports, ok := state.GetWorktreePortsByPath(absPath); ok {
+			for name, basePort := range config.AppConfig.Ports {
+				idx, ok := ports[name]
+				if !ok {
+					continue
+				}
+				envName := strings.ToUpper(name) + "_PORT"
+				env = append(env, fmt.Sprintf("%s=%d", envName, basePort+idx))
+			}
+		}
+	}
+
 	cmd.Env = env
 
 	if err := cmd.Run(); err != nil {

@@ -5,6 +5,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/mocyuto/zgt/internal/gitroot"
@@ -74,20 +75,32 @@ type GitHooksConfig struct {
 	Shared  bool   `mapstructure:"shared" yaml:"shared"`
 }
 
+// HooksConfig holds lifecycle hook commands for the add/remove commands.
+type HooksConfig struct {
+	Add []string `mapstructure:"add" yaml:"add"`
+	RM  []string `mapstructure:"rm"  yaml:"rm"`
+}
+
+// ProfileConfig is a profile-specific override applied on top of the
+// top-level Config. Profile env keys override top-level env per-key; profile
+// hooks.add / hooks.rm are appended AFTER the top-level hooks.
+type ProfileConfig struct {
+	Env   map[string]string `mapstructure:"env"   yaml:"env"`
+	Hooks HooksConfig       `mapstructure:"hooks" yaml:"hooks"`
+}
+
 type Config struct {
-	Hooks struct {
-		Add []string `mapstructure:"add"`
-		RM  []string `mapstructure:"rm"`
-	} `mapstructure:"hooks"`
-	Add struct {
+	Hooks HooksConfig `mapstructure:"hooks" yaml:"hooks"`
+	Add   struct {
 		FromDefault bool `mapstructure:"from_default"`
 		AutoPull    bool `mapstructure:"auto_pull"`
 	} `mapstructure:"add"`
-	Ignore   []string          `mapstructure:"ignore"`
-	Ports    map[string]int    `mapstructure:"ports"`
-	Env      map[string]string `mapstructure:"env"`
-	Tmux     TmuxConfig        `mapstructure:"tmux"`
-	GitHooks GitHooksConfig    `mapstructure:"git_hooks" yaml:"git_hooks"`
+	Ignore   []string                 `mapstructure:"ignore"`
+	Ports    map[string]int           `mapstructure:"ports"`
+	Env      map[string]string        `mapstructure:"env"`
+	Tmux     TmuxConfig               `mapstructure:"tmux"`
+	GitHooks GitHooksConfig           `mapstructure:"git_hooks" yaml:"git_hooks"`
+	Profiles map[string]ProfileConfig `mapstructure:"profiles" yaml:"profiles"`
 }
 
 var AppConfig Config
@@ -174,6 +187,47 @@ func InitConfig() {
 				}
 				maps.Copy(AppConfig.Env, localConfig.Env)
 
+				// Merge profiles:
+				//   * A profile the global config does NOT define is added verbatim.
+				//   * A profile the global config DOES define gets its env merged per-key
+				//     (local overrides global) and its hooks appended AFTER the global
+				//     profile's hooks (mirroring the top-level vs profile ordering: global
+				//     top-level hooks run first, then global profile hooks, then local profile
+				//     hooks).
+				if len(localConfig.Profiles) > 0 {
+					if AppConfig.Profiles == nil {
+						AppConfig.Profiles = make(map[string]ProfileConfig)
+					}
+					for name, localP := range localConfig.Profiles {
+						globalP, ok := AppConfig.Profiles[name]
+						if !ok {
+							AppConfig.Profiles[name] = localP
+							continue
+						}
+						if len(localP.Env) > 0 {
+							if globalP.Env == nil {
+								globalP.Env = make(map[string]string)
+							}
+							for k, v := range localP.Env {
+								globalP.Env[k] = v
+							}
+						}
+						if len(localP.Hooks.Add) > 0 {
+							merged := make([]string, 0, len(globalP.Hooks.Add)+len(localP.Hooks.Add))
+							merged = append(merged, globalP.Hooks.Add...)
+							merged = append(merged, localP.Hooks.Add...)
+							globalP.Hooks.Add = merged
+						}
+						if len(localP.Hooks.RM) > 0 {
+							merged := make([]string, 0, len(globalP.Hooks.RM)+len(localP.Hooks.RM))
+							merged = append(merged, globalP.Hooks.RM...)
+							merged = append(merged, localP.Hooks.RM...)
+							globalP.Hooks.RM = merged
+						}
+						AppConfig.Profiles[name] = globalP
+					}
+				}
+
 				// Merge git hooks
 				if hasKey(raw, "git_hooks", "enabled") {
 					AppConfig.GitHooks.Enabled = localConfig.GitHooks.Enabled
@@ -251,6 +305,7 @@ func applyDefaults(cfg *Config) {
 }
 
 // loadEnvCasePreserved re-reads the config file using yaml.v3 to preserve case in env map
+// (top-level env and per-profile env).
 func loadEnvCasePreserved(path string) error {
 	f, err := os.Open(path)
 	if err != nil {
@@ -266,24 +321,173 @@ func loadEnvCasePreserved(path string) error {
 		return err
 	}
 
+	// Top-level env
 	if envRaw, ok := raw["env"]; ok {
-		if envMap, ok := envRaw.(map[string]interface{}); ok {
-			if AppConfig.Env == nil {
-				AppConfig.Env = make(map[string]string)
+		applyEnvCase(envRaw, &AppConfig.Env)
+	}
+
+	// Per-profile env
+	if profilesRaw, ok := raw["profiles"]; ok {
+		if profilesMap, ok := profilesRaw.(map[string]interface{}); ok {
+			if AppConfig.Profiles == nil {
+				AppConfig.Profiles = make(map[string]ProfileConfig)
 			}
-			for k, v := range envMap {
-				if val, ok := v.(string); ok {
-					// Remove lowercased duplicate from Viper unmarshal
-					lowerK := strings.ToLower(k)
-					if _, exists := AppConfig.Env[lowerK]; exists && lowerK != k {
-						delete(AppConfig.Env, lowerK)
-					}
-					AppConfig.Env[k] = val
+			for name, pRaw := range profilesMap {
+				pMap, ok := pRaw.(map[string]interface{})
+				if !ok {
+					continue
 				}
+				// Viper has already populated AppConfig.Profiles under a
+				// lowercased key (and lowercased env keys). Update the
+				// existing entry in place rather than creating a new entry
+				// under the original-case name — otherwise mixed-case
+				// profile names silently split into two entries and the
+				// viper-derived hooks end up dangling. We MERGE env keys
+				// per-key (preserve globally-defined keys, fix case on local
+				// keys) so global+local configs that define the same
+				// profile env keys compose correctly.
+				lowerName := strings.ToLower(name)
+				p, ok := AppConfig.Profiles[lowerName]
+				if !ok {
+					p = ProfileConfig{}
+				}
+				if p.Env == nil {
+					p.Env = make(map[string]string)
+				}
+				if envRaw, ok := pMap["env"]; ok {
+					applyEnvCase(envRaw, &p.Env)
+				}
+				AppConfig.Profiles[lowerName] = p
 			}
 		}
 	}
 	return nil
+}
+
+// applyEnvCase merges env entries from raw into dst, preserving the case of
+// keys and removing any lowercased duplicates that Viper may have introduced.
+// Non-string YAML scalars (int / bool / float) are stringified via fmt.Sprint,
+// matching Viper's mapstructure coercion into map[string]string.
+func applyEnvCase(raw any, dst *map[string]string) {
+	envMap, ok := raw.(map[string]interface{})
+	if !ok {
+		return
+	}
+	if *dst == nil {
+		*dst = make(map[string]string)
+	}
+	for k, v := range envMap {
+		val := scalarToString(v)
+		if val == "" && v != nil && v != "" {
+			// Non-scalar value (list/map); skip - env maps only hold scalars.
+			continue
+		}
+		lowerK := strings.ToLower(k)
+		if _, exists := (*dst)[lowerK]; exists && lowerK != k {
+			delete(*dst, lowerK)
+		}
+		(*dst)[k] = val
+	}
+}
+
+// scalarToString converts a YAML scalar to its string form. Returns "" for
+// non-scalar values (arrays, maps). nil -> "".
+func scalarToString(v any) string {
+	switch val := v.(type) {
+	case nil:
+		return ""
+	case string:
+		return val
+	case bool:
+		if val {
+			return "true"
+		}
+		return "false"
+	case int:
+		return strconv.Itoa(val)
+	case int64:
+		return strconv.FormatInt(val, 10)
+	case float64:
+		// Format without trailing zeros for typical integer-valued floats.
+		return strconv.FormatFloat(val, 'f', -1, 64)
+	default:
+		// Anything that yaml.v3 decoded as a list or map is non-scalar.
+		return ""
+	}
+}
+
+// ProfileHooks returns the merged hook commands for a given action ("add" or
+// "rm") and profile. Top-level hooks are always included; profile-specific
+// hooks are appended afterwards. An empty or "default" profile yields the
+// top-level hooks only. Unknown profiles fall back to top-level behavior.
+// Profile name lookup is case-insensitive (profile names are stored in
+// lower-case to match Viper's map-key normalization).
+func ProfileHooks(action, profile string) []string {
+	var base []string
+	switch action {
+	case "add":
+		base = AppConfig.Hooks.Add
+	case "rm":
+		base = AppConfig.Hooks.RM
+	}
+	p, ok := lookupProfile(profile)
+	if !ok {
+		return base
+	}
+	var extra []string
+	switch action {
+	case "add":
+		extra = p.Hooks.Add
+	case "rm":
+		extra = p.Hooks.RM
+	}
+	if len(extra) == 0 {
+		return base
+	}
+	out := make([]string, 0, len(base)+len(extra))
+	out = append(out, base...)
+	out = append(out, extra...)
+	return out
+}
+
+// ProfileEnv returns the merged env map for a profile. Top-level env is used
+// as base; profile env keys override per-key. The returned map is always a
+// fresh copy and safe to mutate.
+func ProfileEnv(profile string) map[string]string {
+	base := make(map[string]string, len(AppConfig.Env))
+	for k, v := range AppConfig.Env {
+		base[k] = v
+	}
+	p, ok := lookupProfile(profile)
+	if !ok {
+		return base
+	}
+	for k, v := range p.Env {
+		base[k] = v
+	}
+	return base
+}
+
+// ProfileExists returns true if the named profile is defined in the config.
+// Empty and "default" are always considered valid. Profile name lookup is
+// case-insensitive.
+func ProfileExists(profile string) bool {
+	if profile == "" || profile == "default" {
+		return true
+	}
+	_, ok := lookupProfile(profile)
+	return ok
+}
+
+// lookupProfile returns the ProfileConfig for the given name (case-insensitive
+// match against the lower-cased profile keys), or (zero, false) when the name
+// is empty, "default", or not defined.
+func lookupProfile(profile string) (ProfileConfig, bool) {
+	if profile == "" || profile == "default" || AppConfig.Profiles == nil {
+		return ProfileConfig{}, false
+	}
+	p, ok := AppConfig.Profiles[strings.ToLower(profile)]
+	return p, ok
 }
 
 // hasKey checks if a nested key exists in a map[string]interface{}

@@ -31,7 +31,8 @@ type ProjectState struct {
 }
 
 type WorktreeState struct {
-	Ports map[string]int `json:"ports"` // map[portKey]portIndex
+	Ports   map[string]int `json:"ports"`             // map[portKey]portIndex
+	Profile string         `json:"profile,omitempty"` // selected profile name (empty for default)
 }
 
 var AppState State
@@ -194,6 +195,31 @@ func CleanupState() {
 }
 
 func GetCurrentWorktreePorts() (map[string]int, bool) {
+	wt, ok := GetCurrentWorktree()
+	if !ok {
+		return nil, false
+	}
+	return wt.Ports, true
+}
+
+// GetWorktreePortsByPath returns the port-key->idx map for the worktree at the
+// given path (normalized internally), or (nil, false) if not found. Useful
+// for path-keyed lookups (e.g. injecting port vars into hook subprocesses
+// whose ctx.Path is the worktree even though zgt itself was invoked from
+// elsewhere).
+func GetWorktreePortsByPath(path string) (map[string]int, bool) {
+	n := NormalizePath(path)
+	for _, proj := range AppState.Projects {
+		if wt, ok := proj.Worktrees[n]; ok {
+			return wt.Ports, true
+		}
+	}
+	return nil, false
+}
+
+// GetCurrentWorktree returns the WorktreeState for the worktree containing the
+// current working directory, or (nil, false) if not found.
+func GetCurrentWorktree() (*WorktreeState, bool) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, false
@@ -202,8 +228,8 @@ func GetCurrentWorktreePorts() (map[string]int, bool) {
 
 	// Search across all projects for the best matching worktree path
 	type wtMatch struct {
-		ports map[string]int
-		path  string
+		wt   *WorktreeState
+		path string
 	}
 	var matches []wtMatch
 
@@ -211,7 +237,7 @@ func GetCurrentWorktreePorts() (map[string]int, bool) {
 		for p, wt := range proj.Worktrees {
 			rel, err := filepath.Rel(p, absCwd)
 			if err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
-				matches = append(matches, wtMatch{wt.Ports, p})
+				matches = append(matches, wtMatch{wt, p})
 			}
 		}
 	}
@@ -225,5 +251,26 @@ func GetCurrentWorktreePorts() (map[string]int, bool) {
 		return len(matches[i].path) > len(matches[j].path)
 	})
 
-	return matches[0].ports, true
+	return matches[0].wt, true
+}
+
+// SetProfile stores the profile name for the given worktree path within a
+// project. The state is updated in memory; the caller is responsible for
+// persisting it via SaveState.
+func SetProfile(projectName, path, profile string) {
+	path = NormalizePath(path)
+	if AppState.Projects == nil {
+		AppState.Projects = make(map[string]ProjectState)
+	}
+	proj, ok := AppState.Projects[projectName]
+	if !ok {
+		proj = ProjectState{Worktrees: make(map[string]*WorktreeState)}
+	}
+	wt, ok := proj.Worktrees[path]
+	if !ok {
+		wt = &WorktreeState{Ports: make(map[string]int)}
+	}
+	wt.Profile = profile
+	proj.Worktrees[path] = wt
+	AppState.Projects[projectName] = proj
 }

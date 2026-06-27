@@ -16,6 +16,7 @@ type Context struct {
 	CurrentDir    string // Current working directory name
 	TargetBranch  string // Alias for Branch
 	CurrentBranch string // Current branch name
+	Profile       string // Selected profile name (empty for default)
 }
 
 func toHostname(s string) string {
@@ -83,5 +84,14 @@ func ReplaceConfig(cfg config.Config, ctx Context) config.Config {
 	res.Env = ReplaceMap(cfg.Env, ctx)
 	res.Tmux.Panes = ReplaceTmuxPanes(cfg.Tmux.Panes, ctx)
 	res.Tmux.WindowName = Replace(cfg.Tmux.WindowName, ctx)
+	if cfg.Profiles != nil {
+		res.Profiles = make(map[string]config.ProfileConfig, len(cfg.Profiles))
+		for name, p := range cfg.Profiles {
+			p.Hooks.Add = ReplaceSlice(p.Hooks.Add, ctx)
+			p.Hooks.RM = ReplaceSlice(p.Hooks.RM, ctx)
+			p.Env = ReplaceMap(p.Env, ctx)
+			res.Profiles[name] = p
+		}
+	}
 	return res
 }

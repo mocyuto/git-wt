@@ -165,3 +165,79 @@ func TestSaveLoadState(t *testing.T) {
 		t.Errorf("Loaded project state mismatch: %v", AppState.Projects)
 	}
 }
+
+func TestSetProfile(t *testing.T) {
+	tmpDir, _ := os.MkdirTemp("", "zgt-set-profile-test")
+	defer os.RemoveAll(tmpDir)
+	exec.Command("git", "init", tmpDir).Run()
+
+	absMain, _ := filepath.Abs(tmpDir)
+	projectName := filepath.Base(absMain)
+	wtPath := filepath.Join(tmpDir, "wt")
+	os.MkdirAll(wtPath, 0755)
+
+	AppState.Projects = make(map[string]ProjectState)
+
+	// Set profile for a new worktree
+	SetProfile(projectName, wtPath, "migration")
+
+	// Existing ports should be preserved when SetProfile is called on a
+	// worktree that already has port assignments (simulated here by assigning
+	// first and then setting profile).
+	AssignPortIndex(projectName, wtPath, "http", 3000)
+	SetProfile(projectName, wtPath, "migration")
+
+	proj, ok := AppState.Projects[projectName]
+	if !ok {
+		t.Fatalf("project not found")
+	}
+	wt, ok := proj.Worktrees[NormalizePath(wtPath)]
+	if !ok {
+		t.Fatalf("worktree not found")
+	}
+	if wt.Profile != "migration" {
+		t.Errorf("Profile = %q, want %q", wt.Profile, "migration")
+	}
+	if wt.Ports["http"] != 1 {
+		t.Errorf("Ports[http] = %d, want 1 (preserved)", wt.Ports["http"])
+	}
+}
+
+func TestGetCurrentWorktree_Profile(t *testing.T) {
+	origWd, _ := os.Getwd()
+	defer os.Chdir(origWd)
+
+	tmpDir, _ := os.MkdirTemp("", "zgt-profile-match")
+	defer os.RemoveAll(tmpDir)
+	wtPath := filepath.Join(tmpDir, "wt")
+	os.MkdirAll(wtPath, 0755)
+	wtPath, _ = filepath.EvalSymlinks(wtPath)
+
+	AppState.Projects = map[string]ProjectState{
+		"pj": {
+			Worktrees: map[string]*WorktreeState{
+				wtPath: {Ports: map[string]int{"http": 3}, Profile: "migration"},
+			},
+		},
+	}
+
+	if err := os.Chdir(wtPath); err != nil {
+		t.Fatal(err)
+	}
+
+	wt, ok := GetCurrentWorktree()
+	if !ok {
+		t.Fatalf("GetCurrentWorktree returned ok=false")
+	}
+	if wt.Profile != "migration" {
+		t.Errorf("Profile = %q, want %q", wt.Profile, "migration")
+	}
+	if wt.Ports["http"] != 3 {
+		t.Errorf("Ports[http] = %d, want 3", wt.Ports["http"])
+	}
+
+	ports, ok := GetCurrentWorktreePorts()
+	if !ok || ports["http"] != 3 {
+		t.Errorf("GetCurrentWorktreePorts = %v (ok=%v)", ports, ok)
+	}
+}

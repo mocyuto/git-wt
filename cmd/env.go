@@ -68,11 +68,20 @@ Usage: eval "$(zgt env)"`,
 			}
 		}
 
-		if len(config.AppConfig.Env) > 0 {
+		if len(config.AppConfig.Env) > 0 || len(config.AppConfig.Profiles) > 0 {
 			cwd, _ := os.Getwd()
-			ctx := zcontext.New(cwd, "")
 
-			replacedEnv := template.ReplaceMap(config.AppConfig.Env, ctx)
+			// Determine profile from state if available.
+			profile := ""
+			if wt, ok := state.GetCurrentWorktree(); ok {
+				profile = wt.Profile
+			}
+
+			ctx := zcontext.NewWithProfile(cwd, "", profile)
+
+			// ProfileEnv returns merged top-level + profile env.
+			mergedEnv := config.ProfileEnv(profile)
+			replacedEnv := template.ReplaceMap(mergedEnv, ctx)
 			for k, v := range replacedEnv {
 				fmt.Printf("export %s=%q\n", k, v)
 			}

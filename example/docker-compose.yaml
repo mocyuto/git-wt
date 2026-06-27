@@ -1,0 +1,74 @@
+# Example: per-worktree Docker Compose with isolated DB
+#
+# Demonstrates the topology described in ../README.md (Profiles section):
+#
+#   * api and envoy run in their own compose project per worktree
+#     (COMPOSE_PROJECT_NAME comes from `zgt env`).
+#   * The shared DB lives in the MAIN worktree's compose project (the user
+#     brings it up once with `docker compose --profile db up -d db`).
+#   * When `zgt add --profile migration` is used, the worktree spins up its
+#     OWN db (its volume is cloned from the main DB) so destructive migration
+#     tests cannot corrupt the shared DB.
+#
+# Choice of mechanism: docker compose's own per-service `profiles:` is what
+# keeps `docker compose up -d api envoy` from starting the db service by
+# accident. This prevents the empty-volume race described in H3a (the db
+# service would otherwise eagerly create "${COMPOSE_PROJECT_NAME}_pgdata"
+# before db-clone.sh can copy into it).
+
+services:
+  db:
+    # Compose only starts db when invoked with `--profile db`. This way
+    # `docker compose up -d api envoy` (the default profile add hook) leaves
+    # db untouched on feature worktrees, and the migration add hook
+    # explicitly opts in via `docker compose --profile db up -d db` AFTER
+    # db-clone.sh has populated its volume.
+    profiles: ["db"]
+    image: postgres:16
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: app
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # NOTE ON HOST PORTS:
+    # The DB does NOT publish a host port by default. api reaches it via the
+    # compose service name (`db`) over the default compose network, so there
+    # is no 5432 collision between the main worktree's DB and a migration
+    # worktree's isolated DB.
+    #
+    # If you want to connect with `psql` from the host, opt in with an env var
+    # from your zgt config (e.g. `${DB_HOST_PORT_PUBLISH}")` left empty by
+    # default), or run `docker compose exec db psql -U app app`.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  api:
+    image: node:20
+    working_dir: /app
+    volumes:
+      - ./:/app
+    command: ["npm", "run", "dev"]
+    environment:
+      # DB_HOST is exported by `zgt env`. For the default profile it points
+      # at the shared DB on the main worktree's compose network; for the
+      # migration profile it points to the isolated DB attached to THIS
+      # worktree's compose project. Wire the network between projects however
+      # your environment supports (`host.docker.internal`, an external
+      # compose network, etc.) - that lives outside `zgt`.
+      DATABASE_URL: "postgres://app:app@${DB_HOST:-db}:5432/app"
+    ports:
+      - "${API_PORT}:3000"
+
+  envoy:
+    image: envoyproxy/envoy:v1.29-latest
+    volumes:
+      - ./envoy.yaml:/etc/envoy/envoy.yaml:ro
+    ports:
+      - "${ENVOY_PORT}:8080"
+
+volumes:
+  pgdata: {}
