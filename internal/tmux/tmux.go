@@ -32,7 +32,7 @@ type WindowStatus struct {
 
 // Setup creates a new tmux window and splits it into panes as configured.
 func Setup(ctx template.Context) error {
-	cfg := config.AppConfig.Tmux
+	cfg := config.ProfileTmux(ctx.Profile)
 	if !cfg.Enabled || len(cfg.Panes) == 0 {
 		return nil
 	}
@@ -135,7 +135,7 @@ func sendKeys(paneID string, commands []string, ctx template.Context) {
 
 // GetWindowName returns the configured window name or a default one based on context.
 func GetWindowName(ctx template.Context) string {
-	cfg := config.AppConfig.Tmux
+	cfg := config.ProfileTmux(ctx.Profile)
 	if cfg.WindowName != "" {
 		return template.Replace(cfg.WindowName, ctx)
 	}
@@ -153,7 +153,7 @@ func ActivateWindow(windowID string) error {
 
 // CloseWindow gracefully closes the tmux window associated with the context.
 func CloseWindow(ctx template.Context, force bool) error {
-	cfg := config.AppConfig.Tmux
+	cfg := config.ProfileTmux(ctx.Profile)
 	if !cfg.Enabled || (cfg.KeepOpen && !force) {
 		return nil
 	}

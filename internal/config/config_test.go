@@ -670,6 +670,207 @@ func TestProfileHelpers(t *testing.T) {
 	}
 }
 
+func TestProfileTmux(t *testing.T) {
+	AppConfig = Config{}
+	AppConfig.Tmux = TmuxConfig{
+		Enabled:    true,
+		KeepOpen:   false,
+		WindowName: "[{{.Repo}}]{{.Branch}}",
+		Panes: []TmuxPane{
+			{Id: "main", Commands: []string{"yarn"}},
+		},
+	}
+	AppConfig.Profiles = map[string]ProfileConfig{
+		"frontend": {
+			Tmux: TmuxConfig{
+				// Enabled stays true via OR; KeepOpen flips on via OR.
+				KeepOpen: true,
+				// WindowName overridden when non-empty.
+				WindowName: "[{{.Repo}}]{{.Branch}}-fe",
+				// Panes replaced wholesale.
+				Panes: []TmuxPane{
+					{Id: "fe-main", Commands: []string{"npm run dev"}},
+				},
+			},
+		},
+		"no-tmux": {
+			// Profile without a tmux section: should inherit top-level.
+			Env: map[string]string{"X": "y"},
+		},
+	}
+
+	// default / empty -> top-level unchanged.
+	def := ProfileTmux("")
+	if !def.Enabled {
+		t.Errorf("ProfileTmux(\"\").Enabled = false, want true (top-level)")
+	}
+	if def.KeepOpen {
+		t.Errorf("ProfileTmux(\"\").KeepOpen = true, want false (top-level)")
+	}
+	if def.WindowName != "[{{.Repo}}]{{.Branch}}" {
+		t.Errorf("ProfileTmux(\"\").WindowName = %q, want top-level", def.WindowName)
+	}
+	if len(def.Panes) != 1 || def.Panes[0].Id != "main" {
+		t.Errorf("ProfileTmux(\"\").Panes = %v, want top-level [main]", def.Panes)
+	}
+
+	// unknown profile -> falls back to top-level.
+	unk := ProfileTmux("nonexistent")
+	if len(unk.Panes) != 1 || unk.Panes[0].Id != "main" {
+		t.Errorf("ProfileTmux(nonexistent) should fall back to top-level Panes, got %v", unk.Panes)
+	}
+
+	// frontend: KeepOpen OR-ed on, WindowName overridden, Panes replaced.
+	fe := ProfileTmux("frontend")
+	if !fe.Enabled {
+		t.Errorf("ProfileTmux(frontend).Enabled = false, want true (OR with top-level)")
+	}
+	if !fe.KeepOpen {
+		t.Errorf("ProfileTmux(frontend).KeepOpen = false, want true (OR with profile)")
+	}
+	if fe.WindowName != "[{{.Repo}}]{{.Branch}}-fe" {
+		t.Errorf("ProfileTmux(frontend).WindowName = %q, want overridden", fe.WindowName)
+	}
+	if len(fe.Panes) != 1 || fe.Panes[0].Id != "fe-main" {
+		t.Errorf("ProfileTmux(frontend).Panes = %v, want replaced [fe-main]", fe.Panes)
+	}
+
+	// no-tmux: profile has no tmux section -> inherits top-level entirely.
+	nt := ProfileTmux("no-tmux")
+	if !nt.Enabled {
+		t.Errorf("ProfileTmux(no-tmux).Enabled = false, want true (inherited)")
+	}
+	if nt.WindowName != "[{{.Repo}}]{{.Branch}}" {
+		t.Errorf("ProfileTmux(no-tmux).WindowName = %q, want inherited", nt.WindowName)
+	}
+	if len(nt.Panes) != 1 || nt.Panes[0].Id != "main" {
+		t.Errorf("ProfileTmux(no-tmux).Panes = %v, want inherited [main]", nt.Panes)
+	}
+
+	// Case-insensitive lookup matches ProfileExists / ProfileEnv.
+	feLower := ProfileTmux("FRONTEND")
+	if feLower.WindowName != "[{{.Repo}}]{{.Branch}}-fe" {
+		t.Errorf("ProfileTmux(FRONTEND) should be case-insensitive; got %q", feLower.WindowName)
+	}
+
+	// Mutating the returned Panes must not corrupt AppConfig: ProfileTmux
+	// returns a defensive copy of the Panes slice on every path (replaced
+	// or inherited), so callers can mutate freely.
+	feCopy := ProfileTmux("frontend")
+	if len(feCopy.Panes) != 1 {
+		t.Fatalf("ProfileTmux(frontend).Panes len = %d, want 1", len(feCopy.Panes))
+	}
+	feCopy.Panes[0].Id = "mutated"
+	if AppConfig.Profiles["frontend"].Tmux.Panes[0].Id != "fe-main" {
+		t.Errorf("mutating ProfileTmux(frontend).Panes leaked to AppConfig: %v", AppConfig.Profiles["frontend"].Tmux.Panes)
+	}
+	// And the inherited (top-level) path is also safe to mutate.
+	defCopy := ProfileTmux("")
+	if len(defCopy.Panes) != 1 {
+		t.Fatalf("ProfileTmux(\"\").Panes len = %d, want 1", len(defCopy.Panes))
+	}
+	defCopy.Panes[0].Id = "also-mutated"
+	if AppConfig.Tmux.Panes[0].Id != "main" {
+		t.Errorf("mutating ProfileTmux(\"\").Panes leaked to AppConfig.Tmux: %v", AppConfig.Tmux.Panes)
+	}
+}
+
+// TestProfileTmux_OptIn verifies the headline opt-in use case: a profile
+// with tmux.enabled: true flips the merged config on even when the
+// top-level tmux is disabled. Also confirms ProfileTmux never mutates
+// AppConfig.Tmux.Enabled back.
+func TestProfileTmux_OptIn(t *testing.T) {
+	AppConfig = Config{}
+	AppConfig.Tmux = TmuxConfig{
+		Enabled:    false, // top-level disabled
+		WindowName: "[{{.Repo}}]{{.Branch}}",
+		Panes:      []TmuxPane{{Id: "main", Commands: []string{"yarn"}}},
+	}
+	AppConfig.Profiles = map[string]ProfileConfig{
+		"optin": {
+			Tmux: TmuxConfig{
+				Enabled: true,
+				Panes:   []TmuxPane{{Id: "x", Commands: []string{"run"}}},
+			},
+		},
+	}
+
+	got := ProfileTmux("optin")
+	if !got.Enabled {
+		t.Errorf("ProfileTmux(optin).Enabled = false, want true (profile OR on top-level false)")
+	}
+	if len(got.Panes) != 1 || got.Panes[0].Id != "x" {
+		t.Errorf("ProfileTmux(optin).Panes = %v, want [x] (replaced)", got.Panes)
+	}
+
+	// Top-level must not be mutated by the profile overlay.
+	if AppConfig.Tmux.Enabled {
+		t.Errorf("ProfileTmux(optin) leaked Enabled=true back into AppConfig.Tmux")
+	}
+	if AppConfig.Tmux.Panes[0].Id != "main" {
+		t.Errorf("ProfileTmux(optin) leaked Panes into AppConfig.Tmux: %v", AppConfig.Tmux.Panes)
+	}
+
+	// Default profile still sees top-level Enabled=false (no opt-in).
+	if ProfileTmux("").Enabled {
+		t.Errorf("ProfileTmux(\"\").Enabled = true, want false (top-level disabled, no profile)")
+	}
+}
+
+func TestProfileNames(t *testing.T) {
+	// No profiles defined: only the implicit "default" entry is returned.
+	AppConfig = Config{}
+	got := ProfileNames()
+	if len(got) != 1 || got[0] != "default" {
+		t.Errorf("ProfileNames() with no profiles = %v, want [default]", got)
+	}
+
+	// Profiles defined: names are returned sorted with "default" prepended.
+	AppConfig.Profiles = map[string]ProfileConfig{
+		"migration": {},
+		"frontend":  {},
+		"backend":   {},
+	}
+	got = ProfileNames()
+	want := []string{"backend", "default", "frontend", "migration"}
+	if len(got) != len(want) {
+		t.Fatalf("ProfileNames() len = %d, want %d (%v)", len(got), len(want), got)
+	}
+	for i, w := range want {
+		if got[i] != w {
+			t.Errorf("ProfileNames()[%d] = %q, want %q (full: %v)", i, got[i], w, got)
+		}
+	}
+
+	// Mutating the returned slice must not corrupt subsequent calls.
+	got[0] = "mutated"
+	got2 := ProfileNames()
+	if got2[0] != "backend" {
+		t.Errorf("ProfileNames() returned a shared slice; mutation leaked: %v", got2)
+	}
+
+	// A user-defined `profiles.default` entry is unreachable at runtime
+	// (lookupProfile short-circuits "default"), so it must NOT produce a
+	// duplicate "default" candidate in completion.
+	AppConfig.Profiles = map[string]ProfileConfig{
+		"default":   {Env: map[string]string{"FOO": "bar"}},
+		"migration": {},
+	}
+	got = ProfileNames()
+	count := 0
+	for _, n := range got {
+		if n == "default" {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Errorf("ProfileNames() produced %d 'default' entries, want 1: %v", count, got)
+	}
+	if len(got) != 2 {
+		t.Errorf("ProfileNames() with unreachable default + 1 profile = %v, want 2 entries", got)
+	}
+}
+
 func TestInitConfig_Profiles(t *testing.T) {
 	// Set up a temp project with a profile config
 	tmpGit, err := os.MkdirTemp("", "zgt-profile-test")
@@ -787,5 +988,168 @@ profiles:
 		if _, exists := p.Env[strings.ToLower(k)]; exists && strings.ToLower(k) != k {
 			t.Errorf("lowercased dup %q still present: %v", strings.ToLower(k), p.Env)
 		}
+	}
+}
+
+// TestInitConfig_Profiles_TmuxLoading verifies that a `tmux:` section nested
+// inside a profile is loaded into ProfileConfig.Tmux and that ProfileTmux
+// reflects the merged result (per-field overlay onto the top-level Tmux).
+func TestInitConfig_Profiles_TmuxLoading(t *testing.T) {
+	tmpGit, err := os.MkdirTemp("", "zgt-profile-tmux-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpGit)
+	exec.Command("git", "init", tmpGit).Run()
+
+	configPath := filepath.Join(tmpGit, "zgt.config.yaml")
+	os.WriteFile(configPath, []byte(`
+tmux:
+  enabled: true
+  keep_open: false
+  window_name: "[{{.Repo}}]{{.Branch}}"
+  panes:
+    - id: main
+      commands: ["yarn"]
+profiles:
+  frontend:
+    tmux:
+      keep_open: true
+      window_name: "[{{.Repo}}]fe-{{.Branch}}"
+      panes:
+        - id: fe
+          commands: ["npm run dev"]
+`), 0644)
+
+	AppConfig = Config{}
+	ConfigError = nil
+	CfgFile = configPath
+	defer func() { CfgFile = "" }()
+
+	InitConfig()
+
+	if ConfigError != nil {
+		t.Fatalf("InitConfig failed: %v", ConfigError)
+	}
+	p, ok := AppConfig.Profiles["frontend"]
+	if !ok {
+		t.Fatalf("frontend profile not loaded: %v", AppConfig.Profiles)
+	}
+	if !p.Tmux.KeepOpen {
+		t.Errorf("profile Tmux.KeepOpen not loaded: %+v", p.Tmux)
+	}
+	if p.Tmux.WindowName != "[{{.Repo}}]fe-{{.Branch}}" {
+		t.Errorf("profile Tmux.WindowName = %q, want fe template", p.Tmux.WindowName)
+	}
+	if len(p.Tmux.Panes) != 1 || p.Tmux.Panes[0].Id != "fe" {
+		t.Errorf("profile Tmux.Panes = %v, want [fe]", p.Tmux.Panes)
+	}
+
+	// ProfileTmux merges per-field onto the top-level Tmux.
+	got := ProfileTmux("frontend")
+	if !got.Enabled {
+		t.Errorf("ProfileTmux(frontend).Enabled = false, want true (inherited)")
+	}
+	if !got.KeepOpen {
+		t.Errorf("ProfileTmux(frontend).KeepOpen = false, want true (profile OR)")
+	}
+	if got.WindowName != "[{{.Repo}}]fe-{{.Branch}}" {
+		t.Errorf("ProfileTmux(frontend).WindowName = %q, want overridden", got.WindowName)
+	}
+	if len(got.Panes) != 1 || got.Panes[0].Id != "fe" {
+		t.Errorf("ProfileTmux(frontend).Panes = %v, want replaced [fe]", got.Panes)
+	}
+
+	// Default profile yields top-level tmux unchanged.
+	def := ProfileTmux("")
+	if def.WindowName != "[{{.Repo}}]{{.Branch}}" {
+		t.Errorf("ProfileTmux(\"\").WindowName = %q, want top-level", def.WindowName)
+	}
+	if len(def.Panes) != 1 || def.Panes[0].Id != "main" {
+		t.Errorf("ProfileTmux(\"\").Panes = %v, want top-level [main]", def.Panes)
+	}
+}
+
+// TestInitConfig_Profiles_TmuxGlobalLocalMerge verifies that a profile's
+// tmux section is merged (not lost) when the same profile is defined in both
+// global and local config, mirroring the env/hooks merge behavior.
+func TestInitConfig_Profiles_TmuxGlobalLocalMerge(t *testing.T) {
+	tmpGit, err := os.MkdirTemp("", "zgt-profile-tmux-gl")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpGit)
+	exec.Command("git", "init", tmpGit).Run()
+
+	tmpHome, err := os.MkdirTemp("", "zgt-profile-tmux-home")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpHome)
+
+	origHome := os.Getenv("HOME")
+	origWd, _ := os.Getwd()
+	os.Setenv("HOME", tmpHome)
+	defer os.Setenv("HOME", origHome)
+
+	globalDir := filepath.Join(tmpHome, ".config", "zgt")
+	os.MkdirAll(globalDir, 0755)
+	// Global frontend profile: sets keep_open and a window_name.
+	os.WriteFile(filepath.Join(globalDir, "config.yaml"), []byte(`
+profiles:
+  frontend:
+    tmux:
+      keep_open: true
+      window_name: "[{{.Repo}}]fe-{{.Branch}}"
+`), 0644)
+
+	// Local frontend profile: defines panes (replace) and overrides window_name.
+	localPath := filepath.Join(tmpGit, "zgt.config.yaml")
+	os.WriteFile(localPath, []byte(`
+tmux:
+  enabled: true
+profiles:
+  frontend:
+    tmux:
+      window_name: "[{{.Repo}}]FE-{{.Branch}}"
+      panes:
+        - id: fe
+          commands: ["npm run dev"]
+`), 0644)
+
+	os.Chdir(tmpGit)
+	defer os.Chdir(origWd)
+
+	AppConfig = Config{}
+	ConfigError = nil
+	InitConfig()
+
+	if ConfigError != nil {
+		t.Fatalf("InitConfig failed: %v", ConfigError)
+	}
+	p, ok := AppConfig.Profiles["frontend"]
+	if !ok {
+		t.Fatalf("frontend profile not merged: %v", AppConfig.Profiles)
+	}
+	// keep_open from global profile must survive the local merge.
+	if !p.Tmux.KeepOpen {
+		t.Errorf("global profile Tmux.KeepOpen lost after local merge: %+v", p.Tmux)
+	}
+	// window_name from local profile overrides global.
+	if p.Tmux.WindowName != "[{{.Repo}}]FE-{{.Branch}}" {
+		t.Errorf("profile Tmux.WindowName = %q, want local override", p.Tmux.WindowName)
+	}
+	// panes from local profile replace (none in global).
+	if len(p.Tmux.Panes) != 1 || p.Tmux.Panes[0].Id != "fe" {
+		t.Errorf("profile Tmux.Panes = %v, want local [fe]", p.Tmux.Panes)
+	}
+
+	// ProfileTmux reflects the merged profile + top-level enabled.
+	got := ProfileTmux("frontend")
+	if !got.Enabled {
+		t.Errorf("ProfileTmux(frontend).Enabled = false, want true (top-level OR)")
+	}
+	if !got.KeepOpen {
+		t.Errorf("ProfileTmux(frontend).KeepOpen = false, want true (global profile OR)")
 	}
 }

@@ -72,6 +72,11 @@ tmux:
 # Defining the same profile name in BOTH global and local config composes:
 # env merges per-key (local overrides global) and the local profile's hooks
 # append AFTER the global profile's hooks - matching the top-level playbook.
+#
+# A profile may also overlay a `tmux` section onto the top-level `tmux`:
+#   - enabled / keep_open: OR (profile can enable, never disable)
+#   - window_name: overridden when non-empty
+#   - panes: replaced wholesale when the profile defines at least one pane
 
 profiles:
   migration:
@@ -99,3 +104,24 @@ profiles:
         # Tear down api/envoy (top-level `cd && down`) first, then this
         # profile-specific hook wipes the isolated DB volume.
         - "cd {{.Path}} && docker compose --profile db down -v"
+    # The migration profile gets its own tmux window name and an extra pane
+    # tailing the isolated DB logs. keep_open is OR-ed on so `zgt rm` leaves
+    # the window alive for post-mortem inspection.
+    tmux:
+      keep_open: true
+      window_name: "[{{.Repo}}]mig-{{.Branch}}"
+      panes:
+        - id: main
+          commands:
+            - "echo 'Welcome to {{.Repo}} ({{.Branch}}) [migration]'"
+        - id: server
+          target: "main"
+          split: horizontal
+          size: "30%"
+          commands:
+            - "cd {{.Path}} && docker compose logs -f api envoy"
+        - id: dblogs
+          target: "server"
+          split: vertical
+          commands:
+            - "cd {{.Path}} && docker compose --profile db logs -f db"

@@ -369,6 +369,52 @@ profile names are rejected at `zgt add` time. See `example/` for a complete
 implements the "main worktree owns the shared DB, migration worktrees clone
 its Docker volume" pattern.
 
+#### Profile `tmux` override
+
+A profile may also overlay a `tmux` section onto the top-level `tmux` config.
+The merge is per-field:
+
+- `enabled` / `keep_open`: OR semantics — the profile can turn the flag **on**,
+  but never off. So a profile can opt into tmux even if the top-level left it
+  disabled, and a profile can keep the window open on `zgt rm` regardless of
+  the global default.
+- `window_name`: overridden when the profile sets a non-empty value. This is
+  the common lever for distinguishing profile windows in the tmux window list
+  (e.g. `[repo]fe-branch` vs `[repo]branch`).
+- `panes`: replaced wholesale when the profile defines at least one pane;
+  otherwise the top-level panes are used as-is.
+
+```yaml
+tmux:
+  enabled: true
+  window_name: "[{{.Repo}}]{{.Branch}}"
+  panes:
+    - id: main
+      commands: ["yarn"]
+
+profiles:
+  frontend:
+    tmux:
+      keep_open: true
+      window_name: "[{{.Repo}}]fe-{{.Branch}}"
+      panes:
+        - id: fe
+          commands: ["npm run dev"]
+```
+
+The profile-resolved `tmux` config drives `zgt add`, `zgt tmux open`, and
+`zgt tmux close` (the close command now also resolves the profile from
+`zgt state`, matching `zgt rm`). Note that `zgt tmux close` force-closes
+the window regardless of `keep_open`, so a profile that turned `keep_open`
+on will still keep the window alive across `zgt rm` but will close on an
+explicit `zgt tmux close`.
+
+The same per-field rules apply when a profile is defined in **both** the
+global and local config: `enabled`/`keep_open` are OR-ed across the two
+profile definitions, `window_name` is overridden by the local profile when
+non-empty, and `panes` are replaced by whichever side defines any (local
+replaces global; otherwise global wins).
+
 #### Template Functions
 
 You can use functions to transform placeholder values.

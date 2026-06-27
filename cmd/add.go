@@ -204,4 +204,11 @@ func init() {
 	addCmd.Flags().StringVarP(&pathFlag, "path", "p", "", "custom target path for the worktree")
 	addCmd.Flags().StringVarP(&profileFlag, "profile", "", "", "select a profile from the 'profiles' section of zgt.config.yml")
 	rootCmd.AddCommand(addCmd)
+
+	// Shell completion for --profile: list profile names defined in config.
+	// config.InitConfig runs via cobra.OnInitialize before completion funcs,
+	// so AppConfig.Profiles is populated by the time this is invoked.
+	_ = addCmd.RegisterFlagCompletionFunc("profile", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		return config.ProfileNames(), cobra.ShellCompDirectiveNoFileComp
+	})
 }

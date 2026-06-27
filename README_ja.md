@@ -349,6 +349,36 @@ zgt add feat/migrate-bar --profile migration
 
 `--profile` 未指定や `--profile default` は暗黙のデフォルトプロファイル（トップレベルのみ）を選択するので、後方互換性は完全に保たれます。未知のプロファイル名は `zgt add` 時にエラーになります。「メインworktree が DB を所有し、migration worktree は Docker volume をコピーして独立 DB を持つ」運用の完全なサンプルは `example/` ディレクトリ（`docker-compose.yaml` + `zgt.config.yaml` + `scripts/db-clone.sh`）を参照してください。
 
+#### プロファイルでの `tmux` 上書き
+
+プロファイルには `tmux` セクションも記述でき、トップレベルの `tmux` にフィールド単位で重ね合わせます。マージ規則は以下の通りです。
+
+- `enabled` / `keep_open`: OR（論理和）。プロファイル側で `true` にすると有効化されますが、`false` で無効化することはできません。そのため、トップレベルで tmux 無効でもプロファイルで有効化できますし、`zgt rm` でウィンドウを残す設定もプロファイル側で強制できます。
+- `window_name`: プロファイルが空でない値を設定した場合に上書きします。tmux ウィンドウリストでプロファイルを区別する（例: `[repo]fe-branch` と `[repo]branch`）ための主要なレバーです。
+- `panes`: プロファイルが1つでもペインを定義した場合は全体を置き換え、未定義ならトップレベルの `panes` をそのまま使用します。
+
+```yaml
+tmux:
+  enabled: true
+  window_name: "[{{.Repo}}]{{.Branch}}"
+  panes:
+    - id: main
+      commands: ["yarn"]
+
+profiles:
+  frontend:
+    tmux:
+      keep_open: true
+      window_name: "[{{.Repo}}]fe-{{.Branch}}"
+      panes:
+        - id: fe
+          commands: ["npm run dev"]
+```
+
+プロファイル解決後の `tmux` 設定は `zgt add`・`zgt tmux open`・`zgt tmux close` で共通して使われます（`tmux close` も `zgt rm` と同様に `zgt state` からプロファイルを解決するようになりました）。なお `zgt tmux close` は `keep_open` を無視して強制終了するため、プロファイルで `keep_open: true` にしても `zgt rm` では窓が残りますが `zgt tmux close` では閉じられます。
+
+プロファイルがグローバル設定とローカル設定の**両方**に定義されている場合も同じフィールド単位の規則が適用されます。`enabled`/`keep_open` は両プロファイル定義の OR、`window_name` はローカルプロファイルが空でない値を設定すれば上書き、`panes` はどちらか側が1つでも定義すれば置換（ローカルがグローバルを置換、どちらも未定義なら上位の設定を継承）されます。
+
 #### テンプレート関数
 
 プレースホルダーの値を変換するための関数を使用できます。
