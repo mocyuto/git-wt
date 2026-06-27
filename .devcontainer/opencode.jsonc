@@ -1,0 +1,14 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  // devcontainer 内でのみ適用される opencode 設定。
+  // 実体はここ (.devcontainer/) で Git 管理し、コンテナ起動時に
+  // containerEnv の OPENCODE_CONFIG から明示的に読み込まれる
+  // (devcontainer.json 参照)。ホスト側の opencode には影響しない。
+  // ※ OPENCODE_CONFIG は project-root の opencode.json 系より優先度が
+  //    低いので、将来ルートに opencode 設定を置くとこちらは上書きされる。
+  "permission": {
+    "bash": {
+      "git commit *": "ask",
+    },
+  },
+}
