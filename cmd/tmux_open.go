@@ -2,11 +2,13 @@ package cmd
 
 import (
 	"fmt"
-
+	"path/filepath"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/mocyuto/zgt/internal/git"
+	"github.com/mocyuto/zgt/internal/gitroot"
+	"github.com/mocyuto/zgt/internal/state"
 	"github.com/mocyuto/zgt/internal/tmux"
 	"github.com/mocyuto/zgt/internal/zcontext"
 	"github.com/spf13/cobra"
@@ -67,7 +69,20 @@ var tmuxOpenCmd = &cobra.Command{
 }
 
 func openWorktree(path, branch string) error {
-	ctx := zcontext.New(path, branch)
+	// Resolve profile from state so {{.Profile}} placeholders in tmux
+	// pane/window commands expand consistently with `zgt add` / `zgt env`.
+	absPath := state.NormalizePath(path)
+	mainRoot, _ := gitroot.GetMainProjectRoot()
+	projectName := filepath.Base(mainRoot)
+	_ = state.LoadState()
+	profile := ""
+	if proj, ok := state.AppState.Projects[projectName]; ok {
+		if wt, ok := proj.Worktrees[absPath]; ok {
+			profile = wt.Profile
+		}
+	}
+
+	ctx := zcontext.NewWithProfile(path, branch, profile)
 	windowName := tmux.GetWindowName(ctx)
 
 	windowID, exists, err := tmux.GetWindowIDByName(windowName)
