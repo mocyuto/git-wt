@@ -1,5 +1,9 @@
 # Changelog
 
+## [v0.15.1](https://github.com/mocyuto/zgt/compare/v0.15.0...v0.15.1) - 2026-06-27
+
+- feat(profile): overlay tmux config from profiles by @mocyuto in https://github.com/mocyuto/zgt/pull/89
+
 ## [v0.15.0](https://github.com/mocyuto/zgt/compare/v0.14.1...v0.15.0) - 2026-06-27
 
 - chore(tagpr): guard against duplicate release PR on self-merge push by @mocyuto in https://github.com/mocyuto/zgt/pull/84
