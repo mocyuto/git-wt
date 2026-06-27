@@ -1,5 +1,12 @@
 # Changelog
 
+## [v0.15.0](https://github.com/mocyuto/zgt/compare/v0.14.1...v0.15.0) - 2026-06-27
+
+- chore(tagpr): guard against duplicate release PR on self-merge push by @mocyuto in https://github.com/mocyuto/zgt/pull/84
+- chore(devcontainer): add devcontainer setup with isolated opencode config by @mocyuto in https://github.com/mocyuto/zgt/pull/87
+- feat: profiles for per-worktree env/hooks (isolated DB pattern) by @mocyuto in https://github.com/mocyuto/zgt/pull/86
+- feat(tmux): resolve profile from state in tmux open by @mocyuto in https://github.com/mocyuto/zgt/pull/88
+
 ## [v0.14.1](https://github.com/mocyuto/zgt/compare/v0.14.0...v0.14.1) - 2026-04-19
 - Add shared option and alias support for Git hooks configuration by @mocyuto in https://github.com/mocyuto/zgt/pull/80
 - Support independent Git hooks per worktree and improve configuration flexibility by @mocyuto in https://github.com/mocyuto/zgt/pull/82
