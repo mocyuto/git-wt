@@ -1,0 +1,20 @@
+{
+  "name": "zgt development",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "configureZshAsDefaultShell": true
+    }
+  },
+  "mounts": [
+    "source=zgt-gomodcache,target=/go/pkg/mod,type=volume"
+  ],
+  "containerEnv": {
+    "OPENCODE_CONFIG": "${containerWorkspaceFolder}/.devcontainer/opencode.jsonc"
+  },
+  "postCreateCommand": "chmod +x .githooks/pre-commit; git config core.hooksPath .githooks || true; go mod download",
+  "remoteUser": "vscode"
+}
