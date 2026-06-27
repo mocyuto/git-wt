@@ -12,6 +12,11 @@ import (
 // path is the target path (e.g. worktree path).
 // targetBranch is the branch being operated on.
 func New(path, targetBranch string) template.Context {
+	return NewWithProfile(path, targetBranch, "")
+}
+
+// NewWithProfile creates a new template.Context with the given profile name.
+func NewWithProfile(path, targetBranch, profile string) template.Context {
 	mainRoot, _ := gitroot.GetMainProjectRoot()
 	currentRoot, _ := gitroot.GetGitRoot()
 	currentBranch, _ := git.GetCurrentBranch()
@@ -28,5 +33,6 @@ func New(path, targetBranch string) template.Context {
 		CurrentDir:    filepath.Base(currentRoot),
 		TargetBranch:  targetBranch,
 		CurrentBranch: currentBranch,
+		Profile:       profile,
 	}
 }

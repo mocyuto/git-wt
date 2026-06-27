@@ -49,8 +49,21 @@ var removeCmd = &cobra.Command{
 			branch = b
 		}
 
+		// Resolve profile from state BEFORE removing the worktree entry,
+		// so that profile-specific rm hooks (e.g. isolated DB cleanup) run.
+		absPath := state.NormalizePath(path)
+		mainRoot, _ := gitroot.GetMainProjectRoot()
+		projectName := filepath.Base(mainRoot)
+		_ = state.LoadState()
+		profile := ""
+		if proj, ok := state.AppState.Projects[projectName]; ok {
+			if wt, ok := proj.Worktrees[absPath]; ok {
+				profile = wt.Profile
+			}
+		}
+
 		// Gracefully close tmux window if configured
-		ctx := zcontext.New(path, branch)
+		ctx := zcontext.NewWithProfile(path, branch, profile)
 		if err := tmux.CloseWindow(ctx, false); err != nil {
 			logger.Warn("Failed to close tmux window: %v", err)
 		}
@@ -68,14 +81,10 @@ var removeCmd = &cobra.Command{
 			}
 		}
 
-		// Run removal hooks
+		// Run removal hooks (profile-aware)
 		hook.RunHooks("rm", ctx)
 
 		// Release port index
-		absPath := state.NormalizePath(path)
-		mainRoot, _ := gitroot.GetMainProjectRoot()
-		projectName := filepath.Base(mainRoot)
-		_ = state.LoadState()
 		state.ReleasePortIndex(projectName, absPath)
 		state.CleanupState()
 		_ = state.SaveState()

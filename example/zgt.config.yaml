@@ -1,0 +1,101 @@
+# Example zgt.config.yaml with profiles
+#
+# Demonstrates the pattern:
+#   * Main worktree runs the shared DB (always, on a fixed compose project
+#     name "<repo>-main").
+#   * Feature worktrees separate api/envoy via COMPOSE_PROJECT_NAME but REUSE
+#     the shared DB by pointing DB_HOST at the main DB's container name.
+#   * A `migration` profile runs the isolated DB inside the SAME compose
+#     project as api/envoy, with its Docker volume cloned from the main DB
+#     so destructive migration tests cannot corrupt the shared DB.
+#
+# Variables you can use inside templates (added/replaced by zgt):
+#   {{.Repo}}           main project root directory name
+#   {{.Branch}}         target branch name ("zgt add")
+#   {{.Path}}           absolute path of the worktree
+#   {{.CurrentDir}}     current working directory name
+#   {{.CurrentBranch}}  branch name where zgt was invoked
+#   {{.Profile}}        selected profile name (empty for default)
+
+ports:
+  api: 3000
+  envoy: 8080
+
+env:
+  # All worktrees get their own compose project for api/envoy...
+  COMPOSE_PROJECT_NAME: "{{.Repo}}-{{.Branch}}"
+  # ...but the DB is always on a fixed compose project (the main worktree).
+  DB_PROJECT: "{{.Repo}}-main"
+  # Default DB_HOST = service name of the shared DB on the main compose project
+  # (your worktrees must reach it via the docker network you wire up).
+  DB_HOST: "db"
+
+hooks:
+  add:
+    # `cd {{.Path}} &&` ensures docker compose picks up THIS worktree's
+    # docker-compose.yaml (compose resolves relative paths against the
+    # shell CWD, and zgt runs hooks from where you invoked `zgt add`).
+    # API_PORT and ENVOY_PORT are auto-exported into the hook subprocess
+    # from `zgt`'s port table, so compose sees them without `eval zgt env`.
+    - "cd {{.Path}} && docker compose up -d api envoy"
+  rm:
+    - "cd {{.Path}} && docker compose down"
+
+git_hooks:
+  enabled: true
+
+tmux:
+  enabled: true
+  panes:
+    - id: main
+      commands:
+        - "echo 'Welcome to {{.Repo}} ({{.Branch}})'"
+    - id: server
+      target: "main"
+      split: horizontal
+      size: "30%"
+      commands:
+        - "cd {{.Path}} && docker compose logs -f api envoy"
+
+# ---------------------------------------------------------------------------
+# Profiles
+# ---------------------------------------------------------------------------
+# A profile overrides env keys (per-key; top-level stays as the base) and
+# APPENDS hook commands after the top-level hooks. An empty/missing profile
+# behaves identically to no `profiles` key (full backward compatibility).
+#
+# Select a profile with `zgt add <branch> --profile migration`. The selected
+# profile is persisted in zgt's state, so `zgt env`, `zgt rm`, and hooks all
+# continue to use it for that worktree.
+#
+# Profile names are matched case-insensitively (stored lowercased internally).
+# Defining the same profile name in BOTH global and local config composes:
+# env merges per-key (local overrides global) and the local profile's hooks
+# append AFTER the global profile's hooks - matching the top-level playbook.
+
+profiles:
+  migration:
+    env:
+      # The isolated DB lives INSIDE this worktree's compose project. Its
+      # Docker volume becomes "<COMPOSE_PROJECT_NAME>_pgdata" once the db
+      # service starts.
+      DB_HOST: "db"
+      # Hint consumed by scripts/db-clone.sh (template-replaced before run
+      # via the hook's profile env).
+      DB_ISOLATED: "1"
+      DB_SOURCE_PROJECT: "{{.Repo}}-main"
+    hooks:
+      add:
+        # Profile hooks run AFTER top-level hooks. Order matters:
+        #   1. top-level: `cd {{.Path}} && docker compose up -d api envoy`
+        #      -- no DB because db is gated by `profiles: [db]` in
+        #      docker-compose.yaml; the empty pgdata volume is NOT created
+        #      because db is not started. Safe.
+        #   2. this hook: copy the main DB's volume into THIS worktree's
+        #      compose project, then bring up the isolated DB together with
+        #      api+envoy (re-running api/envoy is a no-op if already up).
+        - "cd {{.Path}} && ./scripts/db-clone.sh && docker compose --profile db up -d db api envoy"
+      rm:
+        # Tear down api/envoy (top-level `cd && down`) first, then this
+        # profile-specific hook wipes the isolated DB volume.
+        - "cd {{.Path}} && docker compose --profile db down -v"

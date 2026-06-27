@@ -319,6 +319,55 @@ Placeholders can be used in `hooks`, `env`, and `tmux.window_name` values.
 | `{{.Branch}}`        | Name of the target branch (provided as argument).             |
 | `{{.TargetBranch}}`  | Alias for `{{.Branch}}`.                                      |
 | `{{.CurrentBranch}}` | Name of the branch you are currently on when executing `zgt`. |
+| `{{.Profile}}`       | Selected profile name (empty for default). See [Profiles](#profiles). |
+
+### Profiles
+
+Profiles let you switch `env` overrides and **append** additional hook commands
+per-worktree via `zgt add <branch> --profile <name>`. The selected profile is
+persisted in `zgt state`, so `zgt env`, `zgt rm`, and the matching hooks all
+continue to use the profile for the lifetime of that worktree.
+
+A profile is defined under the top-level `profiles` map. Profile `env` keys
+override top-level env per-key (top-level keys you do not mention are kept).
+Profile `hooks.add` / `hooks.rm` are appended AFTER the top-level hooks,
+so default behaviour remains unchanged and you only add extra steps.
+
+```yaml
+env:
+  COMPOSE_PROJECT_NAME: "{{.Repo}}-{{.Branch}}"
+  DB_HOST: "db"
+
+profiles:
+  migration:
+    env:
+      # Override DB_HOST only; COMPOSE_PROJECT_NAME is inherited from top-level.
+      DB_HOST: "iso-db"
+    hooks:
+      add:
+        # Run AFTER the top-level `docker compose up -d api envoy` etc.
+        - "./scripts/db-clone.sh"
+      rm:
+        # Run AFTER the top-level `docker compose down`.
+        - "docker compose down -v"
+```
+
+Usage:
+
+```bash
+# Normal worktree (uses shared DB):
+zgt add feat/foo
+
+# Worktree with isolated DB clone (DB volume copied on `add`, wiped on `rm`):
+zgt add feat/migrate-bar --profile migration
+```
+
+An empty or `--profile default` value selects the implicit default profile
+(top-level only), which keeps behaviour fully backward compatible. Unknown
+profile names are rejected at `zgt add` time. See `example/` for a complete
+`docker-compose.yaml + zgt.config.yaml + scripts/db-clone.sh` walkthrough that
+implements the "main worktree owns the shared DB, migration worktrees clone
+its Docker volume" pattern.
 
 #### Template Functions
 

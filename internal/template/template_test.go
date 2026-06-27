@@ -170,3 +170,30 @@ func TestReplaceConfig(t *testing.T) {
 		t.Errorf("Tmux.Panes[0].Commands[0] mismatch: %v", got.Tmux.Panes[0].Commands[0])
 	}
 }
+
+func TestReplaceConfig_Profiles(t *testing.T) {
+	ctx := Context{
+		Path:   "/path",
+		Branch: "feat",
+		Repo:   "myrepo",
+	}
+
+	cfg := config.Config{}
+	cfg.Profiles = map[string]config.ProfileConfig{
+		"migration": {
+			Env: map[string]string{"DB_HOST": "{{.Branch}}-db"},
+			Hooks: config.HooksConfig{
+				Add: []string{"clone {{.Repo}}"},
+			},
+		},
+	}
+
+	got := ReplaceConfig(cfg, ctx)
+	p := got.Profiles["migration"]
+	if p.Env["DB_HOST"] != "feat-db" {
+		t.Errorf("profile Env not replaced: %v", p.Env)
+	}
+	if p.Hooks.Add[0] != "clone myrepo" {
+		t.Errorf("profile Hooks.Add not replaced: %v", p.Hooks.Add)
+	}
+}

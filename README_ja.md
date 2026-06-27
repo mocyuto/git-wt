@@ -310,6 +310,44 @@ hooks:
 | `{{.Branch}}`        | 対象ブランチ名（引数で指定されたもの）           |
 | `{{.TargetBranch}}`  | `{{.Branch}}` のエイリアス                       |
 | `{{.CurrentBranch}}` | `zgt` 実行時にチェックアウトされていたブランチ名 |
+| `{{.Profile}}`       | 選択されたプロファイル名（デフォルト時は空）。[プロファイル](#プロファイルprofiles) 参照 |
+
+### プロファイル（Profiles）
+
+プロファイルを使うと `zgt add <branch> --profile <name>` でワークツリーごとに `env` の上書きと `hooks` の追加が行えます。選択されたプロファイルは `zgt` の state に保存されるので、`zgt env`・`zgt rm`・対応する hooks がその worktree のライフサイクル全体でプロファイルを使い続けます。
+
+プロファイルはトップレベルの `profiles` マップの下に定義します。プロファイルの `env` はトップレベルの env を**キー単位**で上書きします（明示的に指定していないキーはトップレベルの値を引き継ぎます）。プロファイルの `hooks.add` / `hooks.rm` は**トップレベルの hooks の後に追加**実行されるので、デフォルトの挙動はそのままに追加ステップだけを差し込めます。
+
+```yaml
+env:
+  COMPOSE_PROJECT_NAME: "{{.Repo}}-{{.Branch}}"
+  DB_HOST: "db"
+
+profiles:
+  migration:
+    env:
+      # DB_HOST だけ上書き。COMPOSE_PROJECT_NAME はトップレベルを継承。
+      DB_HOST: "iso-db"
+    hooks:
+      add:
+        # トップレベルの `docker compose up -d api envoy` などが終わった後に実行。
+        - "./scripts/db-clone.sh"
+      rm:
+        # トップレベルの `docker compose down` の後に追加。
+        - "docker compose down -v"
+```
+
+使い方:
+
+```bash
+# 通常の worktree（共有 DB を参照）:
+zgt add feat/foo
+
+# 隔離 DB を持つ worktree（`add` で DB の volume コピー、`rm` で volume ごと削除）:
+zgt add feat/migrate-bar --profile migration
+```
+
+`--profile` 未指定や `--profile default` は暗黙のデフォルトプロファイル（トップレベルのみ）を選択するので、後方互換性は完全に保たれます。未知のプロファイル名は `zgt add` 時にエラーになります。「メインworktree が DB を所有し、migration worktree は Docker volume をコピーして独立 DB を持つ」運用の完全なサンプルは `example/` ディレクトリ（`docker-compose.yaml` + `zgt.config.yaml` + `scripts/db-clone.sh`）を参照してください。
 
 #### テンプレート関数
 

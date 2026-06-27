@@ -90,6 +90,33 @@ Tmux integration settings.
   - `size`: Percentage or number of lines/columns.
   - `commands`: List of commands to run in the pane.
 
+### `profiles`
+
+A map of named profiles selectable with `zgt add <branch> --profile <name>`.
+The selected profile is stored in zgt's state for that worktree, so `zgt env`,
+`zgt rm`, and hooks continue to use the profile for the lifetime of the
+worktree. Each profile value supports `env` (per-key override of top-level
+env) and `hooks` (the `add`/`rm` slices are appended AFTER the top-level
+hooks).
+
+```yaml
+profiles:
+  migration:
+    env:
+      DB_HOST: "iso-db"
+    hooks:
+      add:
+        - "./scripts/db-clone.sh"
+      rm:
+        - "docker compose down -v"
+```
+
+An empty or `default` profile name matches the implicit default behavior
+(top-level only), so the `profiles` key is fully optional. The `{{.Profile}}`
+placeholder exposes the active profile name to `hooks`/`env` templates. The
+`example/` directory in the repo demonstrates the "isolated DB per migration
+worktree" pattern end-to-end.
+
 ## Placeholders
 
 Placeholders can be used in `hooks`, `env`, and `tmux.window_name`.
@@ -102,6 +129,7 @@ Placeholders can be used in `hooks`, `env`, and `tmux.window_name`.
 | `{{.Branch}}`        | Target branch name.                      |
 | `{{.TargetBranch}}`  | Alias for `{{.Branch}}`.                 |
 | `{{.CurrentBranch}}` | Branch name where `zgt` was executed.    |
+| `{{.Profile}}`       | Selected profile name (empty for default). |
 
 ## Inspecting Configuration (`config`)
 

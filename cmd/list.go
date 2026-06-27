@@ -47,17 +47,21 @@ func ListWorktrees() error {
 
 	_ = state.LoadState()
 	portsMap := make(map[string]map[string]int)
+	profileMap := make(map[string]string)
 	// We don't have a direct way to get all ports by path easily from State
 	// Let's just use GetCurrentWorktreePorts logic if we were in that dir,
 	// but since we iterate all worktrees, let's just pre-process AppState.
 	for _, proj := range state.AppState.Projects {
 		for p, wt := range proj.Worktrees {
 			portsMap[p] = wt.Ports
+			if wt.Profile != "" {
+				profileMap[p] = wt.Profile
+			}
 		}
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "PATH\tCOMMIT\tBRANCH\tSTATUS\tPORTS")
+	fmt.Fprintln(w, "PATH\tCOMMIT\tBRANCH\tSTATUS\tPORTS\tPROFILE")
 
 	for _, wt := range wts {
 		// Check for local changes
@@ -82,7 +86,11 @@ func ListWorktrees() error {
 		}
 
 		portStr := "-"
-		if ports, ok := portsMap[wt.Path]; ok {
+		// git may report a symlink-unevaluated path (e.g. /tmp on macOS),
+		// while state stores NormalizePath-evaluated paths (/private/tmp).
+		// Look up under the normalized path so PORTS / PROFILE line up.
+		normPath := state.NormalizePath(wt.Path)
+		if ports, ok := portsMap[normPath]; ok {
 			var portInfos []string
 			for name, idx := range ports {
 				basePort := config.AppConfig.Ports[name]
@@ -99,7 +107,12 @@ func ListWorktrees() error {
 			statusStr = "[DIRTY]"
 		}
 
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", wt.Path, head, branchName, statusStr, portStr)
+		profileStr := "-"
+		if p, ok := profileMap[normPath]; ok {
+			profileStr = p
+		}
+
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n", wt.Path, head, branchName, statusStr, portStr, profileStr)
 	}
 	w.Flush()
 
