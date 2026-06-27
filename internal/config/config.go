@@ -5,6 +5,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -530,6 +531,28 @@ func ProfileExists(profile string) bool {
 	}
 	_, ok := lookupProfile(profile)
 	return ok
+}
+
+// ProfileNames returns the names of all profiles defined in the config, sorted
+// alphabetically, with the implicit "default" entry included. Profile names
+// are stored lowercased internally (Viper normalizes map keys), so the
+// returned names are lowercased. The list is safe to use as shell-completion
+// candidates for the --profile flag and contains only "default" when no
+// profiles section is defined. A user-defined `profiles.default` entry is
+// suppressed here (it is unreachable at runtime because lookupProfile treats
+// "default" as the implicit no-op profile), so "default" always appears at
+// most once.
+func ProfileNames() []string {
+	names := make([]string, 0, len(AppConfig.Profiles)+1)
+	for name := range AppConfig.Profiles {
+		if name == "default" {
+			continue
+		}
+		names = append(names, name)
+	}
+	names = append(names, "default")
+	sort.Strings(names)
+	return names
 }
 
 // lookupProfile returns the ProfileConfig for the given name (case-insensitive

@@ -817,6 +817,60 @@ func TestProfileTmux_OptIn(t *testing.T) {
 	}
 }
 
+func TestProfileNames(t *testing.T) {
+	// No profiles defined: only the implicit "default" entry is returned.
+	AppConfig = Config{}
+	got := ProfileNames()
+	if len(got) != 1 || got[0] != "default" {
+		t.Errorf("ProfileNames() with no profiles = %v, want [default]", got)
+	}
+
+	// Profiles defined: names are returned sorted with "default" prepended.
+	AppConfig.Profiles = map[string]ProfileConfig{
+		"migration": {},
+		"frontend":  {},
+		"backend":   {},
+	}
+	got = ProfileNames()
+	want := []string{"backend", "default", "frontend", "migration"}
+	if len(got) != len(want) {
+		t.Fatalf("ProfileNames() len = %d, want %d (%v)", len(got), len(want), got)
+	}
+	for i, w := range want {
+		if got[i] != w {
+			t.Errorf("ProfileNames()[%d] = %q, want %q (full: %v)", i, got[i], w, got)
+		}
+	}
+
+	// Mutating the returned slice must not corrupt subsequent calls.
+	got[0] = "mutated"
+	got2 := ProfileNames()
+	if got2[0] != "backend" {
+		t.Errorf("ProfileNames() returned a shared slice; mutation leaked: %v", got2)
+	}
+
+	// A user-defined `profiles.default` entry is unreachable at runtime
+	// (lookupProfile short-circuits "default"), so it must NOT produce a
+	// duplicate "default" candidate in completion.
+	AppConfig.Profiles = map[string]ProfileConfig{
+		"default":   {Env: map[string]string{"FOO": "bar"}},
+		"migration": {},
+	}
+	got = ProfileNames()
+	count := 0
+	for _, n := range got {
+		if n == "default" {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Errorf("ProfileNames() produced %d 'default' entries, want 1: %v", count, got)
+	}
+	if len(got) != 2 {
+		t.Errorf("ProfileNames() with unreachable default + 1 profile = %v, want 2 entries", got)
+	}
+}
+
 func TestInitConfig_Profiles(t *testing.T) {
 	// Set up a temp project with a profile config
 	tmpGit, err := os.MkdirTemp("", "zgt-profile-test")
