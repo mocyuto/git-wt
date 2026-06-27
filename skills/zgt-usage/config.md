@@ -96,8 +96,8 @@ A map of named profiles selectable with `zgt add <branch> --profile <name>`.
 The selected profile is stored in zgt's state for that worktree, so `zgt env`,
 `zgt rm`, and hooks continue to use the profile for the lifetime of the
 worktree. Each profile value supports `env` (per-key override of top-level
-env) and `hooks` (the `add`/`rm` slices are appended AFTER the top-level
-hooks).
+env), `hooks` (the `add`/`rm` slices are appended AFTER the top-level
+hooks), and `tmux` (per-field overlay onto the top-level `tmux`).
 
 ```yaml
 profiles:
@@ -116,6 +116,37 @@ An empty or `default` profile name matches the implicit default behavior
 placeholder exposes the active profile name to `hooks`/`env` templates. The
 `example/` directory in the repo demonstrates the "isolated DB per migration
 worktree" pattern end-to-end.
+
+Profile `tmux` overlay merges per-field onto the top-level `tmux`:
+
+- `enabled` / `keep_open`: OR semantics (profile can enable, never disable).
+- `window_name`: overridden when the profile sets a non-empty value.
+- `panes`: replaced wholesale when the profile defines at least one pane;
+  otherwise the top-level panes are inherited.
+
+```yaml
+tmux:
+  enabled: true
+  window_name: "[{{.Repo}}]{{.Branch}}"
+  panes:
+    - id: main
+      commands: ["yarn"]
+
+profiles:
+  frontend:
+    tmux:
+      keep_open: true
+      window_name: "[{{.Repo}}]fe-{{.Branch}}"
+      panes:
+        - id: fe
+          commands: ["npm run dev"]
+```
+
+The profile-resolved `tmux` config drives `zgt add`, `zgt tmux open`, and
+`zgt tmux close` consistently. `zgt tmux close` force-closes regardless of
+`keep_open`. The same per-field rules apply when a profile is defined in
+both global and local config (local overrides global for `window_name`,
+replaces `panes`, and ORs `enabled`/`keep_open`).
 
 ## Placeholders
 

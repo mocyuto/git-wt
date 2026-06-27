@@ -83,10 +83,12 @@ type HooksConfig struct {
 
 // ProfileConfig is a profile-specific override applied on top of the
 // top-level Config. Profile env keys override top-level env per-key; profile
-// hooks.add / hooks.rm are appended AFTER the top-level hooks.
+// hooks.add / hooks.rm are appended AFTER the top-level hooks. Profile tmux
+// is merged per-field onto the top-level Tmux (see ProfileTmux).
 type ProfileConfig struct {
 	Env   map[string]string `mapstructure:"env"   yaml:"env"`
 	Hooks HooksConfig       `mapstructure:"hooks" yaml:"hooks"`
+	Tmux  TmuxConfig        `mapstructure:"tmux"  yaml:"tmux"`
 }
 
 type Config struct {
@@ -224,6 +226,12 @@ func InitConfig() {
 							merged = append(merged, localP.Hooks.RM...)
 							globalP.Hooks.RM = merged
 						}
+						// Merge profile-level tmux with the same per-field
+						// semantics as ProfileTmux (single source of truth:
+						// mergeTmux). Enabled/KeepOpen are OR-ed, WindowName is
+						// overridden when non-empty, and Panes are replaced
+						// wholesale when the local profile defines any.
+						globalP.Tmux = mergeTmux(globalP.Tmux, localP.Tmux)
 						AppConfig.Profiles[name] = globalP
 					}
 				}
@@ -466,6 +474,51 @@ func ProfileEnv(profile string) map[string]string {
 		base[k] = v
 	}
 	return base
+}
+
+// ProfileTmux returns the merged TmuxConfig for a profile. The top-level
+// Tmux is used as base; the profile's Tmux is overlaid per-field:
+//   - Enabled and KeepOpen use OR semantics (profile can enable but not
+//     disable).
+//   - WindowName is overridden when the profile sets a non-empty value.
+//   - Panes are replaced wholesale when the profile defines at least one
+//     pane.
+//
+// An empty or "default" profile yields the top-level Tmux unchanged. The
+// returned Panes slice is always a fresh copy, so callers may mutate it
+// without affecting AppConfig.
+func ProfileTmux(profile string) TmuxConfig {
+	p, ok := lookupProfile(profile)
+	if !ok {
+		return mergeTmux(AppConfig.Tmux, TmuxConfig{})
+	}
+	return mergeTmux(AppConfig.Tmux, p.Tmux)
+}
+
+// mergeTmux overlays src onto dst per-field with the same rules as
+// ProfileTmux: Enabled/KeepOpen are OR-ed, WindowName is overridden when
+// non-empty, and Panes are replaced when src defines any. The returned
+// Panes slice is always a fresh copy so the result is safe for callers to
+// mutate without aliasing AppConfig.
+func mergeTmux(dst, src TmuxConfig) TmuxConfig {
+	if src.Enabled {
+		dst.Enabled = true
+	}
+	if src.KeepOpen {
+		dst.KeepOpen = true
+	}
+	if src.WindowName != "" {
+		dst.WindowName = src.WindowName
+	}
+	switch {
+	case len(src.Panes) > 0:
+		dst.Panes = append([]TmuxPane(nil), src.Panes...)
+	case len(dst.Panes) > 0:
+		dst.Panes = append([]TmuxPane(nil), dst.Panes...)
+	default:
+		dst.Panes = nil
+	}
+	return dst
 }
 
 // ProfileExists returns true if the named profile is defined in the config.
