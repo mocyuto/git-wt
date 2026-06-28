@@ -48,7 +48,7 @@ Use `zgt rm <branch>` to cleanup.
 
 - `zgt env`: Outputs export commands for environment variables (eval "$(zgt env)").
 - `zgt ports`: Shows port assignments.
-- `zgt tmux open [branch]`: Opens or activates the tmux window for a worktree. Opens an interactive TUI if no branch is specified.
+- `zgt tmux open [branch]`: Opens or activates the tmux window for a worktree. Opens an interactive TUI if no branch is specified. Use `--profile <name>` to override (and persist) the profile used for window name and pane commands, mirroring `zgt add --profile`. In TUI mode the same profile is applied to all selected worktrees.
 - `zgt tmux close <branch>`: Gracefully closes the tmux window for a worktree.
 
 ### 5. Global Flags

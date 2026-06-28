@@ -6,13 +6,17 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/mocyuto/zgt/internal/config"
 	"github.com/mocyuto/zgt/internal/git"
 	"github.com/mocyuto/zgt/internal/gitroot"
+	"github.com/mocyuto/zgt/internal/logger"
 	"github.com/mocyuto/zgt/internal/state"
 	"github.com/mocyuto/zgt/internal/tmux"
 	"github.com/mocyuto/zgt/internal/zcontext"
 	"github.com/spf13/cobra"
 )
+
+var tmuxOpenProfileFlag string
 
 var tmuxOpenCmd = &cobra.Command{
 	Use:   "open [worktree-name]",
@@ -29,6 +33,12 @@ var tmuxOpenCmd = &cobra.Command{
 		return completions, cobra.ShellCompDirectiveNoFileComp
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// Validate profile flag up-front so both single and TUI modes fail
+		// before any side effects.
+		if tmuxOpenProfileFlag != "" && !config.ProfileExists(tmuxOpenProfileFlag) {
+			return logger.Errorf("unknown profile %q; define it under the 'profiles' section in zgt.config.yml", tmuxOpenProfileFlag)
+		}
+
 		if len(args) == 0 {
 			wts, err := git.GetWorktrees()
 			if err != nil {
@@ -49,9 +59,15 @@ var tmuxOpenCmd = &cobra.Command{
 				return nil
 			}
 
+			profiles, err := resolveProfiles(selectedWts, tmuxOpenProfileFlag)
+			if err != nil {
+				return err
+			}
+
 			for _, wt := range selectedWts {
 				branchName := strings.TrimPrefix(wt.Branch, "refs/heads/")
-				if err := openWorktree(wt.Path, branchName); err != nil {
+				profile := profiles[state.NormalizePath(wt.Path)]
+				if err := openWorktree(wt.Path, branchName, profile); err != nil {
 					fmt.Printf("Error opening %s: %v\n", branchName, err)
 				}
 			}
@@ -64,24 +80,55 @@ var tmuxOpenCmd = &cobra.Command{
 			return fmt.Errorf("failed to resolve worktree info for %s: %v", search, err)
 		}
 
-		return openWorktree(path, branch)
+		profiles, err := resolveProfiles([]git.Worktree{{Path: path}}, tmuxOpenProfileFlag)
+		if err != nil {
+			return err
+		}
+		return openWorktree(path, branch, profiles[state.NormalizePath(path)])
 	},
 }
 
-func openWorktree(path, branch string) error {
-	// Resolve profile from state so {{.Profile}} placeholders in tmux
-	// pane/window commands expand consistently with `zgt add` / `zgt env`.
-	absPath := state.NormalizePath(path)
-	mainRoot, _ := gitroot.GetMainProjectRoot()
+// resolveProfiles returns a map of normalized worktree path -> profile.
+//
+// When overrideProfile is non-empty it is validated and persisted to state
+// (a single LoadState/SaveState cycle regardless of how many worktrees were
+// passed), mirroring `zgt add --profile`. When empty, the existing profile
+// stored for each worktree in state is returned without any state mutation.
+func resolveProfiles(wts []git.Worktree, overrideProfile string) (map[string]string, error) {
+	mainRoot, err := gitroot.GetMainProjectRoot()
+	if err != nil {
+		return nil, logger.Errorf("failed to get main project root: %v", err)
+	}
 	projectName := filepath.Base(mainRoot)
 	_ = state.LoadState()
-	profile := ""
-	if proj, ok := state.AppState.Projects[projectName]; ok {
-		if wt, ok := proj.Worktrees[absPath]; ok {
-			profile = wt.Profile
+
+	result := make(map[string]string, len(wts))
+	if overrideProfile == "" {
+		for _, wt := range wts {
+			absPath := state.NormalizePath(wt.Path)
+			profile := ""
+			if proj, ok := state.AppState.Projects[projectName]; ok {
+				if w, ok := proj.Worktrees[absPath]; ok {
+					profile = w.Profile
+				}
+			}
+			result[absPath] = profile
 		}
+		return result, nil
 	}
 
+	for _, wt := range wts {
+		absPath := state.NormalizePath(wt.Path)
+		state.SetProfile(projectName, absPath, overrideProfile)
+		result[absPath] = overrideProfile
+	}
+	if err := state.SaveState(); err != nil {
+		return nil, logger.Errorf("failed to save state: %v", err)
+	}
+	return result, nil
+}
+
+func openWorktree(path, branch, profile string) error {
 	ctx := zcontext.NewWithProfile(path, branch, profile)
 	windowName := tmux.GetWindowName(ctx)
 
@@ -226,4 +273,12 @@ func selectWorktreesTUI(wts []git.Worktree) ([]git.Worktree, error) {
 
 func init() {
 	tmuxCmd.AddCommand(tmuxOpenCmd)
+	tmuxOpenCmd.Flags().StringVarP(&tmuxOpenProfileFlag, "profile", "", "", "select a profile from the 'profiles' section of zgt.config.yml")
+
+	// Shell completion for --profile: list profile names defined in config.
+	// config.InitConfig runs via cobra.OnInitialize before completion funcs,
+	// so AppConfig.Profiles is populated by the time this is invoked.
+	_ = tmuxOpenCmd.RegisterFlagCompletionFunc("profile", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		return config.ProfileNames(), cobra.ShellCompDirectiveNoFileComp
+	})
 }
