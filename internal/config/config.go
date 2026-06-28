@@ -257,6 +257,13 @@ func InitConfig() {
 				if hasKey(raw, "tmux", "keep_open") {
 					AppConfig.Tmux.KeepOpen = localConfig.Tmux.KeepOpen
 				}
+				// WindowName is overridden when the local config sets a non-empty
+				// value, mirroring the per-field rules used by mergeTmux /
+				// ProfileTmux. Without this, a local-only `tmux.window_name` was
+				// silently dropped during the selective top-level merge.
+				if localConfig.Tmux.WindowName != "" {
+					AppConfig.Tmux.WindowName = localConfig.Tmux.WindowName
+				}
 				if len(localConfig.Tmux.Panes) > 0 {
 					AppConfig.Tmux.Panes = localConfig.Tmux.Panes
 				}
