@@ -342,6 +342,35 @@ tmux:
 			t.Errorf("Expected Tmux.KeepOpen to be true when explicitly set in local config, but got false")
 		}
 	})
+
+	t.Run("Local config merges tmux.window_name", func(t *testing.T) {
+		// Remove any existing local config first
+		for _, name := range LocalConfigNames {
+			os.Remove(filepath.Join(tmpGit, name))
+		}
+
+		// Global config defines a window_name that should be overridden by
+		// the local config's non-empty value.
+		configPath, _ := GetGlobalConfigPath()
+		configDir := filepath.Dir(configPath)
+		os.MkdirAll(configDir, 0755)
+		os.WriteFile(configPath, []byte(`
+tmux:
+  enabled: true
+  window_name: "[global]{{.Branch}}"
+`), 0644)
+		os.WriteFile(filepath.Join(tmpGit, "zgt.config.yml"), []byte(`
+tmux:
+  window_name: "[local]{{.Profile}}-{{.Branch}}"
+`), 0644)
+
+		AppConfig = Config{} // Reset
+		InitConfig()
+
+		if AppConfig.Tmux.WindowName != "[local]{{.Profile}}-{{.Branch}}" {
+			t.Errorf("Expected Tmux.WindowName to be overridden by local config, got %q", AppConfig.Tmux.WindowName)
+		}
+	})
 }
 
 func TestInitConfig_Profiles_MixedCase(t *testing.T) {
