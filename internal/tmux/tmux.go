@@ -20,6 +20,7 @@ type PaneStatus struct {
 	Command   string
 	Running   string
 	IsRunning bool
+	CWD       string
 }
 
 type WindowStatus struct {
@@ -318,8 +319,9 @@ func parseWindows(output string) ([]WindowStatus, error) {
 
 // GetWindowStatus returns the status of all panes in the given window.
 func GetWindowStatus(windowID string) (*WindowStatus, error) {
-	// window_id, window_name, pane_id, pane_current_command, pane_pid, pane_title
-	format := "#{window_id} #{window_name} #{pane_id} #{pane_current_command} #{pane_pid} #{pane_title}"
+	// Tab-delimited so pane_current_path / pane_title may contain spaces
+	// without breaking field parsing.
+	format := "#{session_name}\t#{window_id}\t#{window_name}\t#{pane_id}\t#{pane_current_command}\t#{pane_pid}\t#{pane_current_path}\t#{pane_title}"
 	cmd := exec.Command("tmux", "list-panes", "-t", windowID, "-F", format)
 	output, err := cmd.Output()
 	if err != nil {
@@ -331,7 +333,7 @@ func GetWindowStatus(windowID string) (*WindowStatus, error) {
 		return nil, fmt.Errorf("no panes found for window %s", windowID)
 	}
 
-	firstLineParts := strings.SplitN(lines[0], " ", 6)
+	firstLineParts := strings.SplitN(lines[0], "\t", 8)
 	status := &WindowStatus{
 		SessionName: firstLineParts[0],
 		ID:          firstLineParts[1],
@@ -342,15 +344,16 @@ func GetWindowStatus(windowID string) (*WindowStatus, error) {
 		if line == "" {
 			continue
 		}
-		parts := strings.SplitN(line, " ", 6)
-		if len(parts) < 6 {
+		parts := strings.SplitN(line, "\t", 8)
+		if len(parts) < 8 {
 			continue
 		}
 
-		id := parts[2]
-		currentCmd := parts[3]
-		pid := parts[4]
-		title := parts[5]
+		id := parts[3]
+		currentCmd := parts[4]
+		pid := parts[5]
+		cwd := parts[6]
+		title := parts[7]
 
 		runningProcess := ""
 		isRunning := false
@@ -389,6 +392,7 @@ func GetWindowStatus(windowID string) (*WindowStatus, error) {
 			Command:   currentCmd,
 			Running:   runningProcess,
 			IsRunning: isRunning,
+			CWD:       cwd,
 		})
 	}
 

@@ -139,7 +139,7 @@ zgt sync --ignore "node_modules,temp"
 
 ### 6. その他のコマンド
 
-- `tmux ls`: tmux のセッション、ウィンドウ、ペインの状態（Running/Waiting）をツリー形式で表示します。
+- `tmux ls`: tmux のセッション、ウィンドウ、ペインの状態（Running/Waiting）をツリー形式で表示します。ペイン内で opencode または Claude Code のセッションが動いている場合は `[agent: status]` バッジも表示します（[AIエージェントステータス](#7-aiエージェントステータス-opencode--claude-code) 参照）。
 - `tmux open`: 指定したワークツリーの tmux ウィンドウを開く、またはアクティベートします。ウィンドウが存在すれば切り替え、存在しなければ設定に従って作成します。引数を指定しない場合、インタラクティブな TUI が表示され、1つ以上のワークツリーを選択して開くことができます。`--profile <名前>` でウィンドウ名やペインコマンドに使用するプロファイルを上書き（永続化）できます。`zgt add --profile` と同様の挙動で、TUI モードでは選択したすべてのワークツリーに同じプロファイルが適用されます。
 - `tmux close`: 指定したワークツリーの tmux ウィンドウを正常に閉じます（SIGTERM を送信して終了を待ちます）。
 - `ports update`: 現在のプロジェクトのポート割当を最新の設定に基づいて更新します。不足している割当の追加や、設定から消えた割当の削除を自動で行います。
@@ -147,6 +147,41 @@ zgt sync --ignore "node_modules,temp"
 - `config edit`: システムエディタを使用して設定ファイルを編集します。デフォルトでローカルプロジェクトの設定を編集します。
 - `version`: `zgt` のバージョン番号を表示します。
 - `skill install`: カレントリポジトリの `skills/` ディレクトリ内のスキルを、グローバルなエージェントスキルディレクトリ (`~/.claude/skills/`) にインストールします。
+- `agent status`: 各ワークツリー内の opencode / Claude Code セッションが `working`（作業中）、`idle`（入力待ち）、`waiting`（権限/回答待ち）のいずれかを表示します。`-w` / `--watch` で2秒ごとに更新、`-a` / `--all` でセッションのないワークツリーも含めて表示します。
+- `agent install [claude|opencode|all]`: セッションステータスを `zgt` に報告する Claude Code フックと opencode プラグインをインストールします。マシンごとに1回実行します。再実行も安全です。
+- `agent uninstall [claude|opencode|all]`: `agent install` でインストールしたフック/プラグインを削除します。
+
+### 7. AIエージェントステータス (opencode / Claude Code)
+
+`zgt` は、ワークツリー内で動いている AI コーディングエージェントが「作業中」「入力待ち（idle）」「権限/回答待ち（waiting）」のいずれかを一目で分かるようにします。次の2箇所に表示されます。
+
+- `zgt tmux ls` は各ペインに色付きの `[agent: status]` バッジを追加します（緑=working、黄=waiting、灰=idle）。
+- `zgt agent status` は全ワークツリーの現在のステータスと経過時間を一覧表示します。
+
+ステータスは `zgt agent install` がセットアップするフック/プラグインから書き込まれます。
+
+- **Claude Code**: `UserPromptSubmit` → `working`、`Stop` → `idle`、`Notification`（`permission_prompt`/`idle_prompt`）→ `waiting`、`SessionEnd` → クリア、の各コマンドフック。フックは `zgt agent hook claude` を呼び出し、stdin のイベント JSON を読み取ります。
+- **opencode**: プラグイン（`~/.config/opencode/plugins/zgt-status.js`）が `tool.execute.before`/`message.updated` → `working`、`session.idle` → `idle`、`session.deleted` → クリア を検知して `zgt agent set-status` / `zgt agent clear-status` を実行します。
+
+```bash
+# 初回セットアップ: 両エージェントのフック + プラグインをインストール
+zgt agent install
+
+# 全ワークツリーのステータスを確認
+zgt agent status
+
+# リアルタイム更新ビュー
+zgt agent status --watch
+
+# いずれか一方だけインストール
+zgt agent install claude
+zgt agent install opencode
+
+# 不要になったら削除
+zgt agent uninstall
+```
+
+ステータスレコードは `~/.config/zgt/agent-status/` にワークツリーのパスをキーとして保存され、設定した `stale_after` 期間（デフォルト `1h`）を過ぎると自動的に破棄されるため、クラッシュ/強制終了したセッションが永遠に「working」のままになることはありません。
 
 ## 設定
 
@@ -223,6 +258,10 @@ tmux:
       split: horizontal
       size: 50%
       commands: ["yarn dev"]
+
+agent:
+  enabled: true       # `tmux ls` と `agent status` で opencode / Claude Code のステータスバッジを表示 (デフォルト: true)
+  stale_after: "1h"   # この期間より古いステータスレコードは破棄 (デフォルト: "1h")
 ```
 
 - `WEB_PORT=3001`

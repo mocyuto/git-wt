@@ -141,7 +141,7 @@ zgt sync --ignore "node_modules,temp"
 
 ### 6. Other Commands
 
-- `tmux ls`: Shows tmux sessions, windows, and panes status (Running/Waiting) in a hierarchical tree structure.
+- `tmux ls`: Shows tmux sessions, windows, and panes status (Running/Waiting) in a hierarchical tree structure. Each pane also shows an `[agent: status]` badge when an opencode or Claude Code session is running inside it (see [AI Agent Status](#7-ai-agent-status-opencode--claude-code)).
 - `tmux open`: Opens or activates the tmux window for the specified worktree. If the window exists, it switches to it; otherwise, it creates it according to the configuration. If no worktree name is provided, an interactive TUI is displayed to select one or more worktrees. Use `--profile <name>` to override (and persist) the profile used for window name and pane commands, mirroring `zgt add --profile`. In TUI mode the same profile is applied to all selected worktrees.
 - `tmux close`: Gracefully closes the tmux window for the specified worktree (sends SIGTERM and waits).
 - `ports update`: Synchronizes port assignments for the current project with the latest configuration. It adds missing port assignments and removes those no longer present in the configuration.
@@ -149,6 +149,41 @@ zgt sync --ignore "node_modules,temp"
 - `config edit`: Edits the configuration file using the system editor. Defaults to editing the local project configuration.
 - `version`: Prints the version number of `zgt`.
 - `skill install`: Installs skills from the current repository's `skills/` directory to the global agent skills directory (`~/.claude/skills/`).
+- `agent status`: Shows whether the opencode / Claude Code session in each worktree is `working`, `idle`, or `waiting`. Use `-w` / `--watch` to refresh every 2s, and `-a` / `--all` to include worktrees with no active session.
+- `agent install [claude|opencode|all]`: Installs the Claude Code hooks and opencode plugin that report session status to `zgt`. Run once per machine; re-running is safe.
+- `agent uninstall [claude|opencode|all]`: Removes the hooks/plugin installed by `agent install`.
+
+### 7. AI Agent Status (opencode / Claude Code)
+
+`zgt` can show you, at a glance, whether the AI coding agent running inside a worktree is actively working, idle and awaiting input, or blocked waiting for a permission/answer. This is surfaced in two places:
+
+- `zgt tmux ls` appends a colored `[agent: status]` badge to each pane (green = working, yellow = waiting, gray = idle).
+- `zgt agent status` lists every worktree with its current agent status and age.
+
+Status is written by hooks/plugins that `zgt agent install` sets up:
+
+- **Claude Code**: command hooks for `UserPromptSubmit` → `working`, `Stop` → `idle`, `Notification` (`permission_prompt`/`idle_prompt`) → `waiting`, and `SessionEnd` → clear. The hooks call `zgt agent hook claude` which reads the event JSON from stdin.
+- **opencode**: a plugin (`~/.config/opencode/plugins/zgt-status.js`) that listens to `tool.execute.before`/`message.updated` → `working`, `session.idle` → `idle`, and `session.deleted` → clear, shelling out to `zgt agent set-status` / `zgt agent clear-status`.
+
+```bash
+# One-time setup: install hooks + plugin for both agents
+zgt agent install
+
+# See status for all worktrees
+zgt agent status
+
+# Live-updating view
+zgt agent status --watch
+
+# Install only one agent's integration
+zgt agent install claude
+zgt agent install opencode
+
+# Remove when no longer needed
+zgt agent uninstall
+```
+
+Status records live in `~/.config/zgt/agent-status/` keyed by worktree path and are pruned automatically after the configured `stale_after` duration (default `1h`), so crashed/killed sessions don't leave a stale "working" badge forever.
 
 ## Configuration
 
@@ -232,6 +267,10 @@ tmux:
       split: horizontal
       size: 50%
       commands: ["yarn dev"]
+
+agent:
+  enabled: true       # Show opencode / Claude Code status badges in `tmux ls` and `agent status` (default: true)
+  stale_after: "1h"   # Discard status records older than this (default: "1h")
 ```
 
 - `WEB_PORT=3001`

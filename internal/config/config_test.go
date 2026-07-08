@@ -1182,3 +1182,78 @@ profiles:
 		t.Errorf("ProfileTmux(frontend).KeepOpen = false, want true (global profile OR)")
 	}
 }
+
+func TestAgentDefaultsApplied(t *testing.T) {
+	AppConfig = Config{}
+	InitConfig()
+	if !AppConfig.Agent.Enabled {
+		t.Errorf("expected default Agent.Enabled = true")
+	}
+	if AppConfig.Agent.StaleAfter != "1h" {
+		t.Errorf("expected default Agent.StaleAfter = \"1h\", got %q", AppConfig.Agent.StaleAfter)
+	}
+}
+
+func TestAgentLocalConfigMergesWhenPresent(t *testing.T) {
+	tmpHome, _ := os.MkdirTemp("", "zgt-agent-home-*")
+	defer os.RemoveAll(tmpHome)
+	tmpGit, _ := os.MkdirTemp("", "zgt-agent-git-*")
+	defer os.RemoveAll(tmpGit)
+	exec.Command("git", "init", tmpGit).Run()
+
+	origHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpHome)
+	defer os.Setenv("HOME", origHome)
+	origWd, _ := os.Getwd()
+	defer os.Chdir(origWd)
+
+	// Disable agent in local config and set a custom stale_after.
+	localPath := filepath.Join(tmpGit, "zgt.config.yml")
+	os.WriteFile(localPath, []byte("agent:\n  enabled: false\n  stale_after: 30m\n"), 0644)
+	os.Chdir(tmpGit)
+
+	AppConfig = Config{}
+	ConfigError = nil
+	InitConfig()
+	if ConfigError != nil {
+		t.Fatalf("InitConfig: %v", ConfigError)
+	}
+	if AppConfig.Agent.Enabled {
+		t.Errorf("expected Agent.Enabled = false after local override")
+	}
+	if AppConfig.Agent.StaleAfter != "30m" {
+		t.Errorf("expected Agent.StaleAfter = \"30m\", got %q", AppConfig.Agent.StaleAfter)
+	}
+}
+
+func TestAgentLocalConfigAbsentKeepsDefaults(t *testing.T) {
+	tmpHome, _ := os.MkdirTemp("", "zgt-agent-default-home-*")
+	defer os.RemoveAll(tmpHome)
+	tmpGit, _ := os.MkdirTemp("", "zgt-agent-default-git-*")
+	defer os.RemoveAll(tmpGit)
+	exec.Command("git", "init", tmpGit).Run()
+
+	origHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpHome)
+	defer os.Setenv("HOME", origHome)
+	origWd, _ := os.Getwd()
+	defer os.Chdir(origWd)
+
+	// Local config exists but has no `agent` section.
+	localPath := filepath.Join(tmpGit, "zgt.config.yml")
+	os.WriteFile(localPath, []byte("ports:\n  api: 3000\n"), 0644)
+	os.Chdir(tmpGit)
+
+	AppConfig = Config{}
+	ConfigError = nil
+	InitConfig()
+	if ConfigError != nil {
+		t.Fatalf("InitConfig: %v", ConfigError)
+	}
+	if !AppConfig.Agent.Enabled {
+		t.Errorf("expected Agent.Enabled to stay true when local config omits agent")
+	}
+	if AppConfig.Agent.StaleAfter != "1h" {
+		t.Errorf("expected Agent.StaleAfter to stay \"1h\", got %q", AppConfig.Agent.StaleAfter)
+	}
+}
