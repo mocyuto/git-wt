@@ -1,5 +1,9 @@
 # Changelog
 
+## [v0.17.0](https://github.com/mocyuto/zgt/compare/v0.16.0...v0.17.0) - 2026-07-08
+
+- feat(agent): show opencode / Claude Code working/idle/waiting status by @mocyuto in https://github.com/mocyuto/zgt/pull/94
+
 ## [v0.16.0](https://github.com/mocyuto/zgt/compare/v0.15.1...v0.16.0) - 2026-06-28
 
 - feat(tmux): add --profile flag to tmux open by @mocyuto in https://github.com/mocyuto/zgt/pull/91
