@@ -76,6 +76,16 @@ type GitHooksConfig struct {
 	Shared  bool   `mapstructure:"shared" yaml:"shared"`
 }
 
+// AgentConfig controls agent status reporting integration. When enabled, zgt
+// exposes an `agent` command group and `tmux ls` augments pane output with
+// the idle/working/waiting status of opencode / Claude Code sessions running
+// inside each pane. stale_after determines how long a status record survives
+// without an update before it is considered stale (e.g. "1h", "30m").
+type AgentConfig struct {
+	Enabled    bool   `mapstructure:"enabled" yaml:"enabled"`
+	StaleAfter string `mapstructure:"stale_after" yaml:"stale_after"`
+}
+
 // HooksConfig holds lifecycle hook commands for the add/remove commands.
 type HooksConfig struct {
 	Add []string `mapstructure:"add" yaml:"add"`
@@ -104,6 +114,7 @@ type Config struct {
 	Tmux     TmuxConfig               `mapstructure:"tmux"`
 	GitHooks GitHooksConfig           `mapstructure:"git_hooks" yaml:"git_hooks"`
 	Profiles map[string]ProfileConfig `mapstructure:"profiles" yaml:"profiles"`
+	Agent    AgentConfig              `mapstructure:"agent" yaml:"agent"`
 }
 
 var AppConfig Config
@@ -268,6 +279,17 @@ func InitConfig() {
 					AppConfig.Tmux.Panes = localConfig.Tmux.Panes
 				}
 
+				// Merge agent: local overrides global when explicitly set.
+				// `enabled` defaults to true at the viper layer, so only honor
+				// the local value when the key is present (otherwise a local
+				// config without an `agent` section would silently disable it).
+				if hasKey(raw, "agent", "enabled") {
+					AppConfig.Agent.Enabled = localConfig.Agent.Enabled
+				}
+				if localConfig.Agent.StaleAfter != "" {
+					AppConfig.Agent.StaleAfter = localConfig.Agent.StaleAfter
+				}
+
 				// Fix case for local env
 				if err := loadEnvCasePreserved(localPath); err != nil {
 					logger.Warn("failed to restore environment variable case in local config: %v", err)
@@ -311,11 +333,16 @@ func setViperDefaults(v *viper.Viper) {
 	v.SetDefault("git_hooks.path", ".githooks")
 	v.SetDefault("git_hooks.shared", true)
 	v.SetDefault("tmux.keep_open", false)
+	v.SetDefault("agent.enabled", true)
+	v.SetDefault("agent.stale_after", "1h")
 }
 
 func applyDefaults(cfg *Config) {
 	if cfg.GitHooks.Path == "" {
 		cfg.GitHooks.Path = ".githooks"
+	}
+	if cfg.Agent.StaleAfter == "" {
+		cfg.Agent.StaleAfter = "1h"
 	}
 	// Note: We don't force Shared=true here because it might have been set to false by unmarshal
 }

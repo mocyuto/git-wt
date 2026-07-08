@@ -3,6 +3,8 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/mocyuto/zgt/internal/agentstatus"
+	"github.com/mocyuto/zgt/internal/config"
 	"github.com/mocyuto/zgt/internal/tmux"
 	"github.com/spf13/cobra"
 )
@@ -12,6 +14,11 @@ var tmuxLsCmd = &cobra.Command{
 	Short:   "List all tmux windows and their status",
 	Aliases: []string{"list"},
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// Opportunistically prune stale agent status records so the badges
+		// don't show a stale "working" state from a crashed/killed session.
+		if config.AppConfig.Agent.Enabled {
+			_, _ = agentstatus.PruneStale(agentstatus.ParseStaleAge(config.AppConfig.Agent.StaleAfter))
+		}
 		return ListTmuxWindows()
 	},
 }
@@ -80,7 +87,12 @@ func ListTmuxWindows() error {
 				if pane.IsRunning {
 					statusStr = "Running"
 				}
-				fmt.Printf("%s %s %s: %s\n", panePrefix, pane.ID, statusStr, pane.Running)
+				agentBadge := agentBadgeFor(pane.CWD)
+				if agentBadge != "" {
+					fmt.Printf("%s %s %s: %s %s\n", panePrefix, pane.ID, statusStr, pane.Running, agentBadge)
+				} else {
+					fmt.Printf("%s %s %s: %s\n", panePrefix, pane.ID, statusStr, pane.Running)
+				}
 			}
 		}
 		if i < len(sessions)-1 {
@@ -89,4 +101,37 @@ func ListTmuxWindows() error {
 	}
 
 	return nil
+}
+
+// agentBadgeFor returns a colored "[agent: status]" string for the pane's
+// CWD, or "" when agent integration is disabled or no fresh status record
+// matches the path. The badge lets you see at a glance whether the opencode
+// or Claude Code session inside a pane is working, idle, or waiting.
+func agentBadgeFor(cwd string) string {
+	if !config.AppConfig.Agent.Enabled || cwd == "" {
+		return ""
+	}
+	staleAge := agentstatus.ParseStaleAge(config.AppConfig.Agent.StaleAfter)
+	rec, ok := agentstatus.FindByPath(cwd, staleAge)
+	if !ok {
+		return ""
+	}
+	const (
+		cReset  = "\033[0m"
+		cGreen  = "\033[32m"
+		cGray   = "\033[90m"
+		cYellow = "\033[33m"
+	)
+	var color string
+	switch rec.Status {
+	case agentstatus.StatusWorking:
+		color = cGreen
+	case agentstatus.StatusWaiting:
+		color = cYellow
+	case agentstatus.StatusIdle:
+		color = cGray
+	default:
+		color = cReset
+	}
+	return fmt.Sprintf("%s[%s: %s]%s", color, rec.Agent, rec.Status, cReset)
 }

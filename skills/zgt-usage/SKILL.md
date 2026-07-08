@@ -50,6 +50,17 @@ Use `zgt rm <branch>` to cleanup.
 - `zgt ports`: Shows port assignments.
 - `zgt tmux open [branch]`: Opens or activates the tmux window for a worktree. Opens an interactive TUI if no branch is specified. Use `--profile <name>` to override (and persist) the profile used for window name and pane commands, mirroring `zgt add --profile`. In TUI mode the same profile is applied to all selected worktrees.
 - `zgt tmux close <branch>`: Gracefully closes the tmux window for a worktree.
+- `zgt tmux ls`: Lists tmux sessions/windows/panes with Running/Waiting status and an `[agent: status]` badge for any pane running an opencode / Claude Code session (green=working, yellow=waiting, gray=idle).
+
+### 4b. AI Agent Status (`agent`)
+
+`zgt` reports whether the opencode or Claude Code session in each worktree is `working`, `idle`, or `waiting`.
+
+- `zgt agent install [claude|opencode|all]`: One-time setup. Installs Claude Code hooks (`~/.claude/settings.json`) and the opencode plugin (`~/.config/opencode/plugins/zgt-status.js`) that report session status to `zgt`. Re-running is safe and idempotent.
+- `zgt agent status [worktree]`: Lists every worktree with its current agent status and age. Use `-w`/`--watch` for a live 2s-refreshing view, and `-a`/`--all` to include worktrees with no active session.
+- `zgt agent uninstall [claude|opencode|all]`: Removes the hooks/plugin.
+
+Status records are keyed by worktree path under `~/.config/zgt/agent-status/` and auto-pruned after `agent.stale_after` (default `1h`). Disable the integration in `zgt.config.yml` with `agent.enabled: false`.
 
 ### 5. Global Flags
 
