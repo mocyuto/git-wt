@@ -28,7 +28,7 @@ jobs:
         with:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.SECRET_KEY }}
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 0
           ref: main
@@ -71,6 +71,6 @@ jobs:
           done
           echo "::error::commit->PR index not propagated after ~60s; failing to avoid a duplicate release PR. Re-run the workflow once GitHub recovers."
           exit 1
-      - uses: Songmu/tagpr@v1
+      - uses: Songmu/tagpr@e84001bd5dac8defa0c75b3913937d284a3b3660 # v1.20.0
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
