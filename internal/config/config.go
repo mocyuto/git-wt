@@ -27,8 +27,6 @@ var (
 	LocalConfigNames = []string{
 		"zgt.config.yml",
 		"zgt.config.yaml",
-		"git-wt.config.yml",
-		"git-wt.config.yaml",
 	}
 )
 

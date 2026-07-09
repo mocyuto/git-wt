@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -40,6 +41,12 @@ func TestInitConfig(t *testing.T) {
 	t.Run("Default global config creation", func(t *testing.T) {
 		AppConfig = Config{} // Reset
 		InitConfig()
+
+		for _, legacy := range []string{"git-wt.config.yml", "git-wt.config.yaml"} {
+			if slices.Contains(LocalConfigNames, legacy) {
+				t.Errorf("legacy local config name %q must not be loaded", legacy)
+			}
+		}
 
 		configPath, _ := GetGlobalConfigPath()
 		if _, err := os.Stat(configPath); os.IsNotExist(err) {
@@ -80,14 +87,14 @@ git_hooks:
 		}
 	})
 
-	t.Run("Local config merging (git-wt.config.yaml)", func(t *testing.T) {
+	t.Run("Local config merging (zgt.config.yaml)", func(t *testing.T) {
 		// Remove any existing local config first to ensure clean state
 		for _, name := range LocalConfigNames {
 			os.Remove(filepath.Join(tmpGit, name))
 		}
 
 		// Local config in tmpGit (current working directory) using alternative name
-		os.WriteFile(filepath.Join(tmpGit, "git-wt.config.yaml"), []byte(`
+		os.WriteFile(filepath.Join(tmpGit, "zgt.config.yaml"), []byte(`
 hooks:
   add: ["local-add"]
 ignore: [".local-ignore"]
