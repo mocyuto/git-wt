@@ -162,11 +162,12 @@ zgt sync --ignore "node_modules,temp"
 
 - **Claude Code**: `UserPromptSubmit` → `working`、`Stop` → `idle`、`Notification`（`permission_prompt`/`idle_prompt`）→ `ask`、`SessionEnd` → クリア、の各コマンドフック。フックは `zgt agent hook claude` を呼び出し、stdin のイベント JSON を読み取ります。
 - **opencode**: プラグイン（`~/.config/opencode/plugins/zgt-status.js`）がステータスを `zgt` に報告します:
-  - `tool.execute.before`（`question` 以外）→ `working`、`tool.execute.before`（ビルトイン `question` ツール）→ `ask`、`tool.execute.after`（question ツール）→ `working`
-  - `permission.asked` → `ask`、`permission.replied` → `working`
-  - `session.idle` / `session.status`(idle) → `idle`、`session.status`(busy) → `working`、`session.created` → `idle`（エージェント再起動時に古いステータスをリセット。ただちに busy 報告された再開セッションは上書きしない）、`session.error` → `idle`
   - `message.updated`（ユーザーメッセージ）→ `working`、`message.updated`（アシスタントメッセージ）は idle 中は無視され、遅延確定で `idle` が `working` に上書きされるのを防ぐ
-  - `session.deleted` → クリア、`session.error`/`session.compacted` → 入力待ちフラグをリセット
+  - `message.part.updated`（`question` ツール pending/running）→ `ask`、`message.part.updated`（`question` ツール completed/error）→ `working`
+  - `permission.updated` → `ask`、`permission.replied` → `working`
+  - `session.idle` / `session.status`(idle) → `idle`、`session.status`(busy) → `working`、`session.created` → `idle`（エージェント再起動時に古いステータスをリセット）、`session.error` → `idle`
+  - `session.deleted` → クリア
+  - プラグイン初期化時（エージェント再起動）に `idle` を書き込み、クラッシュしたセッションの `working` が残らないようにする
   - `zgt agent set-status` / `zgt agent clear-status` を呼び出します。
 
 ```bash
