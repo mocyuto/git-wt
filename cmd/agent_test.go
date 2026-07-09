@@ -66,7 +66,7 @@ func TestRunAgentHookClaudeNotification(t *testing.T) {
 		t.Fatal(err)
 	}
 	rec, _ := agentstatus.GetStatus(dir)
-	assert.Equal(t, agentstatus.StatusWaiting, rec.Status)
+	assert.Equal(t, agentstatus.StatusAsk, rec.Status)
 }
 
 func TestRunAgentHookClaudeSessionEndClears(t *testing.T) {
@@ -185,6 +185,70 @@ func TestAgentClearStatusCommand(t *testing.T) {
 	if _, ok := agentstatus.GetStatus(dir); ok {
 		t.Fatal("expected record cleared")
 	}
+}
+
+func TestWriteAgentStatusTableAlignsColumns(t *testing.T) {
+	rows := []agentStatusRow{
+		{Path: "/long/path/here", Branch: "main", Agent: "opencode", Status: "working", Age: "5s"},
+		{Path: "/short", Branch: "feature-branch", Agent: "claude", Status: "ask", Age: "1m"},
+		{Path: "/medium/path", Branch: "dev", Agent: "-", Status: "idle?", Age: "30s"},
+	}
+	var buf bytes.Buffer
+	if err := writeAgentStatusTable(&buf, rows); err != nil {
+		t.Fatalf("writeAgentStatusTable: %v", err)
+	}
+	out := buf.String()
+	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
+	assert.Len(t, lines, len(rows)+1) // header + data rows
+
+	// Every line should have the same number of double-space column
+	// separators, and the AGE column should start at the same visual
+	// offset (i.e. the byte index after stripping ANSI codes is equal).
+	stripANSI := func(s string) string {
+		return strings.NewReplacer("\033[32m", "", "\033[36m", "", "\033[90m", "", "\033[0m", "").Replace(s)
+	}
+	ageOffset := -1
+	for _, line := range lines {
+		visible := stripANSI(line)
+		idx := strings.LastIndex(visible, "  ")
+		if idx < 0 {
+			t.Fatalf("expected column separator in line: %q", visible)
+		}
+		off := idx + 2
+		if ageOffset < 0 {
+			ageOffset = off
+		} else if off != ageOffset {
+			t.Errorf("AGE column misaligned: got offset %d, want %d in line: %q", off, ageOffset, visible)
+		}
+	}
+}
+
+func TestWriteAgentStatusTableColorizesKnownStatuses(t *testing.T) {
+	rows := []agentStatusRow{
+		{Path: "/p", Branch: "main", Agent: "opencode", Status: "working", Age: "1s"},
+		{Path: "/p2", Branch: "dev", Agent: "opencode", Status: "ask", Age: "2s"},
+		{Path: "/p3", Branch: "feat", Agent: "opencode", Status: "idle", Age: "3s"},
+	}
+	var buf bytes.Buffer
+	_ = writeAgentStatusTable(&buf, rows)
+	out := buf.String()
+	assert.Contains(t, out, "\033[32m") // green for working
+	assert.Contains(t, out, "\033[36m") // cyan for ask
+	assert.Contains(t, out, "\033[90m") // gray for idle
+}
+
+func TestWriteAgentStatusTableLeavesUnknownStatusPlain(t *testing.T) {
+	rows := []agentStatusRow{
+		{Path: "/p", Branch: "main", Agent: "-", Status: "idle?", Age: "1s"},
+	}
+	var buf bytes.Buffer
+	_ = writeAgentStatusTable(&buf, rows)
+	out := buf.String()
+	// "idle?" should appear without any color escape codes wrapping it.
+	assert.Contains(t, out, "idle?")
+	assert.NotContains(t, out, "\033[32midle?")
+	assert.NotContains(t, out, "\033[36midle?")
+	assert.NotContains(t, out, "\033[90midle?")
 }
 
 func TestIsZgtClaudeHook(t *testing.T) {

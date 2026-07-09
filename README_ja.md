@@ -147,21 +147,27 @@ zgt sync --ignore "node_modules,temp"
 - `config edit`: システムエディタを使用して設定ファイルを編集します。デフォルトでローカルプロジェクトの設定を編集します。
 - `version`: `zgt` のバージョン番号を表示します。
 - `skill install`: カレントリポジトリの `skills/` ディレクトリ内のスキルを、グローバルなエージェントスキルディレクトリ (`~/.claude/skills/`) にインストールします。
-- `agent status`: 各ワークツリー内の opencode / Claude Code セッションが `working`（作業中）、`idle`（入力待ち）、`waiting`（権限/回答待ち）のいずれかを表示します。`-w` / `--watch` で2秒ごとに更新、`-a` / `--all` でセッションのないワークツリーも含めて表示します。
+- `agent status`: 各ワークツリー内の opencode / Claude Code セッションが `working`（作業中）、`idle`（入力待ち）、`ask`（権限/回答待ち）のいずれかを表示します。`-w` / `--watch` で2秒ごとに更新、`-a` / `--all` でセッションのないワークツリーも含めて表示します。
 - `agent install [claude|opencode|all]`: セッションステータスを `zgt` に報告する Claude Code フックと opencode プラグインをインストールします。マシンごとに1回実行します。再実行も安全です。
 - `agent uninstall [claude|opencode|all]`: `agent install` でインストールしたフック/プラグインを削除します。
 
 ### 7. AIエージェントステータス (opencode / Claude Code)
 
-`zgt` は、ワークツリー内で動いている AI コーディングエージェントが「作業中」「入力待ち（idle）」「権限/回答待ち（waiting）」のいずれかを一目で分かるようにします。次の2箇所に表示されます。
+`zgt` は、ワークツリー内で動いている AI コーディングエージェントが「作業中」「入力待ち（idle）」「権限/回答待ち（ask）」のいずれかを一目で分かるようにします。次の2箇所に表示されます。
 
-- `zgt tmux ls` は各ペインに色付きの `[agent: status]` バッジを追加します（緑=working、黄=waiting、灰=idle）。
-- `zgt agent status` は全ワークツリーの現在のステータスと経過時間を一覧表示します。
+- `zgt tmux ls` は各ペインに色付きの `[agent: status]` バッジを追加します（緑=working、シアン=ask、灰=idle）。
+- `zgt agent status` は全ワークツリーの現在のステータス（色付き）と経過時間を一覧表示します。
 
 ステータスは `zgt agent install` がセットアップするフック/プラグインから書き込まれます。
 
-- **Claude Code**: `UserPromptSubmit` → `working`、`Stop` → `idle`、`Notification`（`permission_prompt`/`idle_prompt`）→ `waiting`、`SessionEnd` → クリア、の各コマンドフック。フックは `zgt agent hook claude` を呼び出し、stdin のイベント JSON を読み取ります。
-- **opencode**: プラグイン（`~/.config/opencode/plugins/zgt-status.js`）が `tool.execute.before`/`message.updated` → `working`、`session.idle` → `idle`、`session.deleted` → クリア を検知して `zgt agent set-status` / `zgt agent clear-status` を実行します。
+- **Claude Code**: `UserPromptSubmit` → `working`、`Stop` → `idle`、`Notification`（`permission_prompt`/`idle_prompt`）→ `ask`、`SessionEnd` → クリア、の各コマンドフック。フックは `zgt agent hook claude` を呼び出し、stdin のイベント JSON を読み取ります。
+- **opencode**: プラグイン（`~/.config/opencode/plugins/zgt-status.js`）がステータスを `zgt` に報告します:
+  - `tool.execute.before`（`question` 以外）→ `working`、`tool.execute.before`（ビルトイン `question` ツール）→ `ask`、`tool.execute.after`（question ツール）→ `working`
+  - `permission.asked` → `ask`、`permission.replied` → `working`
+  - `session.idle` / `session.status`(idle) → `idle`、`session.status`(busy) → `working`
+  - `message.updated`（ユーザーメッセージ）→ `working`、`message.updated`（アシスタントメッセージ）は idle 中は無視され、遅延確定で `idle` が `working` に上書きされるのを防ぐ
+  - `session.deleted` → クリア、`session.error`/`session.compacted` → 入力待ちフラグをリセット
+  - `zgt agent set-status` / `zgt agent clear-status` を呼び出します。
 
 ```bash
 # 初回セットアップ: 両エージェントのフック + プラグインをインストール

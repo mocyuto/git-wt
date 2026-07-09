@@ -41,8 +41,36 @@ type Status string
 const (
 	StatusWorking Status = "working" // agent is processing a prompt / running tools
 	StatusIdle    Status = "idle"    // agent finished a turn and is awaiting input
-	StatusWaiting Status = "waiting" // agent is blocked on a permission / question
+	StatusAsk     Status = "ask"     // agent is blocked on a permission / question
 )
+
+// ColorForStatus returns the ANSI escape code used to colorize a status in
+// the UI. working=green, ask=cyan, idle=gray; unknown statuses get an empty
+// string so callers don't emit spurious reset codes.
+func ColorForStatus(s Status) string {
+	switch s {
+	case StatusWorking:
+		return "\033[32m" // green
+	case StatusAsk:
+		return "\033[36m" // cyan
+	case StatusIdle:
+		return "\033[90m" // gray
+	default:
+		return ""
+	}
+}
+
+// ColorReset is the ANSI reset escape code.
+const ColorReset = "\033[0m"
+
+// normalizeRecord maps legacy status values to their current equivalents.
+// This is called after every json.Unmarshal so on-disk records written by
+// older versions are transparently upgraded on read.
+func normalizeRecord(rec *Record) {
+	if rec != nil && rec.Status == "waiting" {
+		rec.Status = StatusAsk
+	}
+}
 
 // Record is the on-disk representation of an agent's status for one CWD.
 type Record struct {
@@ -171,6 +199,7 @@ func GetStatus(cwd string) (*Record, bool) {
 	if err := json.Unmarshal(data, &rec); err != nil {
 		return nil, false
 	}
+	normalizeRecord(&rec)
 	return &rec, true
 }
 
@@ -265,6 +294,7 @@ func ListStatuses() ([]*Record, error) {
 		if err := json.Unmarshal(data, &rec); err != nil {
 			continue
 		}
+		normalizeRecord(&rec)
 		out = append(out, &rec)
 	}
 	return out, nil
@@ -318,6 +348,7 @@ func PruneStale(maxAge time.Duration) (int, error) {
 			}
 			continue
 		}
+		normalizeRecord(&rec)
 		if time.Since(time.Unix(rec.UpdatedAt, 0)) > maxAge {
 			if err := os.Remove(filepath.Join(dir, e.Name())); err == nil {
 				removed++
