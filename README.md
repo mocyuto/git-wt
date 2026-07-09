@@ -162,15 +162,8 @@ zgt sync --ignore "node_modules,temp"
 
 Status is written by hooks/plugins that `zgt agent install` sets up:
 
-- **Claude Code**: command hooks for `UserPromptSubmit` → `working`, `Stop` → `idle`, `Notification` (`permission_prompt`/`idle_prompt`) → `ask`, and `SessionEnd` → clear. The hooks call `zgt agent hook claude` which reads the event JSON from stdin.
-- **opencode**: a plugin (`~/.config/opencode/plugins/zgt-status.js`) that reports status to `zgt`:
-  - `message.updated` (user message) → `working`; `message.updated` (assistant message) is ignored while idle so late finalization events don't clobber `idle` back to `working`
-  - `message.part.updated` (`question` tool pending/running) → `ask`; `message.part.updated` (`question` tool completed/error) → `working`
-  - `permission.updated` → `ask`; `permission.replied` → `working`
-  - `session.idle` / `session.status` (idle) → `idle`; `session.status` (busy) → `working`; `session.created` → `idle` (resets stale status on agent restart); `session.error` → `idle`
-  - `session.deleted` → clear
-  - On plugin init (agent restart) it writes `idle` so a stale `working` from a crashed session doesn't linger
-  - It shells out to `zgt agent set-status` / `zgt agent clear-status`
+- **Claude Code**: command hooks for `UserPromptSubmit` → `working`, `Stop` → `idle`, `Notification` → `ask`, and `SessionEnd` → clear. The hooks call `zgt agent hook claude` which reads the event JSON from stdin.
+- **opencode**: a plugin (`~/.config/opencode/plugins/zgt-status.js`) that maps session lifecycle and permission events to `working`/`idle`/`ask` (or clears the record on `session.deleted`). It accepts both `permission.asked` and `permission.updated` since opencode emits either depending on version.
 
 ```bash
 # One-time setup: install hooks + plugin for both agents
@@ -547,10 +540,23 @@ Use `-a` or `--all` to install to all targets immediately.
 
 ## Development & Testing
 
+Toolchain versions (Go and Bun) are managed via [`mise.toml`](./mise.toml). Run `mise install` once to set them up, then use the mise tasks:
+
 ```bash
-# Run tests
-go test -v ./...
+mise install
+mise run test       # Go tests: go test ./...
+mise run test-js    # JS tests: bun test internal/agentstatus/assets/
+mise run test-all  # both, in parallel
 ```
+
+You can also invoke the underlying commands directly:
+
+```bash
+go test -v ./...
+bun test internal/agentstatus/assets/
+```
+
+The opencode status plugin (`internal/agentstatus/assets/zgt-status.js`) has its own State-transition tests under the same directory; run them with `mise run test-js` whenever you edit the plugin.
 
 ## FAQ
 

@@ -8,7 +8,10 @@
 // refreshing the status every few seconds during long runs.
 //
 // "ask" is reported in two situations:
-//   - a permission prompt (permission.updated event)
+//   - a permission prompt. opencode emits either `permission.asked` (per the
+//     plugin docs) or `permission.updated` (per the SDK EventListResponse
+//     union), depending on version; both are handled so the status flips to
+//     ask regardless of which opencode release is installed.
 //   - the built-in `question` tool is invoked (e.g. plan / implementation
 //     choice confirmation), detected via message.part.updated when the
 //     tool part has tool === "question" and state.status is pending/running.
@@ -95,6 +98,10 @@ export const ZgtStatusPlugin = async ({ directory, worktree, $ }) => {
         }
 
         // --- Permission events ---
+        // opencode emits `permission.asked` (plugin docs) or
+        // `permission.updated` (SDK EventListResponse) depending on
+        // version; accept both so the badge flips to `ask` regardless.
+        case "permission.asked":
         case "permission.updated":
           awaitingUser = true;
           sessionIdle = false;

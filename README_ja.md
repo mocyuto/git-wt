@@ -160,15 +160,8 @@ zgt sync --ignore "node_modules,temp"
 
 ステータスは `zgt agent install` がセットアップするフック/プラグインから書き込まれます。
 
-- **Claude Code**: `UserPromptSubmit` → `working`、`Stop` → `idle`、`Notification`（`permission_prompt`/`idle_prompt`）→ `ask`、`SessionEnd` → クリア、の各コマンドフック。フックは `zgt agent hook claude` を呼び出し、stdin のイベント JSON を読み取ります。
-- **opencode**: プラグイン（`~/.config/opencode/plugins/zgt-status.js`）がステータスを `zgt` に報告します:
-  - `message.updated`（ユーザーメッセージ）→ `working`、`message.updated`（アシスタントメッセージ）は idle 中は無視され、遅延確定で `idle` が `working` に上書きされるのを防ぐ
-  - `message.part.updated`（`question` ツール pending/running）→ `ask`、`message.part.updated`（`question` ツール completed/error）→ `working`
-  - `permission.updated` → `ask`、`permission.replied` → `working`
-  - `session.idle` / `session.status`(idle) → `idle`、`session.status`(busy) → `working`、`session.created` → `idle`（エージェント再起動時に古いステータスをリセット）、`session.error` → `idle`
-  - `session.deleted` → クリア
-  - プラグイン初期化時（エージェント再起動）に `idle` を書き込み、クラッシュしたセッションの `working` が残らないようにする
-  - `zgt agent set-status` / `zgt agent clear-status` を呼び出します。
+- **Claude Code**: `UserPromptSubmit` → `working`、`Stop` → `idle`、`Notification` → `ask`、`SessionEnd` → クリア、の各コマンドフック。フックは `zgt agent hook claude` を呼び出し、stdin のイベント JSON を読み取ります。
+- **opencode**: プラグイン（`~/.config/opencode/plugins/zgt-status.js`）がセッションライフサイクルと permission イベントを `working`/`idle`/`ask` に対応付け、`session.deleted` でレコードをクリアします。`permission.asked` / `permission.updated` はバージョンによりどちらかが発火するため両方を受け付けます。
 
 ```bash
 # 初回セットアップ: 両エージェントのフック + プラグインをインストール
@@ -512,10 +505,23 @@ zgt skill install
 
 ## 開発・テスト
 
+ツールチェーン（Go・Bun）のバージョンは [`mise.toml`](./mise.toml) で管理しています。初回は `mise install` を実行し、以降は mise タスクを使います。
+
 ```bash
-# テストの実行
-go test -v ./...
+mise install
+mise run test       # Go テスト: go test ./...
+mise run test-js    # JS テスト: bun test internal/agentstatus/assets/
+mise run test-all  # 両方を並列実行
 ```
+
+直接コマンドを実行することも可能です:
+
+```bash
+go test -v ./...
+bun test internal/agentstatus/assets/
+```
+
+opencode 用ステータスプラグイン（`internal/agentstatus/assets/zgt-status.js`）の状態遷移テストは同ディレクトリにあり、プラグインを編集したら `mise run test-js` で確認してください。
 
 ## よくある質問 (FAQ)
 

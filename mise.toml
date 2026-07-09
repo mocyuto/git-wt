@@ -1,0 +1,12 @@
+[tools]
+go = "1.24.1"
+bun = "latest"
+
+[tasks.test]
+run = "go test ./..."
+
+[tasks.test-js]
+run = "bun test internal/agentstatus/assets/"
+
+[tasks.test-all]
+depends = ["test", "test-js"]
