@@ -15,7 +15,10 @@
 // "idle" is reported when the session goes idle (session.idle or
 // session.status with type=idle) and is protected from late-arriving
 // message.updated events that would otherwise clobber it back to
-// "working".
+// "working". On plugin init (agent restart) the status is reset to
+// "idle" so a stale "working" from a previous/crashed session doesn't
+// linger on disk; a "low watermark" timestamp ensures a just-queued
+// "working" event is never overwritten by the init idle write.
 let lastStatus = "";
 let lastWrite = 0;
 
@@ -36,18 +39,46 @@ export const ZgtStatusPlugin = async ({ directory, worktree, $ }) => {
   // never land on disk before earlier ones, even across concurrent event
   // ticks.
   let writeQueue = Promise.resolve();
+  // lowWatermark is the timestamp of the most recent non-idle write
+  // (working/ask). The init reset only writes "idle" if no working/ask
+  // write has been queued after it, so a resumed session that immediately
+  // reports busy isn't clobbered back to idle.
+  let lowWatermark = 0;
 
   const write = (status) => {
     const now = Date.now();
     if (status === lastStatus && now - lastWrite < 5000) return Promise.resolve();
     lastStatus = status;
     lastWrite = now;
+    if (status !== "idle") lowWatermark = now;
     const p = writeQueue.then(() =>
       $`zgt agent set-status --agent opencode --status ${status} --cwd ${cwd}`.quiet().catch(() => {})
     );
     writeQueue = p;
     return p;
   };
+
+  const clear = () => {
+    lastStatus = "";
+    const p = writeQueue.then(() =>
+      $`zgt agent clear-status --cwd ${cwd}`.quiet().catch(() => {})
+    );
+    writeQueue = p;
+    return p;
+  };
+
+  // On plugin init (agent restart), reset to idle so a stale "working"
+  // from a previous/crashed session doesn't linger on disk. The write is
+  // queued (not awaited) so plugin load isn't blocked. If a real
+  // working/ask event arrives before this init write flushes, that event
+  // bumps lowWatermark and we cancel the idle write below.
+  const initStartedAt = Date.now();
+  sessionIdle = true;
+  const initP = writeQueue.then(() => {
+    if (lowWatermark > initStartedAt) return; // a working/ask event won; skip idle
+    return write("idle");
+  });
+  writeQueue = initP;
 
   return {
     // Named hooks receive (input, output) with input.tool available, which
@@ -73,6 +104,14 @@ export const ZgtStatusPlugin = async ({ directory, worktree, $ }) => {
     },
     event: async ({ event }) => {
       switch (event && event.type) {
+        case "session.created":
+          // Only reset to idle if no working/ask event has been seen
+          // since init. This avoids clobbering a resumed session that
+          // immediately reports busy.
+          if (lowWatermark > initStartedAt) return;
+          sessionIdle = true;
+          awaitingUser = false;
+          return write("idle");
         case "session.status": {
           const t = event.properties && event.properties.status && event.properties.status.type;
           if (t === "busy" || t === "retry") {
@@ -111,20 +150,20 @@ export const ZgtStatusPlugin = async ({ directory, worktree, $ }) => {
           sessionIdle = false;
           return write("working");
         case "session.compacted":
+          // Compaction is a maintenance event; the session continues.
+          // Reset transient flags so status updates resume normally.
+          awaitingUser = false;
+          return;
         case "session.error":
-          // The question/permission flow may have been interrupted; allow
-          // subsequent message.updated events to update status normally.
+          // The session errored; flip to idle so a stale "working" badge
+          // doesn't linger until the 1h stale prune.
           awaitingUser = false;
           sessionIdle = false;
-          return;
+          return write("idle");
         case "session.deleted":
           awaitingUser = false;
           sessionIdle = false;
-          lastStatus = "";
-          try {
-            await $`zgt agent clear-status --cwd ${cwd}`.quiet();
-          } catch (_) {}
-          return;
+          return clear();
       }
     },
   };
