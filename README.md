@@ -1,12 +1,10 @@
-# zgt (formerly `git-wt`)
+# zgt
 
 English | [日本語](./README_ja.md)
 
 A CLI tool that extends `git worktree add` by automatically copying ignored configuration files (like `.env`) to the new directory.
 
 ## Overview
-
-- [Migration Guide (from `git-wt`)](./MIGRATION.md)
 
 Git's `worktree` feature is powerful,
 but files ignored by `.gitignore` (such as `.env` or local configs) are not included in the newly created worktree. `zgt` automates the process of copying these files, allowing you to start development and testing immediately.
