@@ -31,3 +31,13 @@ jobs:
 
       - name: Run tests
         run: go test -v ./...
+
+      - name: Set up mise (Go + Bun)
+        if: always()
+        uses: jdx/mise-action@v4
+        with:
+          install: true
+
+      - name: Run JS status-plugin tests
+        if: always()
+        run: mise run test-js
