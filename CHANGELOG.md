@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- feat(agent): rename `waiting` status to `ask` and add color to `agent status` output. opencode plugin now handles `permission.asked`/`permission.replied` events. Legacy `waiting` records on disk are auto-migrated to `ask` on read.
+
 ## [v0.17.0](https://github.com/mocyuto/zgt/compare/v0.16.0...v0.17.0) - 2026-07-08
 
 - feat(agent): show opencode / Claude Code working/idle/waiting status by @mocyuto in https://github.com/mocyuto/zgt/pull/94

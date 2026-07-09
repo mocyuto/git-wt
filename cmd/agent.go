@@ -9,7 +9,6 @@ import (
 	"sort"
 	"strings"
 	"syscall"
-	"text/tabwriter"
 	"time"
 
 	"github.com/mocyuto/zgt/internal/agentstatus"
@@ -25,7 +24,7 @@ var agentCmd = &cobra.Command{
 	Long: `Show and manage AI agent status for worktrees.
 
 Reports whether opencode or Claude Code sessions running inside each
-worktree are working, idle, or waiting. Status is written by hooks/plugins
+worktree are working, idle, or asking. Status is written by hooks/plugins
 installed via 'zgt agent install'.`,
 }
 
@@ -36,7 +35,7 @@ var agentStatusCmd = &cobra.Command{
 	Use:     "status [worktree-name]",
 	Aliases: []string{"ls"},
 	Short:   "Show agent status for each worktree",
-	Long:    `Show the idle/working/waiting status of opencode / Claude Code sessions for each worktree.`,
+	Long:    `Show the idle/working/ask status of opencode / Claude Code sessions for each worktree.`,
 	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if !config.AppConfig.Agent.Enabled {
@@ -98,7 +97,7 @@ called by the opencode plugin installed via 'zgt agent install'.`,
 		}
 		status := agentstatus.Status(setStatusStatus)
 		if !validStatus(status) {
-			return fmt.Errorf("invalid --status %q; expected working, idle, or waiting", setStatusStatus)
+			return fmt.Errorf("invalid --status %q; expected working, idle, or ask", setStatusStatus)
 		}
 		return agentstatus.SetStatus(setStatusCwd, agent, status, setStatusSID)
 	},
@@ -109,7 +108,7 @@ func validAgent(a agentstatus.Agent) bool {
 }
 
 func validStatus(s agentstatus.Status) bool {
-	return s == agentstatus.StatusWorking || s == agentstatus.StatusIdle || s == agentstatus.StatusWaiting
+	return s == agentstatus.StatusWorking || s == agentstatus.StatusIdle || s == agentstatus.StatusAsk
 }
 
 var clearStatusCwd string
@@ -141,7 +140,7 @@ func init() {
 	agentStatusCmd.Flags().BoolVarP(&agentStatusAll, "all", "a", false, "include worktrees with no agent status")
 
 	agentSetStatusCmd.Flags().StringVar(&setStatusAgent, "agent", "opencode", "agent name (claude|opencode)")
-	agentSetStatusCmd.Flags().StringVar(&setStatusStatus, "status", "", "status (working|idle|waiting)")
+	agentSetStatusCmd.Flags().StringVar(&setStatusStatus, "status", "", "status (working|idle|ask)")
 	agentSetStatusCmd.Flags().StringVar(&setStatusCwd, "cwd", "", "worktree path (defaults to current directory)")
 	agentSetStatusCmd.Flags().StringVar(&setStatusSID, "session-id", "", "optional session id")
 	_ = agentSetStatusCmd.MarkFlagRequired("status")
@@ -171,9 +170,9 @@ func runAgentHook(agent string, r io.Reader) error {
 		return agentstatus.SetStatus(in.Cwd, ag, agentstatus.StatusIdle, in.SessionID)
 	case "Notification":
 		// permission_prompt / idle_prompt indicate the agent is blocked
-		// waiting for the user; other notifications (auth_success etc.)
-		// are still "waiting" in the sense that the session is paused.
-		return agentstatus.SetStatus(in.Cwd, ag, agentstatus.StatusWaiting, in.SessionID)
+		// asking the user; other notifications (auth_success etc.) are
+		// still "ask" in the sense that the session is paused.
+		return agentstatus.SetStatus(in.Cwd, ag, agentstatus.StatusAsk, in.SessionID)
 	case "SessionEnd":
 		return agentstatus.ClearStatus(in.Cwd)
 	default:
@@ -286,12 +285,58 @@ func printAgentStatus(args []string) error {
 		return nil
 	}
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "PATH\tBRANCH\tAGENT\tSTATUS\tAGE")
+	return writeAgentStatusTable(os.Stdout, rows)
+}
+
+// writeAgentStatusTable renders the status table with manual column padding
+// instead of text/tabwriter. This is necessary because tabwriter counts byte
+// length (including invisible ANSI escape codes), which breaks alignment when
+// the STATUS column is colorized. By padding the visible text first and then
+// wrapping in color codes, columns stay aligned regardless of color.
+func writeAgentStatusTable(w io.Writer, rows []agentStatusRow) error {
+	const (
+		hdrPath   = "PATH"
+		hdrBranch = "BRANCH"
+		hdrAgent  = "AGENT"
+		hdrStatus = "STATUS"
+		hdrAge    = "AGE"
+	)
+	wPath, wBranch, wAgent, wStatus, wAge := len(hdrPath), len(hdrBranch), len(hdrAgent), len(hdrStatus), len(hdrAge)
 	for _, r := range rows {
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", r.Path, r.Branch, r.Agent, r.Status, r.Age)
+		if len(r.Path) > wPath {
+			wPath = len(r.Path)
+		}
+		if len(r.Branch) > wBranch {
+			wBranch = len(r.Branch)
+		}
+		if len(r.Agent) > wAgent {
+			wAgent = len(r.Agent)
+		}
+		if len(r.Status) > wStatus {
+			wStatus = len(r.Status)
+		}
+		if len(r.Age) > wAge {
+			wAge = len(r.Age)
+		}
 	}
-	return w.Flush()
+
+	// Header row (uncolored).
+	fmt.Fprintf(w, "%-*s  %-*s  %-*s  %-*s  %s\n",
+		wPath, hdrPath, wBranch, hdrBranch, wAgent, hdrAgent, wStatus, hdrStatus, hdrAge)
+
+	for _, r := range rows {
+		// Pad visible text to column width, then wrap in color codes so
+		// the invisible escape sequences don't shift subsequent columns.
+		padded := fmt.Sprintf("%-*s", wStatus, r.Status)
+		statusCol := padded
+		switch agentstatus.Status(r.Status) {
+		case agentstatus.StatusWorking, agentstatus.StatusAsk, agentstatus.StatusIdle:
+			statusCol = agentstatus.ColorForStatus(agentstatus.Status(r.Status)) + padded + agentstatus.ColorReset
+		}
+		fmt.Fprintf(w, "%-*s  %-*s  %-*s  %s  %s\n",
+			wPath, r.Path, wBranch, r.Branch, wAgent, r.Agent, statusCol, r.Age)
+	}
+	return nil
 }
 
 func watchAgentStatus(args []string) error {

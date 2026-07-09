@@ -106,7 +106,7 @@ func ListTmuxWindows() error {
 // agentBadgeFor returns a colored "[agent: status]" string for the pane's
 // CWD, or "" when agent integration is disabled or no fresh status record
 // matches the path. The badge lets you see at a glance whether the opencode
-// or Claude Code session inside a pane is working, idle, or waiting.
+// or Claude Code session inside a pane is working, idle, or asking.
 func agentBadgeFor(cwd string) string {
 	if !config.AppConfig.Agent.Enabled || cwd == "" {
 		return ""
@@ -116,22 +116,6 @@ func agentBadgeFor(cwd string) string {
 	if !ok {
 		return ""
 	}
-	const (
-		cReset  = "\033[0m"
-		cGreen  = "\033[32m"
-		cGray   = "\033[90m"
-		cYellow = "\033[33m"
-	)
-	var color string
-	switch rec.Status {
-	case agentstatus.StatusWorking:
-		color = cGreen
-	case agentstatus.StatusWaiting:
-		color = cYellow
-	case agentstatus.StatusIdle:
-		color = cGray
-	default:
-		color = cReset
-	}
-	return fmt.Sprintf("%s[%s: %s]%s", color, rec.Agent, rec.Status, cReset)
+	color := agentstatus.ColorForStatus(rec.Status)
+	return fmt.Sprintf("%s[%s: %s]%s", color, rec.Agent, rec.Status, agentstatus.ColorReset)
 }

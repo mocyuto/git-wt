@@ -78,7 +78,7 @@ type GitHooksConfig struct {
 
 // AgentConfig controls agent status reporting integration. When enabled, zgt
 // exposes an `agent` command group and `tmux ls` augments pane output with
-// the idle/working/waiting status of opencode / Claude Code sessions running
+// the idle/working/ask status of opencode / Claude Code sessions running
 // inside each pane. stale_after determines how long a status record survives
 // without an update before it is considered stale (e.g. "1h", "30m").
 type AgentConfig struct {

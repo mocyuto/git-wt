@@ -50,13 +50,13 @@ Use `zgt rm <branch>` to cleanup.
 - `zgt ports`: Shows port assignments.
 - `zgt tmux open [branch]`: Opens or activates the tmux window for a worktree. Opens an interactive TUI if no branch is specified. Use `--profile <name>` to override (and persist) the profile used for window name and pane commands, mirroring `zgt add --profile`. In TUI mode the same profile is applied to all selected worktrees.
 - `zgt tmux close <branch>`: Gracefully closes the tmux window for a worktree.
-- `zgt tmux ls`: Lists tmux sessions/windows/panes with Running/Waiting status and an `[agent: status]` badge for any pane running an opencode / Claude Code session (green=working, yellow=waiting, gray=idle).
+- `zgt tmux ls`: Lists tmux sessions/windows/panes with Running/Waiting status and an `[agent: status]` badge for any pane running an opencode / Claude Code session (green=working, cyan=ask, gray=idle).
 
 ### 4b. AI Agent Status (`agent`)
 
-`zgt` reports whether the opencode or Claude Code session in each worktree is `working`, `idle`, or `waiting`.
+`zgt` reports whether the opencode or Claude Code session in each worktree is `working`, `idle`, or `ask` (asking for permission/input).
 
-- `zgt agent install [claude|opencode|all]`: One-time setup. Installs Claude Code hooks (`~/.claude/settings.json`) and the opencode plugin (`~/.config/opencode/plugins/zgt-status.js`) that report session status to `zgt`. Re-running is safe and idempotent.
+- `zgt agent install [claude|opencode|all]`: One-time setup. Installs Claude Code hooks (`~/.claude/settings.json`) and the opencode plugin (`~/.config/opencode/plugins/zgt-status.js`) that report session status to `zgt`. The opencode plugin maps `session.idle`/`session.status`(idle)/`session.created`/`session.error`→`idle`, `permission.updated` and the built-in `question` tool (via `message.part.updated`)→`ask`, `permission.replied`/`question`-completed/`session.status`(busy)→`working`, `session.deleted`→clear; on plugin init (agent restart) it writes `idle` so stale status from a crashed session doesn't linger; late `message.updated` (assistant) events are ignored while idle so the status doesn't flip back to `working`. Re-running is safe and idempotent.
 - `zgt agent status [worktree]`: Lists every worktree with its current agent status and age. Use `-w`/`--watch` for a live 2s-refreshing view, and `-a`/`--all` to include worktrees with no active session.
 - `zgt agent uninstall [claude|opencode|all]`: Removes the hooks/plugin.
 

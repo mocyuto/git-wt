@@ -321,7 +321,7 @@ func TestFindByPathRespectsCustomStaleAge(t *testing.T) {
 func TestRecordRoundTripJSON(t *testing.T) {
 	rec := Record{
 		Agent:     AgentClaude,
-		Status:    StatusWaiting,
+		Status:    StatusAsk,
 		CWD:       "/x",
 		SessionID: "abc",
 		UpdatedAt: 12345,
@@ -335,4 +335,30 @@ func TestRecordRoundTripJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 	assert.Equal(t, rec, got)
+}
+
+func TestColorForStatus(t *testing.T) {
+	assert.Equal(t, "\033[32m", ColorForStatus(StatusWorking)) // green
+	assert.Equal(t, "\033[36m", ColorForStatus(StatusAsk))     // cyan
+	assert.Equal(t, "\033[90m", ColorForStatus(StatusIdle))    // gray
+	assert.Equal(t, "", ColorForStatus(Status("bogus")))       // no color for unknown
+}
+
+func TestNormalizeRecordMigratesWaitingToAsk(t *testing.T) {
+	withTempHome(t)
+	dir, _ := os.MkdirTemp("", "zgt-migrate-*")
+	// Write a legacy "waiting" record using SetStatus with the raw string.
+	if err := SetStatus(dir, AgentClaude, Status("waiting"), ""); err != nil {
+		t.Fatalf("SetStatus: %v", err)
+	}
+
+	// GetStatus should normalize "waiting" → "ask" on read.
+	rec, ok := GetStatus(dir)
+	assert.True(t, ok)
+	assert.Equal(t, StatusAsk, rec.Status)
+
+	// ListStatuses should also normalize.
+	all, _ := ListStatuses()
+	assert.Len(t, all, 1)
+	assert.Equal(t, StatusAsk, all[0].Status)
 }

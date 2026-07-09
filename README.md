@@ -149,21 +149,28 @@ zgt sync --ignore "node_modules,temp"
 - `config edit`: Edits the configuration file using the system editor. Defaults to editing the local project configuration.
 - `version`: Prints the version number of `zgt`.
 - `skill install`: Installs skills from the current repository's `skills/` directory to the global agent skills directory (`~/.claude/skills/`).
-- `agent status`: Shows whether the opencode / Claude Code session in each worktree is `working`, `idle`, or `waiting`. Use `-w` / `--watch` to refresh every 2s, and `-a` / `--all` to include worktrees with no active session.
+- `agent status`: Shows whether the opencode / Claude Code session in each worktree is `working`, `idle`, or `ask` (asking for permission/input). Use `-w` / `--watch` to refresh every 2s, and `-a` / `--all` to include worktrees with no active session.
 - `agent install [claude|opencode|all]`: Installs the Claude Code hooks and opencode plugin that report session status to `zgt`. Run once per machine; re-running is safe.
 - `agent uninstall [claude|opencode|all]`: Removes the hooks/plugin installed by `agent install`.
 
 ### 7. AI Agent Status (opencode / Claude Code)
 
-`zgt` can show you, at a glance, whether the AI coding agent running inside a worktree is actively working, idle and awaiting input, or blocked waiting for a permission/answer. This is surfaced in two places:
+`zgt` can show you, at a glance, whether the AI coding agent running inside a worktree is actively working, idle and awaiting input, or blocked asking for a permission/answer. This is surfaced in two places:
 
-- `zgt tmux ls` appends a colored `[agent: status]` badge to each pane (green = working, yellow = waiting, gray = idle).
-- `zgt agent status` lists every worktree with its current agent status and age.
+- `zgt tmux ls` appends a colored `[agent: status]` badge to each pane (green = working, cyan = ask, gray = idle).
+- `zgt agent status` lists every worktree with its current agent status (color-coded) and age.
 
 Status is written by hooks/plugins that `zgt agent install` sets up:
 
-- **Claude Code**: command hooks for `UserPromptSubmit` → `working`, `Stop` → `idle`, `Notification` (`permission_prompt`/`idle_prompt`) → `waiting`, and `SessionEnd` → clear. The hooks call `zgt agent hook claude` which reads the event JSON from stdin.
-- **opencode**: a plugin (`~/.config/opencode/plugins/zgt-status.js`) that listens to `tool.execute.before`/`message.updated` → `working`, `session.idle` → `idle`, and `session.deleted` → clear, shelling out to `zgt agent set-status` / `zgt agent clear-status`.
+- **Claude Code**: command hooks for `UserPromptSubmit` → `working`, `Stop` → `idle`, `Notification` (`permission_prompt`/`idle_prompt`) → `ask`, and `SessionEnd` → clear. The hooks call `zgt agent hook claude` which reads the event JSON from stdin.
+- **opencode**: a plugin (`~/.config/opencode/plugins/zgt-status.js`) that reports status to `zgt`:
+  - `message.updated` (user message) → `working`; `message.updated` (assistant message) is ignored while idle so late finalization events don't clobber `idle` back to `working`
+  - `message.part.updated` (`question` tool pending/running) → `ask`; `message.part.updated` (`question` tool completed/error) → `working`
+  - `permission.updated` → `ask`; `permission.replied` → `working`
+  - `session.idle` / `session.status` (idle) → `idle`; `session.status` (busy) → `working`; `session.created` → `idle` (resets stale status on agent restart); `session.error` → `idle`
+  - `session.deleted` → clear
+  - On plugin init (agent restart) it writes `idle` so a stale `working` from a crashed session doesn't linger
+  - It shells out to `zgt agent set-status` / `zgt agent clear-status`
 
 ```bash
 # One-time setup: install hooks + plugin for both agents

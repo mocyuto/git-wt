@@ -51,17 +51,17 @@ func TestAgentBadgeWorking(t *testing.T) {
 	assert.Contains(t, got, "\033[32m") // green
 }
 
-func TestAgentBadgeWaiting(t *testing.T) {
+func TestAgentBadgeAsk(t *testing.T) {
 	withAgentTempHome(t)
 	config.AppConfig.Agent.Enabled = true
-	dir, _ := os.MkdirTemp("", "zgt-waiting-*")
-	if err := agentstatus.SetStatus(dir, agentstatus.AgentOpenCode, agentstatus.StatusWaiting, ""); err != nil {
+	dir, _ := os.MkdirTemp("", "zgt-ask-*")
+	if err := agentstatus.SetStatus(dir, agentstatus.AgentOpenCode, agentstatus.StatusAsk, ""); err != nil {
 		t.Fatal(err)
 	}
 	got := agentBadgeFor(dir)
 	assert.Contains(t, got, "opencode")
-	assert.Contains(t, got, "waiting")
-	assert.Contains(t, got, "\033[33m") // yellow
+	assert.Contains(t, got, "ask")
+	assert.Contains(t, got, "\033[36m") // cyan
 }
 
 func TestAgentBadgeIdle(t *testing.T) {

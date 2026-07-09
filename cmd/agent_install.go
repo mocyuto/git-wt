@@ -18,7 +18,7 @@ import (
 const ZgtClaudeHookCommand = "zgt agent hook claude"
 
 // claude hook events zgt manages. Notification uses a matcher so only
-// permission/idle prompts flip the status to waiting.
+// permission/idle prompts flip the status to ask.
 var claudeHookEvents = []struct {
 	event   string
 	matcher string
