@@ -159,11 +159,12 @@ test("session.status retry -> working", async () => {
 
 test("message.updated during active turn -> working", async () => {
   const { plugin, calls } = await setup();
-  // Start a turn via session.status:busy
+  // Start a turn via session.status:busy (writes "working").
   await plugin.event(makeEvent("session.status", { status: { type: "busy" } }));
   await new Promise((r) => setTimeout(r, 0));
-  calls.length = 0;
-  // Any message.updated (user or assistant) during an active turn → working
+  // Any message.updated (user or assistant) during an active turn → working.
+  // The 5s throttle suppresses the duplicate "working" write, so the
+  // last recorded status is still "working" from session.status:busy.
   await plugin.event(makeEvent("message.updated", { info: { role: "assistant" } }));
   await new Promise((r) => setTimeout(r, 0));
   expect(lastStatus(calls)).toBe("working");
@@ -194,6 +195,36 @@ test("session.error -> idle (and late message.updated ignored)", async () => {
   await plugin.event(makeEvent("message.updated", { info: { role: "user" } }));
   await new Promise((r) => setTimeout(r, 0));
   expect(lastStatus([...calls]) || "idle").toBe("idle");
+});
+
+test("permission.replied after session.idle is ignored", async () => {
+  const { plugin, calls } = await setup();
+  await plugin.event(makeEvent("session.idle"));
+  await new Promise((r) => setTimeout(r, 0));
+  const beforeCount = calls.length;
+  // A late permission.replied within the debounce window should NOT
+  // clobber idle back to working.
+  await plugin.event(makeEvent("permission.replied"));
+  await new Promise((r) => setTimeout(r, 0));
+  expect(calls.length).toBe(beforeCount);
+  expect(lastStatus(calls) || "idle").toBe("idle");
+});
+
+test("question tool completed after session.idle is ignored", async () => {
+  const { plugin, calls } = await setup();
+  await plugin.event(makeEvent("session.idle"));
+  await new Promise((r) => setTimeout(r, 0));
+  const beforeCount = calls.length;
+  // A late question-tool completed within the debounce window should
+  // NOT clobber idle back to working.
+  await plugin.event(
+    makeEvent("message.part.updated", {
+      part: { type: "tool", tool: "question", state: { status: "completed" } },
+    })
+  );
+  await new Promise((r) => setTimeout(r, 0));
+  expect(calls.length).toBe(beforeCount);
+  expect(lastStatus(calls) || "idle").toBe("idle");
 });
 
 test("session.deleted clears the record", async () => {

@@ -18,11 +18,14 @@
 //
 // "idle" is reported when the session goes idle (session.idle or
 // session.status with type=idle) and is protected from late-arriving
-// message.updated events that would otherwise clobber it back to
-// "working". The primary turn-start signal is session.status:busy/retry,
-// but a user message.updated arriving more than idleDebounceMs after
+// events that would otherwise clobber it back to "working" or "ask":
+// `message.updated` (all roles), `message.part.updated` for the question
+// tool's completed/error state, and `permission.replied` are all
+// suppressed within `idleDebounceMs` of the idle transition. The
+// primary turn-start signal is `session.status:busy`/`retry`, but a
+// user `message.updated` arriving more than `idleDebounceMs` after
 // idle is also treated as a new turn (fallback for versions/flows
-// where session.status:busy might not fire). On plugin init (agent
+// where `session.status:busy` might not fire). On plugin init (agent
 // restart) the status is reset to "idle" so a stale "working" from a
 // previous/crashed session doesn't linger on disk.
 const idleDebounceMs = 500;
@@ -49,6 +52,9 @@ export const ZgtStatusPlugin = async ({ directory, worktree, $ }) => {
     writeQueue = p;
     return p;
   };
+
+  const withinIdleDebounce = () =>
+    sessionIdle && Date.now() - idleSince <= idleDebounceMs;
 
   const clear = () => {
     lastStatus = "";
@@ -81,6 +87,7 @@ export const ZgtStatusPlugin = async ({ directory, worktree, $ }) => {
               return write("ask");
             }
             if (st === "completed" || st === "error") {
+              if (withinIdleDebounce()) return;
               awaitingUser = false;
               sessionIdle = false;
               return write("working");
@@ -92,14 +99,13 @@ export const ZgtStatusPlugin = async ({ directory, worktree, $ }) => {
         // --- Message updates: track turn transitions ---
         case "message.updated": {
           if (awaitingUser) return;
+          if (withinIdleDebounce()) return;
           if (sessionIdle) {
-            // After session.idle, late message.updated events can arrive
-            // and must not clobber the idle status. A user message after
-            // the debounce window is treated as a genuine new-turn signal
-            // (fallback when session.status:busy doesn't fire). Assistant
-            // messages and anything within the window are ignored.
+            // A user message after the debounce window is a genuine
+            // new-turn signal (fallback when session.status:busy doesn't
+            // fire). Assistant messages are still ignored.
             const info = event.properties && event.properties.info;
-            if (info && info.role === "user" && Date.now() - idleSince > idleDebounceMs) {
+            if (info && info.role === "user") {
               sessionIdle = false;
               return write("working");
             }
@@ -118,6 +124,7 @@ export const ZgtStatusPlugin = async ({ directory, worktree, $ }) => {
           sessionIdle = false;
           return write("ask");
         case "permission.replied":
+          if (withinIdleDebounce()) return;
           awaitingUser = false;
           sessionIdle = false;
           return write("working");
