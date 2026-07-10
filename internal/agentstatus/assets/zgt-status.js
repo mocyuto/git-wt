@@ -19,9 +19,14 @@
 // "idle" is reported when the session goes idle (session.idle or
 // session.status with type=idle) and is protected from late-arriving
 // message.updated events that would otherwise clobber it back to
-// "working". On plugin init (agent restart) the status is reset to
-// "idle" so a stale "working" from a previous/crashed session doesn't
-// linger on disk.
+// "working". The primary turn-start signal is session.status:busy/retry,
+// but a user message.updated arriving more than idleDebounceMs after
+// idle is also treated as a new turn (fallback for versions/flows
+// where session.status:busy might not fire). On plugin init (agent
+// restart) the status is reset to "idle" so a stale "working" from a
+// previous/crashed session doesn't linger on disk.
+const idleDebounceMs = 500;
+
 let lastStatus = "";
 let lastWrite = 0;
 
@@ -30,6 +35,7 @@ export const ZgtStatusPlugin = async ({ directory, worktree, $ }) => {
   if (!cwd) return {};
   let awaitingUser = false;
   let sessionIdle = false;
+  let idleSince = 0;
   let writeQueue = Promise.resolve();
 
   const write = (status) => {
@@ -56,6 +62,7 @@ export const ZgtStatusPlugin = async ({ directory, worktree, $ }) => {
   // On plugin init (agent restart), reset to idle so a stale "working"
   // from a previous/crashed session doesn't linger on disk.
   sessionIdle = true;
+  idleSince = Date.now();
   write("idle");
 
   return {
@@ -85,15 +92,19 @@ export const ZgtStatusPlugin = async ({ directory, worktree, $ }) => {
         // --- Message updates: track turn transitions ---
         case "message.updated": {
           if (awaitingUser) return;
-          const info = event.properties && event.properties.info;
-          // A user message marks the start of a new turn: leave idle and
-          // flip to working. An assistant message arriving while idle is
-          // a late finalization event and should be ignored.
-          if (info && info.role === "user") {
-            sessionIdle = false;
-            return write("working");
+          if (sessionIdle) {
+            // After session.idle, late message.updated events can arrive
+            // and must not clobber the idle status. A user message after
+            // the debounce window is treated as a genuine new-turn signal
+            // (fallback when session.status:busy doesn't fire). Assistant
+            // messages and anything within the window are ignored.
+            const info = event.properties && event.properties.info;
+            if (info && info.role === "user" && Date.now() - idleSince > idleDebounceMs) {
+              sessionIdle = false;
+              return write("working");
+            }
+            return;
           }
-          if (sessionIdle) return;
           return write("working");
         }
 
@@ -114,6 +125,7 @@ export const ZgtStatusPlugin = async ({ directory, worktree, $ }) => {
         // --- Session lifecycle ---
         case "session.created":
           sessionIdle = true;
+          idleSince = Date.now();
           awaitingUser = false;
           return write("idle");
         case "session.status": {
@@ -123,6 +135,7 @@ export const ZgtStatusPlugin = async ({ directory, worktree, $ }) => {
             if (!awaitingUser) return write("working");
           } else if (t === "idle") {
             sessionIdle = true;
+            idleSince = Date.now();
             awaitingUser = false;
             return write("idle");
           }
@@ -130,6 +143,7 @@ export const ZgtStatusPlugin = async ({ directory, worktree, $ }) => {
         }
         case "session.idle":
           sessionIdle = true;
+          idleSince = Date.now();
           awaitingUser = false;
           return write("idle");
         case "session.compacted":
@@ -137,7 +151,8 @@ export const ZgtStatusPlugin = async ({ directory, worktree, $ }) => {
           return;
         case "session.error":
           awaitingUser = false;
-          sessionIdle = false;
+          sessionIdle = true;
+          idleSince = Date.now();
           return write("idle");
         case "session.deleted":
           awaitingUser = false;
