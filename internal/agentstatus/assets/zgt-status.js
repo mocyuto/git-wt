@@ -18,16 +18,19 @@
 //
 // "idle" is reported when the session goes idle (session.idle or
 // session.status with type=idle) and is protected from late-arriving
-// events that would otherwise clobber it back to "working" or "ask":
+// working-clobberers within `idleDebounceMs` of the idle transition:
 // `message.updated` (all roles), `message.part.updated` for the question
 // tool's completed/error state, and `permission.replied` are all
-// suppressed within `idleDebounceMs` of the idle transition. The
-// primary turn-start signal is `session.status:busy`/`retry`, but a
-// user `message.updated` arriving more than `idleDebounceMs` after
-// idle is also treated as a new turn (fallback for versions/flows
-// where `session.status:busy` might not fire). On plugin init (agent
-// restart) the status is reset to "idle" so a stale "working" from a
-// previous/crashed session doesn't linger on disk.
+// suppressed. Ask-clobberers (`permission.asked`/`permission.updated`
+// and question `pending`/`running`) are intentionally NOT debounced
+// because they are more likely to be the start of a new turn than a
+// stale finalization event. The primary turn-start signal is
+// `session.status:busy`/`retry`, but a user `message.updated` arriving
+// more than `idleDebounceMs` after idle is also treated as a new turn
+// (fallback for versions/flows where `session.status:busy` might not
+// fire). On plugin init (agent restart) the status is reset to "idle"
+// so a stale "working" from a previous/crashed session doesn't linger
+// on disk.
 const idleDebounceMs = 500;
 
 let lastStatus = "";

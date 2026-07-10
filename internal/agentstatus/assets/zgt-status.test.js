@@ -227,6 +227,22 @@ test("question tool completed after session.idle is ignored", async () => {
   expect(lastStatus(calls) || "idle").toBe("idle");
 });
 
+test("permission.replied after debounce window still transitions to working", async () => {
+  // When permission.replied arrives AFTER the debounce window (e.g. as
+  // part of a genuine new turn where the event ordering put it after
+  // session.idle), it must still transition to working — the debounce
+  // must not over-suppress.
+  const { plugin, calls } = await setup();
+  await plugin.event(makeEvent("session.idle"));
+  await new Promise((r) => setTimeout(r, 0));
+  calls.length = 0;
+  // Wait beyond the 500ms debounce window.
+  await new Promise((r) => setTimeout(r, 550));
+  await plugin.event(makeEvent("permission.replied"));
+  await new Promise((r) => setTimeout(r, 0));
+  expect(lastStatus(calls)).toBe("working");
+});
+
 test("session.deleted clears the record", async () => {
   const { plugin, calls } = await setup();
   calls.length = 0;
