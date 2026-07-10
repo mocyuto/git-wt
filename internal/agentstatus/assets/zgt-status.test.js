@@ -227,6 +227,45 @@ test("question tool completed after session.idle is ignored", async () => {
   expect(lastStatus(calls) || "idle").toBe("idle");
 });
 
+test("question tool completed after debounce window stays idle (plan mode)", async () => {
+  // Plans/workflows use the question tool: the agent asks, the session
+  // goes idle while waiting for the user, then the user answers well
+  // after the 500ms debounce window. The completed event must NOT flip
+  // idle back to working — the real new turn is signaled by
+  // session.status:busy. This reproduces the "stuck working after a
+  // plan ends" bug.
+  const { plugin, calls } = await setup();
+  // question pending -> ask
+  await plugin.event(
+    makeEvent("message.part.updated", {
+      part: { type: "tool", tool: "question", state: { status: "pending" } },
+    })
+  );
+  await new Promise((r) => setTimeout(r, 0));
+  expect(lastStatus(calls)).toBe("ask");
+  // session goes idle while waiting for user input
+  await plugin.event(makeEvent("session.idle"));
+  await new Promise((r) => setTimeout(r, 0));
+  // user answers AFTER the 500ms debounce window
+  await new Promise((r) => setTimeout(r, 550));
+  calls.length = 0;
+  await plugin.event(
+    makeEvent("message.part.updated", {
+      part: { type: "tool", tool: "question", state: { status: "completed" } },
+    })
+  );
+  await new Promise((r) => setTimeout(r, 0));
+  // should NOT flip to "working"; status stays idle
+  expect(calls.length).toBe(0);
+  expect(lastStatus(calls) || "idle").toBe("idle");
+  // A genuine new turn via session.status:busy still transitions to working.
+  await plugin.event(
+    makeEvent("session.status", { status: { type: "busy" } })
+  );
+  await new Promise((r) => setTimeout(r, 0));
+  expect(lastStatus(calls)).toBe("working");
+});
+
 test("permission.replied after debounce window still transitions to working", async () => {
   // When permission.replied arrives AFTER the debounce window (e.g. as
   // part of a genuine new turn where the event ordering put it after

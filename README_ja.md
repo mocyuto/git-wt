@@ -159,7 +159,7 @@ zgt sync --ignore "node_modules,temp"
 ステータスは `zgt agent install` がセットアップするフック/プラグインから書き込まれます。
 
 - **Claude Code**: `UserPromptSubmit` → `working`、`Stop` → `idle`、`Notification` → `ask`、`SessionEnd` → クリア、の各コマンドフック。フックは `zgt agent hook claude` を呼び出し、stdin のイベント JSON を読み取ります。
-- **opencode**: プラグイン（`~/.config/opencode/plugins/zgt-status.js`）がセッションライフサイクルと permission イベントを `working`/`idle`/`ask` に対応付け、`session.deleted` でレコードをクリアします。`permission.asked` / `permission.updated` はバージョンによりどちらかが発火するため両方を受け付けます。`session.idle` 到着から500ms以内の遅延 `message.updated`、遅延 `message.part.updated`（question 完了/エラー）、遅延 `permission.replied` イベントは無視され、ステータスは `idle` に維持されます。次のターンは主に `session.status:busy`/`retry` で検出し、デバウンス期間後の user `message.updated` をフォールバックとします。
+- **opencode**: プラグイン（`~/.config/opencode/plugins/zgt-status.js`）がセッションライフサイクルと permission イベントを `working`/`idle`/`ask` に対応付け、`session.deleted` でレコードをクリアします。`permission.asked` / `permission.updated` はバージョンによりどちらかが発火するため両方を受け付けます。`session.idle` 到着から500ms以内の遅延 `message.updated` および遅延 `permission.replied` イベントは無視され、ステータスは `idle` に維持されます。遅延 `message.part.updated`（question 完了/エラー）はセッションが既に idle のときは時間経過に関わらず無視されます（プラン/ワークフロー回答はデバウンス期間を超えて到着することが多いため）。次のターンは主に `session.status:busy`/`retry` で検出し、デバウンス期間後の user `message.updated` をフォールバックとします。
 
 ```bash
 # 初回セットアップ: 両エージェントのフック + プラグインをインストール
