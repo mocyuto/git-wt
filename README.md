@@ -161,7 +161,7 @@ zgt sync --ignore "node_modules,temp"
 Status is written by hooks/plugins that `zgt agent install` sets up:
 
 - **Claude Code**: command hooks for `UserPromptSubmit` → `working`, `Stop` → `idle`, `Notification` → `ask`, and `SessionEnd` → clear. The hooks call `zgt agent hook claude` which reads the event JSON from stdin.
-- **opencode**: a plugin (`~/.config/opencode/plugins/zgt-status.js`) that maps session lifecycle and permission events to `working`/`idle`/`ask` (or clears the record on `session.deleted`). It accepts both `permission.asked` and `permission.updated` since opencode emits either depending on version.
+- **opencode**: a plugin (`~/.config/opencode/plugins/zgt-status.js`) that maps session lifecycle and permission events to `working`/`idle`/`ask` (or clears the record on `session.deleted`). It accepts both `permission.asked` and `permission.updated` since opencode emits either depending on version. Late `message.updated`, late `message.part.updated` (question completed/error), and late `permission.replied` events arriving within 500ms of `session.idle` are ignored so the status stays `idle`; the next turn is detected primarily via `session.status:busy`/`retry`, with a user `message.updated` after the debounce window as a fallback.
 
 ```bash
 # One-time setup: install hooks + plugin for both agents

@@ -127,6 +127,120 @@ test("session.idle -> idle (and late message.updated ignored)", async () => {
   await plugin.event(makeEvent("message.updated", { info: { role: "assistant" } }));
   await new Promise((r) => setTimeout(r, 0));
   expect(lastStatus([...calls]) || "idle").toBe("idle");
+  // A late user message.updated within the debounce window should NOT
+  // clobber idle back to working.
+  await plugin.event(makeEvent("message.updated", { info: { role: "user" } }));
+  await new Promise((r) => setTimeout(r, 0));
+  expect(lastStatus([...calls]) || "idle").toBe("idle");
+});
+
+test("session.status busy after idle -> working (new turn)", async () => {
+  const { plugin, calls } = await setup();
+  await plugin.event(makeEvent("session.idle"));
+  await new Promise((r) => setTimeout(r, 0));
+  calls.length = 0;
+  // A new turn is signaled by session.status:busy, not message.updated.
+  await plugin.event(
+    makeEvent("session.status", { status: { type: "busy" } })
+  );
+  await new Promise((r) => setTimeout(r, 0));
+  expect(lastStatus(calls)).toBe("working");
+});
+
+test("session.status retry -> working", async () => {
+  const { plugin, calls } = await setup();
+  calls.length = 0;
+  await plugin.event(
+    makeEvent("session.status", { status: { type: "retry", attempt: 1, message: "rate limit", next: 0 } })
+  );
+  await new Promise((r) => setTimeout(r, 0));
+  expect(lastStatus(calls)).toBe("working");
+});
+
+test("message.updated during active turn -> working", async () => {
+  const { plugin, calls } = await setup();
+  // Start a turn via session.status:busy (writes "working").
+  await plugin.event(makeEvent("session.status", { status: { type: "busy" } }));
+  await new Promise((r) => setTimeout(r, 0));
+  // Any message.updated (user or assistant) during an active turn → working.
+  // The 5s throttle suppresses the duplicate "working" write, so the
+  // last recorded status is still "working" from session.status:busy.
+  await plugin.event(makeEvent("message.updated", { info: { role: "assistant" } }));
+  await new Promise((r) => setTimeout(r, 0));
+  expect(lastStatus(calls)).toBe("working");
+});
+
+test("user message.updated after debounce -> working (fallback)", async () => {
+  const { plugin, calls } = await setup();
+  await plugin.event(makeEvent("session.idle"));
+  await new Promise((r) => setTimeout(r, 0));
+  calls.length = 0;
+  // Wait beyond the 500ms debounce window so a user message.updated
+  // is treated as a genuine new-turn signal.
+  await new Promise((r) => setTimeout(r, 550));
+  await plugin.event(makeEvent("message.updated", { info: { role: "user" } }));
+  await new Promise((r) => setTimeout(r, 0));
+  expect(lastStatus(calls)).toBe("working");
+});
+
+test("session.error -> idle (and late message.updated ignored)", async () => {
+  const { plugin, calls } = await setup();
+  await plugin.event(makeEvent("session.status", { status: { type: "busy" } }));
+  await new Promise((r) => setTimeout(r, 0));
+  calls.length = 0;
+  await plugin.event(makeEvent("session.error"));
+  await new Promise((r) => setTimeout(r, 0));
+  expect(lastStatus(calls)).toBe("idle");
+  // A late message.updated after session.error should not clobber idle.
+  await plugin.event(makeEvent("message.updated", { info: { role: "user" } }));
+  await new Promise((r) => setTimeout(r, 0));
+  expect(lastStatus([...calls]) || "idle").toBe("idle");
+});
+
+test("permission.replied after session.idle is ignored", async () => {
+  const { plugin, calls } = await setup();
+  await plugin.event(makeEvent("session.idle"));
+  await new Promise((r) => setTimeout(r, 0));
+  const beforeCount = calls.length;
+  // A late permission.replied within the debounce window should NOT
+  // clobber idle back to working.
+  await plugin.event(makeEvent("permission.replied"));
+  await new Promise((r) => setTimeout(r, 0));
+  expect(calls.length).toBe(beforeCount);
+  expect(lastStatus(calls) || "idle").toBe("idle");
+});
+
+test("question tool completed after session.idle is ignored", async () => {
+  const { plugin, calls } = await setup();
+  await plugin.event(makeEvent("session.idle"));
+  await new Promise((r) => setTimeout(r, 0));
+  const beforeCount = calls.length;
+  // A late question-tool completed within the debounce window should
+  // NOT clobber idle back to working.
+  await plugin.event(
+    makeEvent("message.part.updated", {
+      part: { type: "tool", tool: "question", state: { status: "completed" } },
+    })
+  );
+  await new Promise((r) => setTimeout(r, 0));
+  expect(calls.length).toBe(beforeCount);
+  expect(lastStatus(calls) || "idle").toBe("idle");
+});
+
+test("permission.replied after debounce window still transitions to working", async () => {
+  // When permission.replied arrives AFTER the debounce window (e.g. as
+  // part of a genuine new turn where the event ordering put it after
+  // session.idle), it must still transition to working — the debounce
+  // must not over-suppress.
+  const { plugin, calls } = await setup();
+  await plugin.event(makeEvent("session.idle"));
+  await new Promise((r) => setTimeout(r, 0));
+  calls.length = 0;
+  // Wait beyond the 500ms debounce window.
+  await new Promise((r) => setTimeout(r, 550));
+  await plugin.event(makeEvent("permission.replied"));
+  await new Promise((r) => setTimeout(r, 0));
+  expect(lastStatus(calls)).toBe("working");
 });
 
 test("session.deleted clears the record", async () => {
